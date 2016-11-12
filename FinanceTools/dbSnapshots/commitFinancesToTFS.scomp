@@ -1,0 +1,141 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<!-- Devart (www.devart.com), compare document file -->
+<!-- Modifying this generated file will probably render it invalid -->
+<CompareDocument>
+  <Properties>
+    <DatabaseProvider>aa8afe9c-7d62-4564-b477-c12e62e0f440</DatabaseProvider>
+    <ProviderVersion>2.0.867.0</ProviderVersion>
+    <SchemaVersion>1.5</SchemaVersion>
+  </Properties>
+  <Source Type="Database">
+    <DataConnection>Finances @ localhost</DataConnection>
+    <ConnectionString>Data Source=localhost;Initial Catalog=Finances;Integrated Security=True</ConnectionString>
+    <Schema>Finances</Schema>
+  </Source>
+  <Target Type="VersionControl">
+    <Connection>
+      <Provider>TFS</Provider>
+      <TfsConnection xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:xsd="http://www.w3.org/2001/XMLSchema">
+        <Host>http://s0:8080/tfs</Host>
+        <ServerFolder>$/FinanceToolsDev/branchV2.0/dbSnapshots</ServerFolder>
+        <WorkingFolder>C:\FinanceTools\dbSnapshots</WorkingFolder>
+        <Name>TFS Finances</Name>
+        <Workspace>JAKEWOODSDFF4_FinanceTools</Workspace>
+        <LoginAsCurrentUser>true</LoginAsCurrentUser>
+      </TfsConnection>
+    </Connection>
+    <File>Finances.snap</File>
+  </Target>
+  <GroupType Value="Status" />
+  <Filter Value="0" />
+  <ComparisonOptions>
+    <UseSubSchemaNamePrefix>true</UseSubSchemaNamePrefix>
+    <IgnorePermissions>false</IgnorePermissions>
+    <IgnoreForeignKeys>false</IgnoreForeignKeys>
+    <CountColumnsToDropUK>false</CountColumnsToDropUK>
+    <IgnoreCase>false</IgnoreCase>
+    <IgnoreComments>false</IgnoreComments>
+    <IgnoreWhiteSpace>true</IgnoreWhiteSpace>
+    <DisableDdlTriggers>false</DisableDdlTriggers>
+    <VerifyTableData>false</VerifyTableData>
+    <AddWithNocheck>false</AddWithNocheck>
+    <CommentDdlForKeysCertificates>true</CommentDdlForKeysCertificates>
+    <SynchronizeAsmViaFiles>false</SynchronizeAsmViaFiles>
+    <CompareSecurityObjectPrivileges>false</CompareSecurityObjectPrivileges>
+    <CompareServerObjects>false</CompareServerObjects>
+    <IgnoreCollations>false</IgnoreCollations>
+    <IgnoreAuthorization>false</IgnoreAuthorization>
+    <IgnoreEventNotificationOnQueues>false</IgnoreEventNotificationOnQueues>
+    <IgnoreExtendedProperties>false</IgnoreExtendedProperties>
+    <IgnoreIndexes>false</IgnoreIndexes>
+    <IgnoreTriggerFireOrder>false</IgnoreTriggerFireOrder>
+    <IgnoreStatistics>false</IgnoreStatistics>
+    <IgnoreDMLTriggers>false</IgnoreDMLTriggers>
+    <IgnoreLogins>false</IgnoreLogins>
+    <IgnoreNotForReplication>false</IgnoreNotForReplication>
+    <IgnoreFullTextSearch>false</IgnoreFullTextSearch>
+    <IgnoreFullTextCatalogPath>false</IgnoreFullTextCatalogPath>
+    <IgnoreFilegroupsPartitionSchemes>false</IgnoreFilegroupsPartitionSchemes>
+    <IgnoreUserDefaultSchema>true</IgnoreUserDefaultSchema>
+    <PopulateFullTextIndexes>false</PopulateFullTextIndexes>
+    <CompareDatabaseProperties>true</CompareDatabaseProperties>
+    <IgnoreIndexesNames>false</IgnoreIndexesNames>
+    <IgnoreStatisticsNorecompute>false</IgnoreStatisticsNorecompute>
+    <IgnorePadIndexAndFillfactor>false</IgnorePadIndexAndFillfactor>
+    <IgnoreDataCompression>false</IgnoreDataCompression>
+    <IgnoreIndexColumnsSortOrder>false</IgnoreIndexColumnsSortOrder>
+    <IgnoreIndexPageAndRowLock>false</IgnoreIndexPageAndRowLock>
+    <IgnoreCheckConstraints>false</IgnoreCheckConstraints>
+    <IgnoreRules>false</IgnoreRules>
+    <IgnoreDefaultConstraints>false</IgnoreDefaultConstraints>
+    <IgnoreIdentitySeedIncrementValues>false</IgnoreIdentitySeedIncrementValues>
+    <IgnoreIdentity>false</IgnoreIdentity>
+    <IgnorePrimaryKeys>false</IgnorePrimaryKeys>
+    <IgnoreUniqueKeys>false</IgnoreUniqueKeys>
+    <IgnoreNocheck>false</IgnoreNocheck>
+    <DecryptEncryptedObjects>true</DecryptEncryptedObjects>
+    <IgnoreSignatures>false</IgnoreSignatures>
+    <IgnoreWithOptionOrder>true</IgnoreWithOptionOrder>
+    <IgnoreKeywordReduction>true</IgnoreKeywordReduction>
+    <IgnoreQuotedIdentifierAndANSINulls>false</IgnoreQuotedIdentifierAndANSINulls>
+    <IgnoreObjectTypeFilter>false</IgnoreObjectTypeFilter>
+    <IgnoreConstraintsNames>false</IgnoreConstraintsNames>
+    <ForceColumnOrder>false</ForceColumnOrder>
+  </ComparisonOptions>
+  <ObjectFilter>
+    <Include>Table</Include>
+    <Include>View</Include>
+    <Include>Procedure</Include>
+    <Include>Function</Include>
+    <Include>User</Include>
+    <Include>Role</Include>
+    <Include>ApplicationRole</Include>
+    <Include>Rule</Include>
+    <Include>Default</Include>
+    <Include>UserDefinedType</Include>
+    <Include>FullTextCatalog</Include>
+    <Include>PartitionFunction</Include>
+    <Include>PartitionScheme</Include>
+    <Include>Assembly</Include>
+    <Include>AsymmetricKey</Include>
+    <Include>Certificate</Include>
+    <Include>Contract</Include>
+    <Include>DdlTrigger</Include>
+    <Include>EventNotification</Include>
+    <Include>MessageType</Include>
+    <Include>Queue</Include>
+    <Include>RemoteServiceBinding</Include>
+    <Include>Route</Include>
+    <Include>Schema</Include>
+    <Include>Service</Include>
+    <Include>SymmetricKey</Include>
+    <Include>Synonym</Include>
+    <Include>XmlSchemaCollection</Include>
+    <Include>FullTextStoplist</Include>
+    <Include>BrokerPriority</Include>
+  </ObjectFilter>
+  <ModifiedObjects />
+  <SynchronizationOptions>
+    <PropertyValue Name="CreateBackupFolder">false</PropertyValue>
+    <PropertyValue Name="BackupDatabase">false</PropertyValue>
+    <PropertyValue Name="ExecuteAsSingleTransaction">true</PropertyValue>
+    <PropertyValue Name="GenerateScriptHeader">true</PropertyValue>
+    <PropertyValue Name="UseSchemaNamePrefix">false</PropertyValue>
+    <PropertyValue Name="ExcludeDependencies">false</PropertyValue>
+    <PropertyValue Name="SynchronizeType">0</PropertyValue>
+    <PropertyValue Name="SynchronizationFileName" xml:space="preserve">C:\FinanceTools\dbSnapshots\Finances (localhost)_20130903-2150.sql</PropertyValue>
+    <PropertyValue Name="OpenScriptInEditor">false</PropertyValue>
+    <PropertyValue Name="RefreshAfterSynchronization">false</PropertyValue>
+    <PropertyValue Name="CommitToVersionControl">false</PropertyValue>
+    <PropertyValue Name="CommentString" xml:space="preserve">End of major v2 changes to database</PropertyValue>
+    <PropertyValue Name="PureScript">false</PropertyValue>
+    <PropertyValue Name="UseCommitMode">false</PropertyValue>
+    <PropertyValue Name="CommitPageLength" xml:space="preserve">200</PropertyValue>
+  </SynchronizationOptions>
+  <Mapping ExcludeUnmappedSchemas="False">
+    <Schemas>
+      <Object SourceName="dbo" TargetName="dbo" State="DefaultMapped" Included="True" />
+      <Object SourceName="guest" TargetName="guest" State="DefaultMapped" Included="True" />
+    </Schemas>
+  </Mapping>
+</CompareDocument>
