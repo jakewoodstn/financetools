@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="utf-8"?>
+<edmx:Edmx Version="3.0" xmlns:edmx="http://schemas.microsoft.com/ado/2009/11/edmx">
+ <!-- EF Designer content (DO NOT EDIT MANUALLY BELOW HERE) -->
+  <edmx:Designer xmlns="http://schemas.microsoft.com/ado/2009/11/edmx">
+    <!-- Diagram content (shape and connector positions) -->
+    <edmx:Diagrams>
+      <Diagram DiagramId="79bf80bcc07e4a6fa7ae9acd1cb360ff" Name="Diagram1" ZoomLevel="100" DisplayType="false">
+        <EntityTypeShape EntityType="FinancesModel.simpleBudget" Width="2" PointX="0.75" PointY="3.375" IsExpanded="true" />
+        <EntityTypeShape EntityType="FinancesModel.simpleBudgetCalculatedActual" Width="3.875" PointX="6.75" PointY="1.625" IsExpanded="true" />
+        <EntityTypeShape EntityType="FinancesModel.simpleBudgetExpected" Width="2.5" PointX="3.5" PointY="1.25" IsExpanded="true" />
+        <EntityTypeShape EntityType="FinancesModel.simpleBudgetRule" Width="2.375" PointX="3.5" PointY="4.75" IsExpanded="true" />
+        <AssociationConnector Association="FinancesModel.fk_simpleBudgetRule_simpleBudget" ManuallyRouted="false" />
+        <AssociationConnector Association="FinancesModel.sbCalcActual_expected_fk" ManuallyRouted="false" />
+        <AssociationConnector Association="FinancesModel.FK_simpleBudgetExpected_simpleBudget_simpleBudgetId" />
+      </Diagram>
+    </edmx:Diagrams>
+  </edmx:Designer>
+</edmx:Edmx>
