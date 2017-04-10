@@ -1,0 +1,206 @@
+﻿@using System.Dynamic;
+
+@{
+
+
+
+
+    budgetReport br = new budgetReport();
+    br.startDate = new DateTime(System.DateTime.Now.Year, 1, 1);
+    br.endDate = new DateTime(System.DateTime.Now.Year, 12, 31);
+    br.density = "month";
+    br.metric = "expected";
+
+    var fe = new FinancesEntities();
+
+    //var res = fe.simpleBudgets.Where(x => x.label3 !="").Select(
+    //        s =>
+    //          new { s.label1, s.label2, s.label3, transactionStartDate = s.simpleBudgetExpecteds.Select(se => se.transactionStartDate) }
+
+    //          );
+
+
+    var level3BudgetDetails = (from sb in fe.simpleBudgets
+                               from sbe in sb.simpleBudgetExpecteds
+                               join dd in fe.DimDates on System.Data.Entity.DbFunctions.TruncateTime(sbe.transactionStartDate) equals dd.FullDate
+                               from sbca in sbe.simpleBudgetCalculatedActuals.DefaultIfEmpty()
+                               where br.endDate >= sbe.transactionStartDate && br.startDate <= sbe.transactionEndDate
+                               where System.DateTime.Now >= sbe.effectiveDate && System.DateTime.Now <= sbe.retiredDate
+                               where sb.label3 != null && sb.label3 != ""
+                               select new { sb.label1, sb.label2, sb.label3, expectedAmount = sbe.amount, actualAmount = (sbca.amount == null ? 0 : sbca.amount), sb.sortOrder, sbe.transactionStartDate, sbe.transactionEndDate, dd.ActDate, dd.ActQtr, dd.CalendarYearNumber });
+
+    var level3BudgetSummary = level3BudgetDetails
+        .Select(x => new
+        {
+            x.label1,
+            x.label2,
+            x.label3,
+            x.transactionStartDate,
+            x.transactionEndDate,
+            x.expectedAmount,
+            x.actualAmount,
+            x.sortOrder,
+            x.ActDate,
+            x.ActQtr,
+            x.CalendarYearNumber
+        });
+
+
+    var level2BudgetDetails = (from sb in fe.simpleBudgets
+                               from sbe in sb.simpleBudgetExpecteds
+                               join dd in fe.DimDates on System.Data.Entity.DbFunctions.TruncateTime(sbe.transactionStartDate) equals dd.FullDate
+                               from sbca in sbe.simpleBudgetCalculatedActuals.DefaultIfEmpty()
+                               where br.endDate >= sbe.transactionStartDate && br.startDate <= sbe.transactionEndDate
+                               where System.DateTime.Now >= sbe.effectiveDate && System.DateTime.Now <= sbe.retiredDate
+                               where sb.label2 != null && sb.label2 != ""
+                               select new { sb.label1, sb.label2, expectedAmount = sbe.amount, actualAmount = (sbca.amount == null ? 0 : sbca.amount), sb.sortOrder, sbe.transactionStartDate, sbe.transactionEndDate, dd.ActDate, dd.ActQtr, dd.CalendarYearNumber });
+
+    var level2BudgetSummary = level2BudgetDetails.GroupBy(x => new { x.label1, x.label2, x.transactionStartDate, x.transactionEndDate, x.ActDate, x.ActQtr, x.CalendarYearNumber })
+        .Select(x => new
+        {
+            x.Key.label1,
+            x.Key.label2,
+            label3 = "",
+            x.Key.transactionStartDate,
+            x.Key.transactionEndDate,
+            expectedAmount = x.Sum(k => k.expectedAmount),
+            actualAmount = x.Sum(k => k.actualAmount),
+            sortOrder = x.Max(k => k.sortOrder),
+            x.Key.ActDate,
+            x.Key.ActQtr,
+            x.Key.CalendarYearNumber
+
+        });
+
+
+
+    var level1BudgetDetails = (from sb in fe.simpleBudgets
+                               from sbe in sb.simpleBudgetExpecteds
+                               join dd in fe.DimDates on System.Data.Entity.DbFunctions.TruncateTime(sbe.transactionStartDate) equals dd.FullDate
+                               from sbca in sbe.simpleBudgetCalculatedActuals.DefaultIfEmpty()
+                               where br.endDate >= sbe.transactionStartDate && br.startDate <= sbe.transactionEndDate
+                               where System.DateTime.Now >= sbe.effectiveDate && System.DateTime.Now <= sbe.retiredDate
+                               where sb.label1 != null && sb.label1 != ""
+                               select new { sb.label1, expectedAmount = sbe.amount, actualAmount = (sbca.amount == null ? 0 : sbca.amount), sb.sortOrder, sbe.transactionStartDate, sbe.transactionEndDate, dd.ActDate, dd.ActQtr, dd.CalendarYearNumber });
+
+
+    var level1BudgetSummary = level1BudgetDetails.GroupBy(x => new { x.label1, x.transactionStartDate, x.transactionEndDate, x.ActDate, x.ActQtr, x.CalendarYearNumber })
+     .Select(x => new
+     {
+         x.Key.label1,
+         label2 = "",
+         label3 = "",
+         x.Key.transactionStartDate,
+         x.Key.transactionEndDate,
+         expectedAmount = x.Sum(k => k.expectedAmount),
+         actualAmount = x.Sum(k => k.actualAmount),
+         sortOrder = x.Max(k => k.sortOrder),
+         x.Key.ActDate,
+         x.Key.ActQtr,
+         x.Key.CalendarYearNumber
+
+     });
+
+
+    var allBudgetSummary = level1BudgetSummary.Union(level2BudgetSummary.Union(level3BudgetSummary)).OrderBy(x => x.sortOrder).OrderBy(x => x.label3 == "" ? (x.label2 == "" ? 2 : 1) : (x.label2 == "" ? 1 : 0));
+
+    var classifiers = allBudgetSummary.Select(x => new { x.label1, x.label2, x.label3, x.sortOrder }).Distinct();
+    var result = new List<dynamic>();
+
+    if (br.density == "month")
+    {
+        var pivots = allBudgetSummary.Select(x => new { x.ActDate }).Distinct();
+        foreach (var c in classifiers)
+        {
+            var row = new ExpandoObject() as IDictionary<string, Object>;
+            row.Add("label1", c.label1);
+            row.Add("label2", c.label2);
+            row.Add("label3", c.label3);
+            row.Add("sortOrder", c.sortOrder);
+            foreach (var p in pivots)
+            {
+                var value =
+                    allBudgetSummary.Where(x => x.label1 == c.label1 && x.label2 == c.label2 && x.label3 == c.label3 && x.ActDate == p.ActDate).
+                    GroupBy(x => new { x.label1, x.label2, x.label3, x.sortOrder, x.ActDate }).
+                    Select(x => new { expectedAmount = x.Sum(k => k.expectedAmount), actualAmount = x.Sum(k => k.actualAmount) }).ToList()[0];
+                row.Add(p.ActDate, br.metric == "actual" ? value.actualAmount : value.expectedAmount);
+            }
+            result.Add(row);
+        }
+    }
+
+
+    if (br.density == "quarter")
+    {
+        var pivots = allBudgetSummary.Select(x => new { x.ActQtr }).Distinct();
+        foreach (var c in classifiers)
+        {
+            var row = new ExpandoObject() as IDictionary<string, Object>;
+            row.Add("label1", c.label1);
+            row.Add("label2", c.label2);
+            row.Add("label3", c.label3);
+            row.Add("sortOrder", c.sortOrder);
+            foreach (var p in pivots)
+            {
+                var value =
+                    allBudgetSummary.Where(x => x.label1 == c.label1 && x.label2 == c.label2 && x.label3 == c.label3 && x.ActQtr == p.ActQtr).
+                    GroupBy(x => new { x.label1, x.label2, x.label3, x.sortOrder, x.ActQtr }).
+                    Select(x => new { expectedAmount = x.Sum(k => k.expectedAmount), actualAmount = x.Sum(k => k.actualAmount) }).ToList()[0];
+                row.Add(p.ActQtr, br.metric == "actual" ? value.actualAmount : value.expectedAmount);
+            }
+            result.Add(row);
+        }
+    }
+
+    if (br.density == "year")
+    {
+        var pivots = allBudgetSummary.Select(x => new { x.CalendarYearNumber }).Distinct();
+        foreach (var c in classifiers)
+        {
+            var row = new ExpandoObject() as IDictionary<string, Object>;
+            row.Add("label1", c.label1);
+            row.Add("label2", c.label2);
+            row.Add("label3", c.label3);
+            row.Add("sortOrder", c.sortOrder);
+            foreach (var p in pivots)
+            {
+                var value =
+                    allBudgetSummary.Where(x => x.label1 == c.label1 && x.label2 == c.label2 && x.label3 == c.label3 && x.CalendarYearNumber == p.CalendarYearNumber).
+                    GroupBy(x => new { x.label1, x.label2, x.label3, x.sortOrder, x.CalendarYearNumber }).
+                    Select(x => new { expectedAmount = x.Sum(k => k.expectedAmount), actualAmount = x.Sum(k => k.actualAmount) }).ToList()[0];
+                row.Add(p.CalendarYearNumber.ToString(), br.metric == "actual" ? value.actualAmount : value.expectedAmount);
+            }
+            result.Add(row);
+        }
+    }
+
+    //new { x.sortOrder, x.label3 == "" ? (x.label2 == "" ? 2 : 1) : (x.label2 == "" ? 1 : 0) }
+
+    WebGrid wg = new WebGrid(result.OrderBy(x => x.sortOrder).ThenBy(x => x.label3 == "" ? (x.label2 == "" ? 2 : 1) : (x.label2 == "" ? 1 : 0) ), rowsPerPage: 50);
+
+    /* @wg.GetHtml(columns: wg.Columns(
+                 wg.Column("label1", "Income/Expense")
+                 , wg.Column("label2", "Budget")
+                 , wg.Column("label3", "SubBudget")
+                 , wg.Column("expectedAmount", "Budgeted Amount", format: (item) => String.Format("{0:C2}", item.expectedAmount))
+                 , wg.Column("actualAmount", "Actual Amount", format: (item) => String.Format("{0:C2}", item.actualAmount))
+                 //  , wg.Column("transactionStartDate", "Start Date")
+                 //  , wg.Column("transactionEndDate", "End Date")
+                 , wg.Column("ActDate")
+                 , wg.Column("ActQtr")
+                 , wg.Column("CalendarYearNumber")
+                 )
+             )
+*/
+}
+<!DOCTYPE html>
+<html>
+<head>
+    <title></title>
+</head>
+<body>
+    @wg.GetHtml()
+    
+       
+</body>
+</html>

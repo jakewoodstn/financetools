@@ -5,6 +5,44 @@
     <!-- SSDL content -->
     <edmx:StorageModels>
     <Schema Namespace="FinancesModel.Store" Provider="System.Data.SqlClient" ProviderManifestToken="2012" Alias="Self" xmlns:store="http://schemas.microsoft.com/ado/2007/12/edm/EntityStoreSchemaGenerator" xmlns:customannotation="http://schemas.microsoft.com/ado/2013/11/edm/customannotation" xmlns="http://schemas.microsoft.com/ado/2009/11/edm/ssdl">
+        <EntityType Name="DimDate">
+          <Key>
+            <PropertyRef Name="DateSK" />
+          </Key>
+          <Property Name="DateSK" Type="int" Nullable="false" />
+          <Property Name="FullDate" Type="datetime" Nullable="false" />
+          <Property Name="ActDate" Type="varchar" MaxLength="6" Nullable="false" />
+          <Property Name="ActQtr" Type="varchar" MaxLength="6" Nullable="false" />
+          <Property Name="Day" Type="tinyint" Nullable="false" />
+          <Property Name="DaySuffix" Type="varchar" MaxLength="4" Nullable="false" />
+          <Property Name="DayOfWeek" Type="varchar" MaxLength="9" Nullable="false" />
+          <Property Name="DayOfWeekNumber" Type="int" Nullable="false" />
+          <Property Name="DayOfWeekInMonth" Type="tinyint" Nullable="false" />
+          <Property Name="DayOfYearNumber" Type="int" Nullable="false" />
+          <Property Name="WeekOfYearNumber" Type="tinyint" Nullable="false" />
+          <Property Name="WeekOfMonthNumber" Type="tinyint" Nullable="false" />
+          <Property Name="CalendarMonthNumber" Type="tinyint" Nullable="false" />
+          <Property Name="CalendarMonthName" Type="varchar" MaxLength="9" Nullable="false" />
+          <Property Name="CalendarQuarterNumber" Type="tinyint" Nullable="false" />
+          <Property Name="CalendarQuarterName" Type="varchar" MaxLength="6" Nullable="false" />
+          <Property Name="CalendarYearNumber" Type="int" Nullable="false" />
+          <Property Name="StandardDate" Type="varchar" MaxLength="10" Nullable="false" />
+          <Property Name="FirstDayOfMonth" Type="date" Nullable="false" />
+          <Property Name="LastDayOfMonth" Type="date" Nullable="false" />
+          <Property Name="FirstDayOfQuarter" Type="date" Nullable="false" />
+          <Property Name="LastDayOfQuarter" Type="date" Nullable="false" />
+          <Property Name="FirstDayOfYear" Type="date" Nullable="false" />
+          <Property Name="LastDayOfYear" Type="date" Nullable="false" />
+          <Property Name="WeekDayFlag" Type="bit" Nullable="false" />
+          <Property Name="OpenFlag" Type="bit" Nullable="false" />
+          <Property Name="PaydayFlag" Type="tinyint" Nullable="false" />
+          <Property Name="FirstDayOfCalendarMonthFlag" Type="bit" Nullable="false" />
+          <Property Name="LastDayOfCalendarMonthFlag" Type="bit" Nullable="false" />
+          <Property Name="HolidayFlag" Type="bit" Nullable="false" />
+          <Property Name="HolidayText" Type="varchar" MaxLength="50" />
+          <Property Name="ActWeek" Type="varchar" MaxLength="7" />
+          <Property Name="semiAnnum" Type="varchar" MaxLength="6" />
+        </EntityType>
         <EntityType Name="simpleBudget">
           <Key>
             <PropertyRef Name="simpleBudgetId" />
@@ -102,6 +140,7 @@
           <Parameter Name="sendMessage" Type="int" Mode="In" />
         </Function>
         <EntityContainer Name="FinancesModelStoreContainer">
+          <EntitySet Name="DimDate" EntityType="Self.DimDate" Schema="dbo" store:Type="Tables" />
           <EntitySet Name="simpleBudget" EntityType="Self.simpleBudget" Schema="dbo" store:Type="Tables" />
           <EntitySet Name="simpleBudgetCalculatedActual" EntityType="Self.simpleBudgetCalculatedActual" Schema="dbo" store:Type="Tables" />
           <EntitySet Name="simpleBudgetExpected" EntityType="Self.simpleBudgetExpected" Schema="dbo" store:Type="Tables" />
@@ -230,6 +269,7 @@
             <Parameter Name="endDate" Mode="In" Type="DateTime" />
             <Parameter Name="sendMessage" Mode="In" Type="Int32" />
           </FunctionImport>
+          <EntitySet Name="DimDates" EntityType="FinancesModel.DimDate" />
         </EntityContainer>
         <Association Name="FK_simpleBudgetExpected_simpleBudget_simpleBudgetId">
           <End Type="FinancesModel.simpleBudget" Role="simpleBudget" Multiplicity="0..1" />
@@ -243,6 +283,44 @@
             </Dependent>
           </ReferentialConstraint>
         </Association>
+        <EntityType Name="DimDate">
+          <Key>
+            <PropertyRef Name="DateSK" />
+          </Key>
+          <Property Name="DateSK" Type="Int32" Nullable="false" />
+          <Property Name="FullDate" Type="DateTime" Nullable="false" Precision="3" />
+          <Property Name="ActDate" Type="String" Nullable="false" MaxLength="6" FixedLength="false" Unicode="false" />
+          <Property Name="ActQtr" Type="String" Nullable="false" MaxLength="6" FixedLength="false" Unicode="false" />
+          <Property Name="Day" Type="Byte" Nullable="false" />
+          <Property Name="DaySuffix" Type="String" Nullable="false" MaxLength="4" FixedLength="false" Unicode="false" />
+          <Property Name="DayOfWeek" Type="String" Nullable="false" MaxLength="9" FixedLength="false" Unicode="false" />
+          <Property Name="DayOfWeekNumber" Type="Int32" Nullable="false" />
+          <Property Name="DayOfWeekInMonth" Type="Byte" Nullable="false" />
+          <Property Name="DayOfYearNumber" Type="Int32" Nullable="false" />
+          <Property Name="WeekOfYearNumber" Type="Byte" Nullable="false" />
+          <Property Name="WeekOfMonthNumber" Type="Byte" Nullable="false" />
+          <Property Name="CalendarMonthNumber" Type="Byte" Nullable="false" />
+          <Property Name="CalendarMonthName" Type="String" Nullable="false" MaxLength="9" FixedLength="false" Unicode="false" />
+          <Property Name="CalendarQuarterNumber" Type="Byte" Nullable="false" />
+          <Property Name="CalendarQuarterName" Type="String" Nullable="false" MaxLength="6" FixedLength="false" Unicode="false" />
+          <Property Name="CalendarYearNumber" Type="Int32" Nullable="false" />
+          <Property Name="StandardDate" Type="String" Nullable="false" MaxLength="10" FixedLength="false" Unicode="false" />
+          <Property Name="FirstDayOfMonth" Type="DateTime" Nullable="false" Precision="0" />
+          <Property Name="LastDayOfMonth" Type="DateTime" Nullable="false" Precision="0" />
+          <Property Name="FirstDayOfQuarter" Type="DateTime" Nullable="false" Precision="0" />
+          <Property Name="LastDayOfQuarter" Type="DateTime" Nullable="false" Precision="0" />
+          <Property Name="FirstDayOfYear" Type="DateTime" Nullable="false" Precision="0" />
+          <Property Name="LastDayOfYear" Type="DateTime" Nullable="false" Precision="0" />
+          <Property Name="WeekDayFlag" Type="Boolean" Nullable="false" />
+          <Property Name="OpenFlag" Type="Boolean" Nullable="false" />
+          <Property Name="PaydayFlag" Type="Byte" Nullable="false" />
+          <Property Name="FirstDayOfCalendarMonthFlag" Type="Boolean" Nullable="false" />
+          <Property Name="LastDayOfCalendarMonthFlag" Type="Boolean" Nullable="false" />
+          <Property Name="HolidayFlag" Type="Boolean" Nullable="false" />
+          <Property Name="HolidayText" Type="String" MaxLength="50" FixedLength="false" Unicode="false" />
+          <Property Name="ActWeek" Type="String" MaxLength="7" FixedLength="false" Unicode="false" />
+          <Property Name="semiAnnum" Type="String" MaxLength="6" FixedLength="false" Unicode="false" />
+        </EntityType>
       </Schema>
     </edmx:ConceptualModels>
     <!-- C-S mapping content -->
@@ -309,6 +387,45 @@
             </EntityTypeMapping>
           </EntitySetMapping>
           <FunctionImportMapping FunctionImportName="materializeSimpleBudgetActual" FunctionName="FinancesModel.Store.materializeSimpleBudgetActual" />
+          <EntitySetMapping Name="DimDates">
+            <EntityTypeMapping TypeName="FinancesModel.DimDate">
+              <MappingFragment StoreEntitySet="DimDate">
+                <ScalarProperty Name="semiAnnum" ColumnName="semiAnnum" />
+                <ScalarProperty Name="ActWeek" ColumnName="ActWeek" />
+                <ScalarProperty Name="HolidayText" ColumnName="HolidayText" />
+                <ScalarProperty Name="HolidayFlag" ColumnName="HolidayFlag" />
+                <ScalarProperty Name="LastDayOfCalendarMonthFlag" ColumnName="LastDayOfCalendarMonthFlag" />
+                <ScalarProperty Name="FirstDayOfCalendarMonthFlag" ColumnName="FirstDayOfCalendarMonthFlag" />
+                <ScalarProperty Name="PaydayFlag" ColumnName="PaydayFlag" />
+                <ScalarProperty Name="OpenFlag" ColumnName="OpenFlag" />
+                <ScalarProperty Name="WeekDayFlag" ColumnName="WeekDayFlag" />
+                <ScalarProperty Name="LastDayOfYear" ColumnName="LastDayOfYear" />
+                <ScalarProperty Name="FirstDayOfYear" ColumnName="FirstDayOfYear" />
+                <ScalarProperty Name="LastDayOfQuarter" ColumnName="LastDayOfQuarter" />
+                <ScalarProperty Name="FirstDayOfQuarter" ColumnName="FirstDayOfQuarter" />
+                <ScalarProperty Name="LastDayOfMonth" ColumnName="LastDayOfMonth" />
+                <ScalarProperty Name="FirstDayOfMonth" ColumnName="FirstDayOfMonth" />
+                <ScalarProperty Name="StandardDate" ColumnName="StandardDate" />
+                <ScalarProperty Name="CalendarYearNumber" ColumnName="CalendarYearNumber" />
+                <ScalarProperty Name="CalendarQuarterName" ColumnName="CalendarQuarterName" />
+                <ScalarProperty Name="CalendarQuarterNumber" ColumnName="CalendarQuarterNumber" />
+                <ScalarProperty Name="CalendarMonthName" ColumnName="CalendarMonthName" />
+                <ScalarProperty Name="CalendarMonthNumber" ColumnName="CalendarMonthNumber" />
+                <ScalarProperty Name="WeekOfMonthNumber" ColumnName="WeekOfMonthNumber" />
+                <ScalarProperty Name="WeekOfYearNumber" ColumnName="WeekOfYearNumber" />
+                <ScalarProperty Name="DayOfYearNumber" ColumnName="DayOfYearNumber" />
+                <ScalarProperty Name="DayOfWeekInMonth" ColumnName="DayOfWeekInMonth" />
+                <ScalarProperty Name="DayOfWeekNumber" ColumnName="DayOfWeekNumber" />
+                <ScalarProperty Name="DayOfWeek" ColumnName="DayOfWeek" />
+                <ScalarProperty Name="DaySuffix" ColumnName="DaySuffix" />
+                <ScalarProperty Name="Day" ColumnName="Day" />
+                <ScalarProperty Name="ActQtr" ColumnName="ActQtr" />
+                <ScalarProperty Name="ActDate" ColumnName="ActDate" />
+                <ScalarProperty Name="FullDate" ColumnName="FullDate" />
+                <ScalarProperty Name="DateSK" ColumnName="DateSK" />
+              </MappingFragment>
+            </EntityTypeMapping>
+          </EntitySetMapping>
         </EntityContainerMapping>
       </Mapping>
     </edmx:Mappings>

@@ -10,6 +10,43 @@
 using System;
 using System.Collections.Generic;
 
+public partial class DimDate
+{
+    public int DateSK { get; set; }
+    public System.DateTime FullDate { get; set; }
+    public string ActDate { get; set; }
+    public string ActQtr { get; set; }
+    public byte Day { get; set; }
+    public string DaySuffix { get; set; }
+    public string DayOfWeek { get; set; }
+    public int DayOfWeekNumber { get; set; }
+    public byte DayOfWeekInMonth { get; set; }
+    public int DayOfYearNumber { get; set; }
+    public byte WeekOfYearNumber { get; set; }
+    public byte WeekOfMonthNumber { get; set; }
+    public byte CalendarMonthNumber { get; set; }
+    public string CalendarMonthName { get; set; }
+    public byte CalendarQuarterNumber { get; set; }
+    public string CalendarQuarterName { get; set; }
+    public int CalendarYearNumber { get; set; }
+    public string StandardDate { get; set; }
+    public System.DateTime FirstDayOfMonth { get; set; }
+    public System.DateTime LastDayOfMonth { get; set; }
+    public System.DateTime FirstDayOfQuarter { get; set; }
+    public System.DateTime LastDayOfQuarter { get; set; }
+    public System.DateTime FirstDayOfYear { get; set; }
+    public System.DateTime LastDayOfYear { get; set; }
+    public bool WeekDayFlag { get; set; }
+    public bool OpenFlag { get; set; }
+    public byte PaydayFlag { get; set; }
+    public bool FirstDayOfCalendarMonthFlag { get; set; }
+    public bool LastDayOfCalendarMonthFlag { get; set; }
+    public bool HolidayFlag { get; set; }
+    public string HolidayText { get; set; }
+    public string ActWeek { get; set; }
+    public string semiAnnum { get; set; }
+}
+
 public partial class simpleBudget
 {
     [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Usage", "CA2214:DoNotCallOverridableMethodsInConstructors")]
