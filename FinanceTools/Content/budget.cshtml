@@ -51,7 +51,7 @@
     depths.Add("subbudget", "Subbudgets");
 
     budgetReport br = new budgetReport();
-    br.startDate = Request["startDate"] == null ? System.DateTime.Parse("1/1/" + System.DateTime.Now.Year) : System.DateTime.Parse(Request["startDate"]);
+    br.startDate = Request["startDate"] == null ? System.DateTime.Parse(System.DateTime.Now.Month + "/1/" + System.DateTime.Now.Year) : System.DateTime.Parse(Request["startDate"]);
     br.endDate = Request["endDate"] == null ? System.DateTime.Today : System.DateTime.Parse(Request["endDate"]);
     br.density = (Request["densitySelect"] == "" || Request["densitySelect"] == null) ? "month" : densities.Where(i => i.Key == Request["densitySelect"]).First().Key;
     br.metric = (Request["metricSelect"] == null || Request["metricSelect"] == "") ? "actual" : metrics.Where(i => i.Key == Request["metricSelect"]).First().Key;

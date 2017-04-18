@@ -9,14 +9,11 @@ using System.Data;
 /// </summary>
 public class budgetReport
 {
-    string _density;
-    string _metric;
-    string _depth;
-
+ 
     public budgetReport()
     {
         asOfDate = System.DateTime.Now;
-        _density = "month";
+        density = "month";
 
     }
 
