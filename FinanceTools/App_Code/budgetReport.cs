@@ -7,12 +7,16 @@ using System.Data;
 /// <summary>
 /// Summary description for budgetReport
 /// </summary>
-public class budgetReport 
+public class budgetReport
 {
+    string _density;
+    string _metric;
+    string _depth;
+
     public budgetReport()
     {
         asOfDate = System.DateTime.Now;
-        density ="Monthly";
+        _density = "month";
 
     }
 
@@ -21,8 +25,5 @@ public class budgetReport
     public DateTime asOfDate { get; set; }
     public string density { get; set; }
     public string metric { get; set; }
-
-
-
-
+    public string depth { get; set; }
 }

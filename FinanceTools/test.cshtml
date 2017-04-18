@@ -1,15 +1,61 @@
 ﻿@using System.Dynamic;
+@functions{
+    dynamic expandoDynamicLookupProperty(dynamic exo, string propertyName)
+    {
+        var dict = (IDictionary<string, object>)exo;
+        object returner;
+        var success = dict.TryGetValue(propertyName, out returner);
+        return returner;
+    }
 
+}
+
+@section scripts{
+    <script type="text/javascript">
+        function init() {
+            $('.foldTrigger').click(foldHandler);
+            //$('.foldable').find('.folds').hide();
+        }
+
+        function foldHandler(evt) {
+            evt.preventDefault();
+            targ = $(this).parent('.foldable');
+            foldToggler(targ);
+        }
+
+        function foldToggler(targ) {
+            $(targ).find('.folds').slideToggle();
+        }
+
+
+        $(document).ready(init);
+    </script>
+}
 @{
 
+    Layout = "~/Content/shared/_entry2Layout.cshtml";
 
+    Dictionary<string, string> densities = new Dictionary<string, string>();
+    densities.Add("month", "Monthly");
+    densities.Add("quarter", "Quarterly");
+    densities.Add("year", "Anually");
 
+    Dictionary<string, string> metrics = new Dictionary<string, string>();
+    metrics.Add("actual", "Actual Spending");
+    metrics.Add("expected", "Expected Budget");
+    metrics.Add("remaining", "Remains to Spend");
+
+    Dictionary<string, string> depths = new Dictionary<string, string>();
+    depths.Add("incomeExpense", "High Level");
+    depths.Add("budget", "Budgets");
+    depths.Add("subbudget", "Subbudgets");
 
     budgetReport br = new budgetReport();
-    br.startDate = new DateTime(System.DateTime.Now.Year, 1, 1);
-    br.endDate = new DateTime(System.DateTime.Now.Year, 12, 31);
-    br.density = "month";
-    br.metric = "expected";
+    br.startDate = Request["startDate"] == null ? System.DateTime.Parse("1/1/" + System.DateTime.Now.Year) : System.DateTime.Parse(Request["startDate"]);
+    br.endDate = Request["endDate"] == null ? System.DateTime.Today : System.DateTime.Parse(Request["endDate"]);
+    br.density = (Request["densitySelect"] == "" || Request["densitySelect"] == null) ? "month" : densities.Where(i => i.Key == Request["densitySelect"]).First().Key;
+    br.metric = (Request["metricSelect"] == null || Request["metricSelect"] == "") ? "actual" : metrics.Where(i => i.Key == Request["metricSelect"]).First().Key;
+    br.depth = (Request["depthSelect"] == null || Request["depthSelect"] == "") ? "subbudget" : depths.Where(i => i.Key == Request["depthSelect"]).First().Key;
 
     var fe = new FinancesEntities();
 
@@ -102,14 +148,35 @@
      });
 
 
-    var allBudgetSummary = level1BudgetSummary.Union(level2BudgetSummary.Union(level3BudgetSummary)).OrderBy(x => x.sortOrder).OrderBy(x => x.label3 == "" ? (x.label2 == "" ? 2 : 1) : (x.label2 == "" ? 1 : 0));
+    var unionSource = br.depth == "budget" ? level2BudgetSummary : br.depth == "subbudget" ? level2BudgetSummary.Union(level3BudgetSummary) : level1BudgetSummary;
+    var allBudgetSummary = level1BudgetSummary.Union(unionSource).OrderBy(x => x.sortOrder).OrderBy(x => x.label3 == "" ? (x.label2 == "" ? 2 : 1) : (x.label2 == "" ? 1 : 0));
 
+    WebGrid wg = new WebGrid(canPage: false);
+
+    List<WebGridColumn> wgCols = new List<WebGridColumn>();
+
+    wgCols.Add(wg.Column("label1", "Income/Expense"));
+    wgCols.Add(wg.Column("label2", "Budget"));
+    wgCols.Add(wg.Column("label3", "SubBudget"));
     var classifiers = allBudgetSummary.Select(x => new { x.label1, x.label2, x.label3, x.sortOrder }).Distinct();
     var result = new List<dynamic>();
 
     if (br.density == "month")
     {
         var pivots = allBudgetSummary.Select(x => new { x.ActDate }).Distinct();
+        foreach (var p in pivots)
+        {
+            wgCols.Add(
+                wg.Column(
+                    columnName: p.ActDate,
+                    header: p.ActDate + " (" + br.metric + ")",
+                    format: (item) =>
+                        String.Format("{0:C2}", expandoDynamicLookupProperty(item.Value, p.ActDate))
+                    )
+            );
+        }
+
+
         foreach (var c in classifiers)
         {
             var row = new ExpandoObject() as IDictionary<string, Object>;
@@ -122,8 +189,17 @@
                 var value =
                     allBudgetSummary.Where(x => x.label1 == c.label1 && x.label2 == c.label2 && x.label3 == c.label3 && x.ActDate == p.ActDate).
                     GroupBy(x => new { x.label1, x.label2, x.label3, x.sortOrder, x.ActDate }).
-                    Select(x => new { expectedAmount = x.Sum(k => k.expectedAmount), actualAmount = x.Sum(k => k.actualAmount) }).ToList()[0];
-                row.Add(p.ActDate, br.metric == "actual" ? value.actualAmount : value.expectedAmount);
+                    Select(x => new { expectedAmount = x.Sum(k => k.expectedAmount), actualAmount = x.Sum(k => k.actualAmount), remainingAmount = x.Sum(k => k.actualAmount - k.expectedAmount) }).ToList()[0];
+                var displayValue = (decimal)0;
+                switch (br.metric)
+                {
+                    case "actual": displayValue = value.actualAmount; break;
+                    case "expected": displayValue = (decimal)value.expectedAmount; break;
+                    case "remaining": displayValue = (decimal)value.remainingAmount; break;
+                    default: break;
+                }
+
+                row.Add(p.ActDate, displayValue);
             }
             result.Add(row);
         }
@@ -133,6 +209,18 @@
     if (br.density == "quarter")
     {
         var pivots = allBudgetSummary.Select(x => new { x.ActQtr }).Distinct();
+        foreach (var p in pivots)
+        {
+            wgCols.Add(
+                wg.Column(
+                    columnName: p.ActQtr,
+                    header: p.ActQtr + " (" + br.metric + ")",
+                    format: (item) =>
+                        String.Format("{0:C2}", expandoDynamicLookupProperty(item.Value, p.ActQtr))
+                    )
+            );
+        }
+
         foreach (var c in classifiers)
         {
             var row = new ExpandoObject() as IDictionary<string, Object>;
@@ -145,16 +233,38 @@
                 var value =
                     allBudgetSummary.Where(x => x.label1 == c.label1 && x.label2 == c.label2 && x.label3 == c.label3 && x.ActQtr == p.ActQtr).
                     GroupBy(x => new { x.label1, x.label2, x.label3, x.sortOrder, x.ActQtr }).
-                    Select(x => new { expectedAmount = x.Sum(k => k.expectedAmount), actualAmount = x.Sum(k => k.actualAmount) }).ToList()[0];
-                row.Add(p.ActQtr, br.metric == "actual" ? value.actualAmount : value.expectedAmount);
+                    Select(x => new { expectedAmount = x.Sum(k => k.expectedAmount), actualAmount = x.Sum(k => k.actualAmount), remainingAmount = x.Sum(k => k.actualAmount - k.expectedAmount) }).ToList()[0];
+                var displayValue = (decimal)0;
+                switch (br.metric)
+                {
+                    case "actual": displayValue = value.actualAmount; break;
+                    case "expected": displayValue = (decimal)value.expectedAmount; break;
+                    case "remaining": displayValue = (decimal)value.remainingAmount; break;
+                    default: break;
+                }
+
+                row.Add(p.ActQtr, displayValue);
             }
             result.Add(row);
         }
     }
 
+
     if (br.density == "year")
     {
         var pivots = allBudgetSummary.Select(x => new { x.CalendarYearNumber }).Distinct();
+        foreach (var p in pivots)
+        {
+            wgCols.Add(
+                wg.Column(
+                    columnName: p.CalendarYearNumber.ToString(),
+                    header: p.CalendarYearNumber.ToString() + " (" + br.metric + ")",
+                    format: (item) =>
+                        String.Format("{0:C2}", expandoDynamicLookupProperty(item.Value, p.CalendarYearNumber.ToString()))
+                    )
+            );
+        }
+
         foreach (var c in classifiers)
         {
             var row = new ExpandoObject() as IDictionary<string, Object>;
@@ -167,40 +277,112 @@
                 var value =
                     allBudgetSummary.Where(x => x.label1 == c.label1 && x.label2 == c.label2 && x.label3 == c.label3 && x.CalendarYearNumber == p.CalendarYearNumber).
                     GroupBy(x => new { x.label1, x.label2, x.label3, x.sortOrder, x.CalendarYearNumber }).
-                    Select(x => new { expectedAmount = x.Sum(k => k.expectedAmount), actualAmount = x.Sum(k => k.actualAmount) }).ToList()[0];
-                row.Add(p.CalendarYearNumber.ToString(), br.metric == "actual" ? value.actualAmount : value.expectedAmount);
+                    Select(x => new { expectedAmount = x.Sum(k => k.expectedAmount), actualAmount = x.Sum(k => k.actualAmount), remainingAmount = x.Sum(k => k.actualAmount - k.expectedAmount) }).ToList()[0];
+                var displayValue = (decimal)0;
+                switch (br.metric)
+                {
+                    case "actual": displayValue = value.actualAmount; break;
+                    case "expected": displayValue = (decimal)value.expectedAmount; break;
+                    case "remaining": displayValue = (decimal)value.remainingAmount; break;
+                    default: break;
+                }
+
+                row.Add(p.CalendarYearNumber.ToString(), displayValue);
             }
             result.Add(row);
         }
     }
 
-    //new { x.sortOrder, x.label3 == "" ? (x.label2 == "" ? 2 : 1) : (x.label2 == "" ? 1 : 0) }
+    if (br.depth == "budget") { wgCols.Remove(wgCols[2]); }
+    if (br.depth == "incomeExpense") { wgCols.Remove(wgCols[2]); wgCols.Remove(wgCols[1]); }
 
-    WebGrid wg = new WebGrid(result.OrderBy(x => x.sortOrder).ThenBy(x => x.label3 == "" ? (x.label2 == "" ? 2 : 1) : (x.label2 == "" ? 1 : 0) ), rowsPerPage: 50);
+    wg.Bind(result.OrderBy(x => x.sortOrder).ThenBy(x => x.label3 == "" ? (x.label2 == "" ? 2 : 1) : (x.label2 == "" ? 1 : 0)));
 
-    /* @wg.GetHtml(columns: wg.Columns(
-                 wg.Column("label1", "Income/Expense")
-                 , wg.Column("label2", "Budget")
-                 , wg.Column("label3", "SubBudget")
-                 , wg.Column("expectedAmount", "Budgeted Amount", format: (item) => String.Format("{0:C2}", item.expectedAmount))
-                 , wg.Column("actualAmount", "Actual Amount", format: (item) => String.Format("{0:C2}", item.actualAmount))
-                 //  , wg.Column("transactionStartDate", "Start Date")
-                 //  , wg.Column("transactionEndDate", "End Date")
-                 , wg.Column("ActDate")
-                 , wg.Column("ActQtr")
-                 , wg.Column("CalendarYearNumber")
-                 )
-             )
-*/
+
 }
 <!DOCTYPE html>
 <html>
 <head>
     <title></title>
+    <link type="text/css" rel="stylesheet" href="~/Content/transcat.css" />
 </head>
 <body>
-    @wg.GetHtml()
-    
-       
+    <div class="row">
+        <div class="col-sm-2">
+            <div class="affix">
+                <form id="parameterForm" name="parameterForm" method="post">
+                    <div class="row">
+
+
+                        <div id="parameters" class="col-xs-12 foldable">
+                            <div class="row foldTrigger">
+                                <div class="col-xs-12">
+                                    @Html.Label("Report Parameters", new { @class = "foldTrigger", id = "mainLabel", name = "mainLabel" })
+                                </div>
+                            </div>
+                            <div class="row folds dropTiny">
+                                <div class="col-xs-12">
+                                    @Html.Label("Start Date", new { @class = "folds" })
+                                </div>
+                            </div>
+                            <div class="row folds">
+                                <div class="col-xs-12">
+                                    @Html.TextBox("startDate", br.startDate, new { @class = "folds form-control" })
+                                </div>
+                            </div>
+                            <div class="row folds dropTiny">
+                                <div class="col-xs-12">
+                                    @Html.Label("End Date", new { @class = "folds" })
+                                </div>
+                            </div>
+                            <div class="row folds">
+                                <div class="col-xs-12">
+                                    @Html.TextBox("endDate", br.endDate, new { @class = "folds form-control" })
+                                </div>
+                            </div>
+                            <div class="row folds dropTiny">
+                                <div class="col-xs-12">
+                                    @Html.Label("Time Density:", new { @class = "folds" })
+                                </div>
+                            </div>
+                            <div class="row folds">
+                                <div class="col-xs-12">
+                                    @Html.DropDownList("densitySelect", densities.Select(i => new SelectListItem { Text = i.Value.ToString(), Value = i.Key.ToString(), Selected = (i.Key.ToString() == br.density) }), new { @class = "form-control" })
+                                </div>
+                            </div>
+                            <div class="row folds dropTiny">
+                                <div class="col-xs-12">
+                                    @Html.Label("Financial Metric:", new { @class = "folds" })
+                                </div>
+                            </div>
+                            <div class="row folds">
+                                <div class="col-xs-12">
+                                    @Html.DropDownList("metricSelect", metrics.Select(i => new SelectListItem { Text = i.Value.ToString(), Value = i.Key.ToString(), Selected = (i.Key.ToString() == br.metric) }), new { @class = "form-control" })
+                                </div>
+                            </div>
+                            <div class="row folds dropTiny">
+                                <div class="col-xs-12">
+                                    @Html.Label("Grouping Depth:", new { @class = "folds" })
+                                </div>
+                            </div>
+                            <div class="row folds">
+                                <div class="col-xs-12">
+                                    @Html.DropDownList("depthSelect", depths.Select(i => new SelectListItem { Text = i.Value.ToString(), Value = i.Key.ToString(), Selected = (i.Key.ToString() == br.depth) }), new { @class = "form-control" })
+                                </div>
+                            </div>
+                            <div class="row dropSmall folds">
+                                <div class="col-xs-12">
+                                    <input type="button" class="btn btn-primary btn-block" value="Refresh" onclick="$('#parameterForm').submit();" />
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </form>
+            </div>
+        </div>
+        <div class="col-sm-10">
+            @wg.GetHtml(columns: wgCols, tableStyle: "table table-condensed", alternatingRowStyle: "info", selectedRowStyle: "active")
+        </div>
+    </div>
 </body>
 </html>
