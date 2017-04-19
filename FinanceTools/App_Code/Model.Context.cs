@@ -31,7 +31,7 @@ public partial class FinancesEntities : DbContext
     public virtual DbSet<simpleBudgetRule> simpleBudgetRules { get; set; }
     public virtual DbSet<DimDate> DimDates { get; set; }
 
-    public virtual ObjectResult<string> materializeSimpleBudgetActual(Nullable<System.DateTime> startDate, Nullable<System.DateTime> endDate, Nullable<int> sendMessage)
+    public virtual ObjectResult<string> materializeSimpleBudgetActual(Nullable<System.DateTime> startDate, Nullable<System.DateTime> endDate, Nullable<int> sendMessage, Nullable<int> force)
     {
         var startDateParameter = startDate.HasValue ?
             new ObjectParameter("startDate", startDate) :
@@ -45,6 +45,10 @@ public partial class FinancesEntities : DbContext
             new ObjectParameter("sendMessage", sendMessage) :
             new ObjectParameter("sendMessage", typeof(int));
 
-        return ((IObjectContextAdapter)this).ObjectContext.ExecuteFunction<string>("materializeSimpleBudgetActual", startDateParameter, endDateParameter, sendMessageParameter);
+        var forceParameter = force.HasValue ?
+            new ObjectParameter("force", force) :
+            new ObjectParameter("force", typeof(int));
+
+        return ((IObjectContextAdapter)this).ObjectContext.ExecuteFunction<string>("materializeSimpleBudgetActual", startDateParameter, endDateParameter, sendMessageParameter, forceParameter);
     }
 }

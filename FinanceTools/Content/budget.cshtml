@@ -8,6 +8,10 @@
         return returner;
     }
 
+    void refreshActuals(FinancesEntities fc, DateTime startDate, DateTime endDate) {
+        fc.materializeSimpleBudgetActual(startDate, endDate, 1,1);
+    }
+
 }
 
 @section scripts{
@@ -58,6 +62,8 @@
     br.depth = (Request["depthSelect"] == null || Request["depthSelect"] == "") ? "subbudget" : depths.Where(i => i.Key == Request["depthSelect"]).First().Key;
 
     var fe = new FinancesEntities();
+
+    if (Request["whichButton"]=="matButton") { refreshActuals(fe, br.startDate, br.endDate); }
 
     //var res = fe.simpleBudgets.Where(x => x.label3 !="").Select(
     //        s =>
@@ -372,7 +378,17 @@
                             </div>
                             <div class="row dropSmall folds">
                                 <div class="col-xs-12">
-                                    <input type="button" class="btn btn-primary btn-block" value="Refresh" onclick="$('#parameterForm').submit();" />
+                                    <input id="submitButton" name ="submitButton" type="button" class="btn btn-primary btn-block" value="Refresh" onclick="$('#whichButton').val('submitButton'); $('#parameterForm').submit();" />
+                                </div>
+                            </div>
+                            <div class="row dropSmall folds">
+                                <div class="col-xs-12">
+                                    <input id="matButton" name="matButton" type="button" class="btn btn-success btn-block" value="Calculate Actuals" onclick="$('#whichButton').val('matButton'); $('#parameterForm').submit();" />
+                                </div>
+                            </div>
+                            <div class="row dropSmall folds">
+                                <div class="col-xs-12">
+                                    @Html.Hidden("whichButton");
                                 </div>
                             </div>
                         </div>

@@ -138,6 +138,7 @@
           <Parameter Name="startDate" Type="date" Mode="In" />
           <Parameter Name="endDate" Type="date" Mode="In" />
           <Parameter Name="sendMessage" Type="int" Mode="In" />
+          <Parameter Name="force" Type="int" Mode="In" />
         </Function>
         <EntityContainer Name="FinancesModelStoreContainer">
           <EntitySet Name="DimDate" EntityType="Self.DimDate" Schema="dbo" store:Type="Tables" />
@@ -268,6 +269,7 @@
             <Parameter Name="startDate" Mode="In" Type="DateTime" />
             <Parameter Name="endDate" Mode="In" Type="DateTime" />
             <Parameter Name="sendMessage" Mode="In" Type="Int32" />
+            <Parameter Name="force" Mode="In" Type="Int32" />
           </FunctionImport>
           <EntitySet Name="DimDates" EntityType="FinancesModel.DimDate" />
         </EntityContainer>
