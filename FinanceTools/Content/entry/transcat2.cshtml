@@ -107,8 +107,8 @@
         <div class="row"><div class="col-sm-12"><span class="h4">sort:</span></div></div>
         <div class="row">
             <div id="sortDiv" class="col-sm-12 dropTiny">
-                <input type="button" id="sortDate" class="btn btn-primary sortButton " value="Date" />
-                <input type="button" id="sortDesc" class="asc btn btn-primary sortButton sortSelected" value="Payee" />
+                <input type="button" id="sortDate" class="btn btn-primary sortButton sortSelected" value="Date" />
+                <input type="button" id="sortDesc" class="btn btn-primary sortButton" value="Payee" />
                 <input type="button" id="sortCat" class="btn btn-primary sortButton" value="Category" />
                 <input type="button" id="sortAmt" class="btn btn-primary sortButton" value="$" />
             </div>
@@ -176,6 +176,7 @@
                         <input id="splitLineCount" type="hidden" value="-1" />
                         <input id="splitCancButton" class="splitPanelButton btn btn-danger" type="button" value="Cancel" onclick="$('#splitPanel').toggle(false);" />
                         <input id="splitSaveButton" class="splitPanelButton btn btn-success" type="button" value="Save" onclick="saveSplit()" />
+                        <input id="splitDeleteAllButton" class="splitPanelButton btn btn-info btn-pink" type="button" value="Delete All" onclick="deleteAllSplits()" />
                     </div>
                 </div>
             </div>
@@ -202,7 +203,7 @@
                 <div class="row foldTrigger"><div class="col-sm-12"><span class="h4">Payee Mapping:</span></div></div>
                 <div class="row folds dropSmall"><div class="col-lg-5">Typical Mapping:</div><div class="text-right col-lg-7"><button id="typicalMap" class="btn btn-success btn-xs" style="display: none;">&nbsp;</button></div></div>
                 <div class="row folds dropTiny"><div class="col-lg-5"># of Times Used:</div><div class="text-right col-lg-7"><button id="typicalMapObsCt" class="btn btn-success btn-xs" style="display: none;">&nbsp;</button></div></div>
-                <div class="row folds dropSmall"><div class="col-lg-5"><input id="getMapping" onclick="getTypicalMapping()" type="button" class="btn btn-lg btn-info" value="Look up Mapping"></div><div class="col-lg-5"><input id="applyMapping" onclick="applyMapping();" type="button" class="btn btn-lg btn-info" value="Apply Mapping"></div></div>
+                <div class="row folds dropSmall"><div class="col-lg-5"><input id="getMapping" onclick="getTypicalMapping()" type="button" class="btn btn-lg btn-info" value="Look up Mapping"></div><div class="col-lg-5"><input id="applyMapping" onclick="applyMapping();" type="button" class="btn btn-lg btn-info btn-pink" value="Apply Mapping"></div></div>
             </div> 
         </div>
         <div class="row">

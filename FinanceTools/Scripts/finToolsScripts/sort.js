@@ -1,4 +1,4 @@
-var currentSort = { "sortField": "description", "sortDirection": "asc" };
+var currentSort = { "sortField": "accountingDate", "sortDirection": "desc" };
 
 function getSort(index) {
     var sortMap = {

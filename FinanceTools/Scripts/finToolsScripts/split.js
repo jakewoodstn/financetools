@@ -1,15 +1,42 @@
 
+function lineCount() { return $("#splitDetailTable tr:not(.deletedSplitLine)").length - 1; } //Number of Rows minus header row
+function usedLineCount() {
+    var amtCt = lineCount() - $("#splitDetailTable tr:not(.deletedSplitLine)").find(":input").filter("[type='text']").filter("[value='0.00']").length;
+    var catCt = lineCount() - $("#splitDetailTable tr:not(.deletedSplitLine) :selected").filter("[value='0']").length;
+    return amtCt < catCt ? amtCt : catCt;
+
+}
+
+
 function markSplitDeleted(evt) {
     var lineindex = evt.data.lineindex;
     if ($('#splitDetailTable tr[lineindex="' + lineindex + '"]').find('select').attr('splitid') != 0) {
-        $('#splitDetailTable tr[lineindex="' + lineindex + '"]').addClass('deletedSplitLine');
+        $('#splitDetailTable tr[lineindex="' + lineindex + '"]').addClass('deletedSplitLine').hide();
     } else {
         $('#splitDetailTable tr[lineindex="' + lineindex + '"]').remove();
     }
     changeSplit();
 }
 
+function deleteAllSplits() {
+    $.ajax({
+        type: 'POST',
+        url: '/Content/shared/dataRetrieveJSON.cshtml',
+        data: {
+            "procedure": 'deleteAllSplits',
+            "var0": $('#splitPanel').attr('tranid'),
+            "ct": 1
+        },
+        dataType: 'html'
+    });
+    $("#splitPanel").hide();
+    $('#Category' + $('#splitPanel').attr('tranid')).html('<span class="btn btn-sm btn-info"> Uncategorized</span><img class="editButton indelible tinyButton" src="/Images/split.png" name="split" style="right: 4px; display: none;">');
+
+    redraw($("#splitPanel").attr('tranid'));
+}
+
 function saveSplit() {
+
     var test = $("#splitPanel").find('.unbalanced');
     if (test.length > 0) { alert('Cannot save unbalanced split'); return; }
 
@@ -51,7 +78,10 @@ function saveSplit() {
     else if (usedLineCount() == 1) { $('#splitPanel').toggle(false); }
     else { $('#splitPanel').toggle(false); }
     $('#splitPanel').toggle(false);
-    $('#Category' + $('#splitPanel').attr('tranid')).text('Split');
+    $('#Category' + $('#splitPanel').attr('tranid')).html('<span class="btn btn-sm btn-primary"> Split</span><img class="editButton indelible tinyButton" src="/Images/split.png" name="split" style="right: 4px; display: none;">');
+
+    redraw($("#splitPanel").attr('tranid'));
+
 }
 
 function addSplit() {
@@ -73,7 +103,7 @@ function changeSplit() {
         } else {
             ipt.val(parseFloat('-' + ipt.val()).toFixed(2));
         }
-
+        ipt.attr("value", ipt.val());
 
 
     }
@@ -83,13 +113,14 @@ function changeSplit() {
         tot += parseFloat($(amts[iamt]).val());
 
     }
-    $('#splitAssigned').text(parseFloat(tot).toFixed(2));
+    $('#splitAssigned').text('$'+parseFloat(tot).toFixed(2));
     if (parseFloat(tot).toFixed(2) == parseFloat($('#splitTotal').text().replace('$','')).toFixed(2)) {
+        $('#splitRemaining').find('span').text('$0.00');
         $('#splitAssigned').removeClass('unbalanced');
         $('#splitRemaining').addClass('balancedHidden');
         $('#splitRemaining').removeClass('unbalanced');
     } else {
-        $('#splitRemaining').find('span').text(parseFloat(parseFloat($('#splitTotal').text().replace('$','')) - parseFloat(tot)).toFixed(2));
+        $('#splitRemaining').find('span').text('$' + parseFloat(parseFloat($('#splitTotal').text().replace('$','')) - parseFloat(tot)).toFixed(2));
         $('#splitRemaining').addClass('unbalanced');
         $('#splitRemaining').removeClass('balancedHidden');
         $('#splitAssigned').addClass('unbalanced');

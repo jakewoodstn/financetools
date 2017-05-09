@@ -536,13 +536,14 @@ function saveDate(tdef) {
         $.ajax({
             type: 'POST',
             url: '/Content/shared/dataRetrieveJSON.cshtml',
-            data: { "procedure": "changeAccountingDate",
+            data: { "procedure": "changeAcctingDate",
                 "var0": $(tdef).attr('id').substring(11),
                 "var1": v,
                 "ct": 2
             },
             dataType: 'html'
         });
+        redraw($(tdef).attr('id').substring(11));
     }
 }
 
@@ -679,13 +680,25 @@ function editInPlace(evt) {
     $(ipt).focus();
 }
 
+function redraw(transactionId) {
 
-function lineCount() { return $("#splitDetailTable tr:not(.deletedSplitLine)").length - 1; } //Number of Rows minus header row
-function usedLineCount() {
-    var amtCt = lineCount() - $("#splitDetailTable tr:not(.deletedSplitLine)").find(":input").filter("[type='text']").filter("[value='0.00']").length;
-    var catCt = lineCount() - $("#splitDetailTable tr:not(.deletedSplitLine) :selected").filter("[value='0']").length;
-    return amtCt < catCt ? amtCt : catCt;
+    var existing = $("#" + transactionId);
+    if (existing.length > 0) {
+        var transaction = { 'transactionId': transactionId };
+        if (existing.hasClass('baChecking')) { transaction.accountId = 1; }
+        if (existing.hasClass('chaseCredit')) { transaction.accountId = 2; }
+        transaction.accountingDate = existing.find('.transDate').text();
+        transaction.description = existing.find('.transDescription').text();
+        transaction.bankOrigdescription = existing.find('.transDescription').attr('title');
+        transaction.amount = existing.find('.transAmount').text();
+        transaction.categoryName = existing.find('.transCatName .btn').text();
+        transaction.categoryName = transaction.categoryName == ' Uncategorized' ? "" : transaction.categoryName;
+        transaction.tags = existing.find('.transTags').text();
+        transaction.tagCount = (transaction.tags.match(/;/g) || []).length;
+        existing.replaceWith(transTable(transaction));
+    }
 
+    return existing.length;
 }
 
 function transTable(transaction) {
