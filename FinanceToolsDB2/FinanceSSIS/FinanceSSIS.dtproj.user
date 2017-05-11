@@ -6,6 +6,7 @@
       <Options>
         <ServerName />
         <PathOnServer />
+        <Run64BitRuntime>true</Run64BitRuntime>
         <UserIDs />
         <UserPasswords />
         <OfflineMode>false</OfflineMode>

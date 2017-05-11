@@ -114,13 +114,13 @@ function changeSplit() {
 
     }
     $('#splitAssigned').text('$'+parseFloat(tot).toFixed(2));
-    if (parseFloat(tot).toFixed(2) == parseFloat($('#splitTotal').text().replace('$','')).toFixed(2)) {
+    if (parseFloat(tot).toFixed(2) == parseFloat($('#splitTotal').text().replace('$','').replace(',','')).toFixed(2)) {
         $('#splitRemaining').find('span').text('$0.00');
         $('#splitAssigned').removeClass('unbalanced');
         $('#splitRemaining').addClass('balancedHidden');
         $('#splitRemaining').removeClass('unbalanced');
     } else {
-        $('#splitRemaining').find('span').text('$' + parseFloat(parseFloat($('#splitTotal').text().replace('$','')) - parseFloat(tot)).toFixed(2));
+        $('#splitRemaining').find('span').text('$' + parseFloat(parseFloat($('#splitTotal').text().replace('$','').replace(',','')) - parseFloat(tot)).toFixed(2));
         $('#splitRemaining').addClass('unbalanced');
         $('#splitRemaining').removeClass('balancedHidden');
         $('#splitAssigned').addClass('unbalanced');
