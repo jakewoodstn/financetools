@@ -47,6 +47,7 @@ function saveSplit() {
             var cat = parseInt(sel.find(":selected").val());
             var li = sel.attr('lineindex');
             var amt = $("#splitDetailTable #amount" + li).children('input').val();
+            var tags = $("#splitDetailTable #tags" + li).children('input').val();
             var splitid = sel.attr('splitid');
             if ($('#splitDetailTable tr[lineindex="' + li + '"]:not(.deletedSplitLine)').length > 0) {
                 $.ajax({
@@ -57,7 +58,8 @@ function saveSplit() {
                         "var1": $('#splitPanel').attr('tranid'),
                         "var2": cat,
                         "var3": amt,
-                        "ct": 4
+                        "var4": tags,
+                        "ct": 5
                     },
                     dataType: 'html'
                 });
@@ -97,7 +99,7 @@ function addSplit() {
 
 function changeSplit() {
     if (!(this === undefined)) {
-        var ipt = $(this).find('input');
+        var ipt = $(this).find('.splitDetailAmount');
         if (!(ipt.val() === undefined) && (ipt.val().substring(0, 1) == '-' || ipt.val().substring(0, 1) == '+')) {
             ipt.val(parseFloat(ipt.val()).toFixed(2));
         } else {
@@ -128,10 +130,12 @@ function changeSplit() {
 }
 
 function renderSplitLine(splitLineData) {
+    //console.info(splitLineData);
 
     var amt = splitLineData['amount'];
     var catid = splitLineData['categoryid'];
     var splitline = splitLineData['splittransactionid'];
+    var tags = splitLineData['tags'];
     var tranid = splitLineData['transactionId'];
     var lineIndex = splitLineData['lineIndex'];
 
@@ -183,8 +187,20 @@ function renderSplitLine(splitLineData) {
 
     tds[2] = td;
 
+    td = document.createElement('td');
+    jtd = $(td);
+    jtd.attr('id', 'tags' + lineIndex);
+    var ipt = document.createElement('input');
+    $(ipt).attr('type', 'text');
+    $(ipt).attr('lineIndex', lineIndex);
+    $(ipt).attr('value', tags);
+    jtd.append(ipt);
+    jtd.change(changeSplit);
+    tds[3] = td;
+
     $(tr).append(tds[0]);
     $(tr).append(tds[1]);
+    $(tr).append(tds[3]);
     $(tr).append(tds[2]);
     return tr;
 }

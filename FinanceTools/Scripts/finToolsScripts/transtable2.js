@@ -1,5 +1,5 @@
 
-var clipboard = { "payee": "" };
+var clipboard = { "payee": "" , "tags": "", "category":""};
 
 var selectedElem;
 var shiftDown;
@@ -36,6 +36,8 @@ $(document).keyup(function (evt) {
 function copyTran() {
     if ($('.transSelected').length > 0) {
         clipboard.payee = $('.transSelected').first().find('.transDescription').text();
+        clipboard.tags = $('.transSelected').first().find('.transTags').text();
+        //clipboard.category = $('.transSelected').first().find('.transCat').find('.btn').text();
     }
 }
 
