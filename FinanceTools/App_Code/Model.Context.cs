@@ -30,6 +30,8 @@ public partial class FinancesEntities : DbContext
     public virtual DbSet<simpleBudgetExpected> simpleBudgetExpecteds { get; set; }
     public virtual DbSet<simpleBudgetRule> simpleBudgetRules { get; set; }
     public virtual DbSet<DimDate> DimDates { get; set; }
+    public virtual DbSet<taggedEvent> taggedEvents { get; set; }
+    public virtual DbSet<transactionTaggedEvent> transactionTaggedEvents { get; set; }
 
     public virtual ObjectResult<string> materializeSimpleBudgetActual(Nullable<System.DateTime> startDate, Nullable<System.DateTime> endDate, Nullable<int> sendMessage, Nullable<int> force)
     {

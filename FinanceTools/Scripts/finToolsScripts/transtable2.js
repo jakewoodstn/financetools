@@ -661,6 +661,10 @@ function editInPlace(evt) {
     $(par).append(can);
     $(can).show();
     var ipt = document.createElement('input');
+
+    if (evt.data == undefined || evt.data.autoCompleteSproc == undefined) { }
+    else { addAutocomplete(ipt, evt.data.autoCompleteSproc);}
+
     $(ipt).attr('type', 'text');
     $(ipt).addClass('form-control');
     $(ipt).click(function (e) { e.stopPropagation(); });
@@ -801,10 +805,11 @@ function transTable(transaction) {
     $(edTag).attr('name', 'edittag');
     $(edTag).addClass('indelible');
     $(edTag).addClass('tinyButton');
-    $(edTag).click({'valueAttr':'tagValue','saveFunction':saveTags,'clearFunction':clearTags},editInPlace);
+    $(edTag).click({'valueAttr':'tagValue','saveFunction':saveTags,'clearFunction':clearTags, 'autoCompleteSproc':'tagAutocomplete'},editInPlace);
     $(td).append(edTag);
     $(td).hover(function () { $(edTag).fadeIn(); }, function () { out(tds[3]); });
     $(td).addClass('col-sm-11 col-sm-offset-1');
+
     $(t).append(td);
 
 

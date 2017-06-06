@@ -123,3 +123,32 @@ public partial class simpleBudgetRule
 
     public virtual simpleBudget simpleBudget { get; set; }
 }
+
+public partial class taggedEvent
+{
+    [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Usage", "CA2214:DoNotCallOverridableMethodsInConstructors")]
+    public taggedEvent()
+    {
+        this.transactionTaggedEvents = new HashSet<transactionTaggedEvent>();
+    }
+
+    public int taggedEventId { get; set; }
+    public string taggedEventTag { get; set; }
+    public string taggedEventDescription { get; set; }
+    public Nullable<System.DateTime> effectiveDate { get; set; }
+    public Nullable<System.DateTime> retiredDate { get; set; }
+
+    [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Usage", "CA2227:CollectionPropertiesShouldBeReadOnly")]
+    public virtual ICollection<transactionTaggedEvent> transactionTaggedEvents { get; set; }
+}
+
+public partial class transactionTaggedEvent
+{
+    public int transactionTaggedEventId { get; set; }
+    public Nullable<long> transactionId { get; set; }
+    public Nullable<int> taggedEventId { get; set; }
+    public Nullable<System.DateTime> taggedAt { get; set; }
+    public Nullable<int> splitTransactionId { get; set; }
+
+    public virtual taggedEvent taggedEvent { get; set; }
+}
