@@ -22,11 +22,13 @@
     <script type="text/javascript" src="~/Scripts/finToolsScripts/autocomplete.js"></script>
     <script type="text/javascript" src="/Scripts/finToolsScripts/search.js"></script>
     <script type="text/javascript" src="/Scripts/finToolsScripts/transtable2.js"></script>
+    <script type="text/javascript" src="~/Scripts/finToolsScripts/datepicker.js"></script>
+    <script type="text/javascript" src="~/Scripts/finToolsScripts/transactionFocus.js"></script>
 
     <script type="text/javascript">
         var numTopCat = 24;
         var durTopCat = 365;
-
+        
         function init() {
             $("#loadingDiv").toggle(true);
             fetchData(renderTrans);
@@ -45,6 +47,14 @@
             $("#transactionsDiv").parent().height($(window).height() * 0.7);
             $('.foldTrigger').click(foldHandler);
             $('.foldable').find('.folds').hide();
+            initDateRange('#filterMinDate', '#filterMaxDate');
+            readFilterFields();
+            $('#search').click(search);
+            $('#clearSearch').click(clearSearchFilter);
+            $('#clearFilter').click(clearSearchFilter);
+            $('#accountSearch').change(accountChange);
+            $('#filterButton').click(processFilterFields);
+            $("fieldset#filterAndOr input").checkboxradio();
         }
 
         $(document).ready(init);
@@ -119,15 +129,65 @@
         </div>
         <hr />
         <div class="row">
-            <div class="col-sm-1"><span class="h4">filter:</span></div>
-            <div class="col-sm-11">
-                <select id="accountSearch" class="searchButton form-control">
-                    <option selected accountid="0">All Accounts</option>
-                    <option accountid="1">BA Checking</option>
-                    <option accountid="2">Chase Credit</option>
-                </select>
+            <div id="filterDiv" class="col-sm-12 dropTiny ">
+                <div class="row">
+                    <div class="col-sm-1"><span class="h4">filter:</span></div>
+                </div>
+                <div class="row dropTiny">
+                    <div class="col-sm-2"><span class="h4">account:</span></div>
+                    <div class="col-sm-10">
+                        <select id="accountSearch" class="searchButton form-control filter-control">
+                            <option accountid="0">All Accounts</option>
+                            <option accountid="1">BA Checking</option>
+                            <option accountid="2">Chase Credit</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="row dropSmall">
+                    <div class="col-sm-2"><span class="h4">dates:</span></div>
+                    <div class="col-sm-4"><input type="text" class="span2 filter-control form-control" value="" id="filterMinDate" /></div>
+                    <div class="col-sm-4 col-sm-offset-1"><input type="text" class="span2 filter-control form-control" value="" id="filterMaxDate" /></div>
+                </div>
+                <div class="row dropSmall">
+                    <div class="col-sm-2">
+                        <fieldset id="filterAndOr">
+                            <legend>Filter on: </legend>
+                            <label for="radio-1">Any</label>
+                            <input type="radio" name="radio-1" id="radio-1" checked>
+                            <label for="radio-2">All</label>
+                            <input type="radio" name="radio-1" id="radio-2">
+                        </fieldset>
+                    </div>
+                    <div class="col-sm-10 well">
+                        <div class="row dropSmall">
+                            <div class="col-sm-2"><span class="h4">payee:</span></div>
+                            <div class="col-sm-10"><input type="text" class="filter-control form-control" id="filterPayee" /></div>
+                        </div>
+                        <div class="row dropSmall">
+                            <div class="col-sm-2"><span class="h4">category:</span></div>
+                            <div class="col-sm-10"><input type="text" class="filter-control form-control" id="filterCategory" /></div>
+                        </div>
+                        <div class="row dropSmall">
+                            <div class="col-sm-2"><span class="h4">tag:</span></div>
+                            <div class="col-sm-10"><input type="text" class="filter-control form-control" id="filterTag" /></div>
+                        </div>
+                        <div class="row dropSmall">
+                            <div class="col-sm-2"><span class="h4">amount:</span></div>
+                            <div class="col-sm-3"><input type="text" class="filter-control form-control" id="filterAmount" /></div>
+                        </div>
+                    </div>
+                </div>
+                <div class="row dropTiny">
+                    <div class="col-sm-5 col-sm-offset-2">
+                        <input type="button" id="filterButton" class="filter-control searchButton btn btn-info btn-block" value="Filter" />
+                    </div>
+                    <div class="col-sm-5">
+                        <input type="button" id="clearFilter" class="searchButton btn btn-warning btn-block" value="Clear Search/Filter" />
+                    </div>
+                </div>
             </div>
         </div>
+        <hr />
         <div class="row">
             <div id="searchDiv" class="col-sm-12 dropTiny">
                 <label for="searcher">search term:</label>
@@ -140,7 +200,7 @@
                     </div>
                 </div>
                 <input type="button" id="search" class="searchButton btn btn-info btn-block" value="Search" />
-                <input type="button" id="clearSearch" class="searchButton btn btn-warning btn-block" value="Clear Search" />
+                <input type="button" id="clearSearch" class="searchButton btn btn-warning btn-block" value="Clear Search/Filter" />
             </div>
         </div>
 
@@ -189,9 +249,14 @@
                 </div>
             </div>
             <div class="col-sm-4">
-                <div class="row">
+                <div class="row dropSmall" >
                     <div class="col-sm-12 text-right">
                         <span id="selectedCount" class="h4"></span>
+                    </div>
+                </div>
+                <div class="row dropTiny">
+                    <div class="col-sm-12 text-right">
+                        <span id="totals" class="h4"></span>
                     </div>
                 </div>
                 <div class="row">
@@ -200,6 +265,9 @@
                     </div>
                     <div class="col-sm-4">
                         <button class="btn btn-info" onclick="pasteTran('payee');">Paste Payee</button>
+                    </div>
+                    <div class="col-sm-4">
+                        <button class="btn btn-info" onclick="sendToTransactionFocus();">Transaction Focus</button>
                     </div>
                 </div>
             </div>
@@ -226,7 +294,7 @@
             <div class="col-sm-12 foldable">
                 <div class="row"><div class="col-sm-10"><hr /></div></div>
                 <div class="row foldTrigger"><div class="col-sm-12 dropTiny"><span class="h4">Category Stats:</span></div></div>
-                <div class="row folds"><div class="col-sm-12 dropTiny " id="catStats"></div></div>
+                <div class="row folds"><div class="col-sm-12 dropTiny " id="categoryStats"></div></div>
                 <div class="row folds">
                     <div class="col-sm-5 dropSmall">
                         <button class="btn btn-info" id="lookupTagTransaction" onclick="getPayeeCatStats();">Lookup Stats for Payee</button>

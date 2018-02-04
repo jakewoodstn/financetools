@@ -1,5 +1,5 @@
 
-var clipboard = { "payee": "" , "tags": "", "category":""};
+var clipboard = { "payee": "", "tags": "", "category": "" };
 
 var selectedElem;
 var shiftDown;
@@ -25,7 +25,7 @@ $(document).keyup(function (evt) {
     if (evt.keyCode === 16) {
         shiftDown = false;
     }
-    
+
     if (evt.keyCode === 17) {
         evt.preventDefault();
         ctrlDown = false;
@@ -53,14 +53,19 @@ function pasteTran(pasteTarget) {
 
 function getPayeeCatStats() {
 
-    includer = $('.transSelected').length > 0 ? 1: includeAll;
-    searcher = $('.transSelected').length > 0 ? 'payee:\\'+$(".transSelected").first().find('.transDescription').text() +'\\': searchTerm;
+    includer = $('.transSelected').length > 0 ? 1 : includeAll;
+
+    var f = {};
+    initializeFilter(f);
+    if ($('.transSelected').length > 0) { f.payee = $(".transSelected").first().find('.transDescription').text(); }
+    var searcher = JSON.stringify(f);
 
     $.ajax({
         type: 'POST',
         url: "/Content/shared/dataRetrieveJSON.cshtml",
 
-        data: { "procedure": "transactionStatsJSON",
+        data: {
+            "procedure": "transactionStatsJSON",
             "var0": 1,
             "var1": includer,
             "var2": accountFilter,
@@ -82,7 +87,7 @@ function foldHandler(evt) {
     foldToggler(targ);
 }
 
-function foldToggler(targ){
+function foldToggler(targ) {
     $(targ).find('.folds').slideToggle();
 }
 
@@ -90,11 +95,11 @@ function fold(targ) {
     $(targ).find('.folds').slideUp();
 }
 
-function unfold(targ){
+function unfold(targ) {
     $(targ).find('.folds').slideDown();
 }
 
-function parseCatStats(catStats,targetId) {
+function parseCatStats(catStats, targetId) {
 
     cs = $(targetId);
 
@@ -108,7 +113,21 @@ function parseCatStats(catStats,targetId) {
         elem = document.createElement('span');
         $(elem).addClass('btn');
         $(elem).addClass('btn-sm');
+        $(elem).addClass('transaction-focus');
+        $(elem).click(function () {
+            var tf = transactionFocus();
+            readFieldsIntoFilter();
+            var f = getFilters();
+            var target = $(this).attr('id');
+            target = target.substring(0, target.indexOf("Stats"));
+            f[target] = $(this).text();
+            tf.setFilter(f);
+            tf.includeAll = ($('input[type="checkbox"]').is(':checked') ? 1 : 0);
+            tf.arm();
+            tf.post();
+        });
         $(elem).text(innerObj.name);
+        $(elem).attr('id', targetId.replace(/#/g, "") + '_' + innerObj.name.replace(/ /g, "_"));
         $(elem).attr('obs', innerObj.obs);
         $(elem).attr('spend', innerObj.spend);
         switch (Object.keys(obj)[0]) {
@@ -121,10 +140,10 @@ function parseCatStats(catStats,targetId) {
                 incs.push(elem);
                 break;
         }
-       
+
     }
 
-    
+
 
     exDiv = document.createElement('div');
     exLabel = document.createElement('span');
@@ -134,13 +153,13 @@ function parseCatStats(catStats,targetId) {
     cs.append(exDiv);
 
     //debugStats = [catStats,exs];
-    
+
     headrow = document.createElement('div');
     $(headrow).addClass('row');
-    
+
     headColName = document.createElement('div');
     $(headColName).addClass('col-sm-6');
-    $(headColName).text('Category Name');
+    $(headColName).text('Name');
     $(headrow).append(headColName);
 
     headColObs = document.createElement('div');
@@ -148,7 +167,7 @@ function parseCatStats(catStats,targetId) {
     $(headColObs).text('# Trans');
     $(headrow).append(headColObs);
 
-    
+
     headColSpend = document.createElement('div');
     $(headColSpend).addClass('col-sm-3');
     $(headColSpend).text('$ Spent');
@@ -156,28 +175,28 @@ function parseCatStats(catStats,targetId) {
     cs.append(headrow);
 
     for (var j = 0; j < exs.length; j++) {
-      r = document.createElement('div');
-      $(r).addClass('dropTiny');
-      $(r).addClass('row');
+        r = document.createElement('div');
+        $(r).addClass('dropTiny');
+        $(r).addClass('row');
 
-      c = document.createElement('div');
-      $(c).addClass('col-sm-6');
-      $(c).html(exs[j]);
-      $(r).append(c);
-      
-      c = document.createElement('div');
-      $(c).addClass('col-sm-3');
-      $(c).text($(exs[j]).attr('obs'));
-      $(r).append(c);
-      
-      c = document.createElement('div');
-      $(c).addClass('col-sm-3');
-      $(c).text(accounting.formatMoney($(exs[j]).attr('spend')));
-      $(r).append(c);
+        c = document.createElement('div');
+        $(c).addClass('col-sm-6');
+        $(c).html(exs[j]);
+        $(r).append(c);
 
-      cs.append(r);
+        c = document.createElement('div');
+        $(c).addClass('col-sm-3');
+        $(c).text($(exs[j]).attr('obs'));
+        $(r).append(c);
+
+        c = document.createElement('div');
+        $(c).addClass('col-sm-3');
+        $(c).text(accounting.formatMoney($(exs[j]).attr('spend')));
+        $(r).append(c);
+
+        cs.append(r);
     }
-    
+
     exDiv = document.createElement('div');
     exLabel = document.createElement('span');
     $(exLabel).addClass('h5');
@@ -188,7 +207,7 @@ function parseCatStats(catStats,targetId) {
 
     headrow = document.createElement('div');
     $(headrow).addClass('row');
-    
+
     headColName = document.createElement('div');
     $(headColName).addClass('col-sm-6');
     $(headColName).text('Category Name');
@@ -199,50 +218,52 @@ function parseCatStats(catStats,targetId) {
     $(headColObs).text('# Trans');
     $(headrow).append(headColObs);
 
-    
+
     headColSpend = document.createElement('div');
     $(headColSpend).addClass('col-sm-3');
     $(headColSpend).text('$ Earned');
     $(headrow).append(headColSpend);
     cs.append(headrow);
 
-     for (var j = 0; j < incs.length; j++) {
-         r = document.createElement('div');
-         $(r).addClass('dropTiny');
-         $(r).addClass('row');
+    for (var j = 0; j < incs.length; j++) {
+        r = document.createElement('div');
+        $(r).addClass('dropTiny');
+        $(r).addClass('row');
 
-         c = document.createElement('div');
-         $(c).addClass('col-sm-6');
-         $(c).html(incs[j]);
-         $(r).append(c);
+        c = document.createElement('div');
+        $(c).addClass('col-sm-6');
+        $(c).html(incs[j]);
+        $(r).append(c);
 
-         c = document.createElement('div');
-         $(c).addClass('col-sm-3');
-         $(c).text($(incs[j]).attr('obs'));
-         $(r).append(c);
+        c = document.createElement('div');
+        $(c).addClass('col-sm-3');
+        $(c).text($(incs[j]).attr('obs'));
+        $(r).append(c);
 
-         c = document.createElement('div');
-         $(c).addClass('col-sm-3');
-         $(c).text(accounting.formatMoney($(incs[j]).attr('spend')));
-         $(r).append(c);
+        c = document.createElement('div');
+        $(c).addClass('col-sm-3');
+        $(c).text(accounting.formatMoney($(incs[j]).attr('spend')));
+        $(r).append(c);
 
-         cs.append(r);
+        cs.append(r);
     }
 
 
 }
 
-function parseStats(transactionStats) { 
-    catLoc = $.inArray("catStats",Object.keys(transactionStats));
-    if (catLoc > -1) { parseCatStats(transactionStats.catStats,"#catStats"); }
+function parseStats(transactionStats) {
+    catLoc = $.inArray("categoryStats", Object.keys(transactionStats));
+    if (catLoc > -1) { parseCatStats(transactionStats.categoryStats, "#categoryStats"); }
 
-    payeeLoc = $.inArray("payeeStats",Object.keys(transactionStats));
-    if (payeeLoc > -1) { parseCatStats(transactionStats.payeeStats,'#payeeStats'); }
+    payeeLoc = $.inArray("payeeStats", Object.keys(transactionStats));
+    if (payeeLoc > -1) { parseCatStats(transactionStats.payeeStats, '#payeeStats'); }
 }
 
-function renderTags(tagData,target) {
+function renderTags(tagData, target) {
     $(target).html('');
-    
+
+    var tagClass = target.indexOf("Transaction") == -1 ? 'allTag' : 'transactionTag';
+
     l = tagData.length;
     pivot = 0;
     for (var i = 0; i < l; i++) {
@@ -252,7 +273,7 @@ function renderTags(tagData,target) {
     fontMin = 10;
     fontStep = 2;
     fontBase = fontMin + (5 > pivot ? 5 : pivot) * fontStep;
-    
+
     for (var i = 0; i < l; i++) {
         obj = tagData[i];
         calcFontSub = obj.fontIndex * fontStep;
@@ -261,13 +282,29 @@ function renderTags(tagData,target) {
         $(sp).css('font-size', (fontBase - calcFontSub) + 'pt');
         $(sp).css('padding-right', '10px');
         $(sp).css('word-wrap', 'normal');
+        $(sp).css('color', '#2050FF');
+        $(sp).addClass(tagClass);
+        $(sp).click(
+               function () {
+                   var tf = transactionFocus();
+                   readFieldsIntoFilter();
+                   var f = getFilters();
+                   var target = $(this).hasClass('transactionTag') ? 'payee' : '';
+                   f[target] = $(this).parent().attr('payee');
+                   f['tag'] = $(this).text();
+                   tf.setFilter(f);
+                   tf.includeAll = ($('input[type="checkbox"]').is(':checked') ? 1 : 0);
+                   tf.arm();
+                   tf.post();
+               }
+        );
         $(target).append(sp);
         $(target).append('  ');
     }
     if (l == undefined) {
         sp = document.createElement('span');
         $(sp).text('no tags found.');
-        $(sp).css('color','gray')
+        $(sp).css('color', 'gray')
         $(target).append(sp);
     }
 
@@ -277,13 +314,14 @@ function getTags(target) {
 
     data = {};
 
-    switch (target){
+    switch (target) {
         case "transaction":
-            tranid=$('.transSelected').first().attr('id');
+            tranid = $('.transSelected').first().attr('id');
             if (tranid == undefined) { return undefined; }
             target = '#tagCloudTransaction';
+            $(target).attr('payee', $('.transSelected').first().children('.transDescription').text());
             procedure = 'tagCloudForTransaction';
-            data.var0= tranid;
+            data.var0 = tranid;
             break;
         case "all":
             target = '#tagCloudAll';
@@ -300,7 +338,7 @@ function getTags(target) {
         url: '/Content/shared/dataRetrieveJSON.cshtml',
         data: data,
         dataType: 'json',
-        success: function (data) { renderTags(data,target); },
+        success: function (data) { renderTags(data, target); },
         error: function (obj, disp, err) { console.log(obj); console.log(disp); console.log(err); }
     });
 }
@@ -310,10 +348,11 @@ function applyMapping() {
     $('.transSelected').each(function () {
         tranid = $(this).attr('id');
         $(this).children('.transDescription').text(newDesc);
-         $.ajax({
+        $.ajax({
             type: 'POST',
             url: '/Content/shared/dataRetrieveJSON.cshtml',
-            data: { "procedure": "changeDescription",
+            data: {
+                "procedure": "changeDescription",
                 "var0": tranid,
                 "var1": newDesc,
                 "ct": 2
@@ -330,22 +369,23 @@ function clearTypicalMapping() {
 
 function setTypicalMapping(mappingObject) {
     clearTypicalMapping();
-    if (Object.keys(mappingObject).length > 0) { 
+    if (Object.keys(mappingObject).length > 0) {
         $("#typicalMap").text(mappingObject.typicalMap).show();
-        $("#typicalMapObsCt").text(mappingObject.obsCt).show();    
+        $("#typicalMapObsCt").text(mappingObject.obsCt).show();
     }
 }
 
-function getTypicalMapping(){
+function getTypicalMapping() {
     var t = $('.transSelected').first();
-    if(t.length==0){return;}
+    if (t.length == 0) { return; }
     $("#getMapping").addClass('disabled');
 
     $.ajax({
         type: 'POST',
         url: "/Content/shared/dataRetrieveJSON.cshtml",
 
-        data: { "procedure": "typicalPayeeMapping",
+        data: {
+            "procedure": "typicalPayeeMapping",
             "var0": $(t).attr('id'),
             "ct": 1
         },
@@ -359,9 +399,9 @@ function getTypicalMapping(){
 }
 
 
-function updateSelectedCount(){
+function updateSelectedCount() {
     var ct = $('.transSelected').length;
-    $('#selectedCount').text(ct + ' ' + (ct==1?'record':'records') + ' selected');
+    $('#selectedCount').text(ct + ' ' + (ct == 1 ? 'record' : 'records') + ' selected');
     if (ct == 0) { clearTypicalMapping(); }
 }
 
@@ -380,7 +420,8 @@ function approve() {
     $.ajax({
         type: 'POST',
         url: '/Content/shared/dataRetrieveJSON.cshtml',
-        data: { "procedure": "approveCat",
+        data: {
+            "procedure": "approveCat",
             "var0": String(myArr),
             "ct": 1
         },
@@ -398,7 +439,8 @@ function assign(src, index) {
     $.ajax({
         type: 'POST',
         url: '/Content/shared/dataRetrieveJSON.cshtml',
-        data: { "procedure": "assignCat",
+        data: {
+            "procedure": "assignCat",
             "var0": String(myArr),
             "var1": ($(src).is("img") || $(src).is("span")) ? $('#catLabel' + $(src).attr("i")).text() : $("#selectAny option:selected").attr("id"),
             "ct": 2
@@ -416,16 +458,17 @@ function assign(src, index) {
 
 }
 
-function saveMultiple(value){
-    if (value == undefined){value = $("#multiDescription").val()}
+function saveMultiple(value) {
+    if (value == undefined) { value = $("#multiDescription").val() }
     var myArr = selectedTransArray();
-    for(var i=0;i<myArr.length;i++){
+    for (var i = 0; i < myArr.length; i++) {
         var elem = $("#Description" + myArr[i]);
         elem.text(value);
         $.ajax({
             type: 'POST',
             url: '/Content/shared/dataRetrieveJSON.cshtml',
-            data: { "procedure": "changeDescription",
+            data: {
+                "procedure": "changeDescription",
                 "var0": elem.attr('id').substring(11),
                 "var1": value,
                 "ct": 2
@@ -439,7 +482,7 @@ function renderButtons(buttons) {
     for (var i = 0; i < buttons.length; i++) {
         $('#catLabel' + i).each(
                     function () {
-                        $(this).html("<button class='btn btn-primary btn-xs'>"+buttons[i]+"</button>");
+                        $(this).html("<button class='btn btn-primary btn-xs'>" + buttons[i] + "</button>");
                         $(this).attr("i", i);
                         $(this).addClass('quickCat')
                         $(this).click(
@@ -463,7 +506,8 @@ function getButtons(callback) {
     $.ajax({
         type: 'POST',
         url: "/Content/shared/dataRetrieveJSON.cshtml",
-        data: { "procedure": "topCatJSON",
+        data: {
+            "procedure": "topCatJSON",
             "var0": 0,
             "var1": numTopCat,
             "var2": durTopCat,
@@ -482,7 +526,7 @@ function getButtons(callback) {
 
 
 function selected(elem) {
-    if (!shiftDown == true && !ctrlDown==true  && !$(elem).hasClass("transSelected")) {
+    if (!shiftDown == true && !ctrlDown == true && !$(elem).hasClass("transSelected")) {
         $(".transSelected").removeClass("transSelected");
     }
 
@@ -538,7 +582,8 @@ function saveDate(tdef) {
         $.ajax({
             type: 'POST',
             url: '/Content/shared/dataRetrieveJSON.cshtml',
-            data: { "procedure": "changeAcctingDate",
+            data: {
+                "procedure": "changeAcctingDate",
                 "var0": $(tdef).attr('id').substring(11),
                 "var1": v,
                 "ct": 2
@@ -560,7 +605,8 @@ function saveDesc(tdef) {
         $.ajax({
             type: 'POST',
             url: '/Content/shared/dataRetrieveJSON.cshtml',
-            data: { "procedure": "changeDescription",
+            data: {
+                "procedure": "changeDescription",
                 "var0": $(tdef).attr('id').substring(11),
                 "var1": v,
                 "ct": 2
@@ -570,8 +616,8 @@ function saveDesc(tdef) {
     }
 }
 
-function clearTags(tdef){ 
-    tranId=$(tdef).attr('id').substring(4)
+function clearTags(tdef) {
+    tranId = $(tdef).attr('id').substring(4)
     $.ajax({
         type: 'POST',
         url: '/Content/shared/dataRetrieveJSON.cshtml',
@@ -598,7 +644,7 @@ function saveTags(tdef) {
 
     if (v == null || v == '') { v = $(tdef).attr('priorText'); update = false; }
     if (v.substring(v.length - 1) != ';') {
-         v = v + ';'
+        v = v + ';'
     }
     var ct = v == ';' ? 0 : v.split(';').length - 1;
     $(tdef).attr('priorText', ct == 0 ? '&nbsp;' : v);
@@ -608,7 +654,8 @@ function saveTags(tdef) {
         $.ajax({
             type: 'POST',
             url: '/Content/shared/dataRetrieveJSON.cshtml',
-            data: { "procedure": "changeTags",
+            data: {
+                "procedure": "changeTags",
                 "var0": $(tdef).attr('id').substring(4),
                 "var1": v,
                 "ct": 2
@@ -633,8 +680,8 @@ function out(tdef) {
 }
 
 function editInPlace(evt) {
-    
-    
+
+
     evt.stopPropagation();
     var par = this.parentElement;
     $(this).css('display', 'none');
@@ -645,7 +692,7 @@ function editInPlace(evt) {
     $(sv).addClass('tinyButton');
     if (evt.data == undefined || evt.data.saveFunction == undefined) {
         $(sv).click(function () { save(par); });
-    } else{
+    } else {
         $(sv).click(function () { evt.data.saveFunction(par); });
     }
     $(par).append(sv);
@@ -655,7 +702,7 @@ function editInPlace(evt) {
     $(can).addClass('tinyButton');
     if (evt.data == undefined || evt.data.clearFunction == undefined) {
         $(can).click(function () { out(par); });
-    } else{
+    } else {
         $(can).click(function () { evt.data.clearFunction(par); });
     }
     $(par).append(can);
@@ -663,7 +710,7 @@ function editInPlace(evt) {
     var ipt = document.createElement('input');
 
     if (evt.data == undefined || evt.data.autoCompleteSproc == undefined) { }
-    else { addAutocomplete(ipt, evt.data.autoCompleteSproc);}
+    else { addAutocomplete(ipt, evt.data.autoCompleteSproc); }
 
     $(ipt).attr('type', 'text');
     $(ipt).addClass('form-control');
@@ -726,13 +773,13 @@ function transTable(transaction) {
     $(td).attr('id', 'AcctingDate' + transaction.transactionId.toString());
     td.innerHTML = transaction.accountingDate;
     $(td).attr('class', 'transDate');
-    $(edd).click({'saveFunction':saveDate},editInPlace);
+    $(edd).click({ 'saveFunction': saveDate }, editInPlace);
     $(td).append(edd);
     $(td).hover(function () { $(edd).fadeIn(); }, function () { out(tds[0]); });
     $(td).addClass('col-sm-1');
 
     $(t).append(td);
-    
+
     //Payee
     tds[1] = document.createElement('div');
     td = tds[1];
@@ -747,19 +794,19 @@ function transTable(transaction) {
     $(ed).attr('name', 'editpencil');
     $(ed).addClass('indelible');
     $(ed).addClass('tinyButton');
-    $(ed).click({'saveFunction':saveDesc},editInPlace);
+    $(ed).click({ 'saveFunction': saveDesc }, editInPlace);
     $(td).append(ed);
     $(td).hover(function () { $(ed).fadeIn(); }, function () { out(tds[1]); });
     $(td).addClass('col-sm-7');
 
     $(t).append(td);
-    
-    
+
+
     //amount
     tds[2] = document.createElement('div');
     td = tds[2];
 
-    td.innerHTML = accounting.formatMoney(transaction.amount); 
+    td.innerHTML = accounting.formatMoney(transaction.amount);
     $(td).attr('class', 'transAmount');
     $(td).attr('id', 'amount' + transaction.transactionId.toString());
     $(td).addClass('col-sm-1');
@@ -770,9 +817,9 @@ function transTable(transaction) {
     tds[4] = document.createElement('div');
     td = tds[4];
 
-  
+
     $(td).attr('class', 'transCatName dropTiny');
-    td.innerHTML ='<span class="btn btn-sm ' +  (transaction.categoryName==''?'btn-info"> Uncategorized':'btn-primary"> '+ transaction.categoryName) + '</span>';
+    td.innerHTML = '<span class="btn btn-sm ' + (transaction.categoryName == '' ? 'btn-info"> Uncategorized' : 'btn-primary"> ' + transaction.categoryName) + '</span>';
     $(td).attr('colspan', '2');
     $(td).attr('id', 'Category' + transaction.transactionId.toString());
     var edsplit = addOverlayButton(td, 0);
@@ -785,7 +832,7 @@ function transTable(transaction) {
     $(td).hover(function () { $(edsplit).fadeIn(); }, function () { out(tds[4]); });
     $(td).addClass('col-sm-3');
     $(t).append(td);
-    
+
     //Tag field
     tds[3] = document.createElement('div');
     td = tds[3];
@@ -805,7 +852,7 @@ function transTable(transaction) {
     $(edTag).attr('name', 'edittag');
     $(edTag).addClass('indelible');
     $(edTag).addClass('tinyButton');
-    $(edTag).click({'valueAttr':'tagValue','saveFunction':saveTags,'clearFunction':clearTags, 'autoCompleteSproc':'tagAutocomplete'},editInPlace);
+    $(edTag).click({ 'valueAttr': 'tagValue', 'saveFunction': saveTags, 'clearFunction': clearTags, 'autoCompleteSproc': 'tagAutocomplete' }, editInPlace);
     $(td).append(edTag);
     $(td).hover(function () { $(edTag).fadeIn(); }, function () { out(tds[3]); });
     $(td).addClass('col-sm-11 col-sm-offset-1');
@@ -818,17 +865,19 @@ function transTable(transaction) {
     $(t).attr('unselectable', 'on');
     $(t).addClass('row');
     $(t).addClass(accountDisplay[acctId - 1]);
-     $(t).click(function (evt) {evt.preventDefault(); selected(t); });
- 
+    $(t).click(function (evt) { evt.preventDefault(); selected(t); });
+
 
 
     return t;
 }
 
 function renderTrans(data) {
+
+
     var ct = 0;
     var ctLimit = 500;
-    if (data === null||data.length==0) {
+    if (data === null || data.length == 0) {
         $("#loadingDiv").toggle(false);
         $("#transactionsDiv").toggle(false);
         $("#noRecordsDiv").toggle(true);
@@ -848,7 +897,7 @@ function renderTrans(data) {
     });
     $("#transactionsDiv").toggle(true);
     $("#recordCount").html('<a href="#">' + $("#transactions").children().length + ' records displayed.</a>')
-
+    computeTotals();
 }
 
 function fetchError(obj, disp, err) {
@@ -863,11 +912,13 @@ function fetchData(callback) {
     $('#transactionsDiv').html('<div id="transactions" class="col-sm-12"></div>');
     $('#selectedCount').text('0 records selected');
     $('.tagCloud').html('');
+
     $.ajax({
         type: 'POST',
         url: "/Content/shared/dataRetrieveJSON.cshtml",
 
-        data: { "procedure": "transactionsJSON",
+        data: {
+            "procedure": "transactionsJSON",
             "var0": 0,
             "var1": includeAll,
             "var2": accountFilter,
@@ -891,7 +942,8 @@ function fetchData(callback) {
         type: 'POST',
         url: "/Content/shared/dataRetrieveJSON.cshtml",
 
-        data: { "procedure": "transactionStatsJSON",
+        data: {
+            "procedure": "transactionStatsJSON",
             "var0": 0,
             "var1": includeAll,
             "var2": accountFilter,
@@ -909,4 +961,90 @@ function fetchData(callback) {
 
 
 
+}
+
+
+
+function readFieldsIntoFilter() {
+    f = getFilters();
+
+    f.setFilter("minDate", moment($('.filter-control#filterMinDate').val(), 'MM/DD/YYYY'));
+    f.setFilter("maxDate", moment($('.filter-control#filterMaxDate').val(), 'MM/DD/YYYY'));
+    f.setFilter("accountId", [$('select.filter-control#accountSearch').children(':selected').first().index()]);
+    f.setFilter("payee", $('.filter-control#filterPayee').val());
+    f.setFilter("category", $('.filter-control#filterCategory').val());
+    f.setFilter("tag", $('.filter-control#filterTag').val());
+    f.setFilter("amount", accounting.formatNumber($('.filter-control#filterAmount').val(), 2));
+
+    if ($('#filterAndOr input:checked').attr('id') == 'radio-1') {
+        f.setFilter('or', ["amount", "payee", "category", "subcategory", "tag"]);
+    } else {
+        f.setFilter('or', []);
+
+    }
+
+    if (f.payee.indexOf('%') == -1 && f.payee.length > 0) { f.setFilter('payee', '%' + f.payee + '%'); };
+    if (f.category.indexOf('%') == -1 && f.category.length > 0) { f.setFilter('category', '%' + f.category + '%'); };
+    if (f.tag.indexOf('%') == -1 && f.tag.length > 0) { f.setFilter('tag', '%' + f.tag + '%'); };
+
+    setFilters(f);
+
+}
+
+function processFilterFields() {
+
+    readFieldsIntoFilter();
+    includeAll = ($('input[type="checkbox"]').is(':checked') ? 1 : 0);
+    applyFilter(renderTrans, true);
+
+}
+
+function readFilterFields() {
+    f = getFilters();
+
+    $('.filter-control#filterMinDate').val(f.minDate.format('MM/DD/YYYY'));
+    $('.filter-control#filterMaxDate').val(f.maxDate.format('MM/DD/YYYY'));
+    $("select.filter-control#accountSearch").prop('selectedIndex', f.accountId[0]);
+    $(".filter-control#filterPayee").val(f.payee);
+    $(".filter-control#filterCategory").val(f.category);
+    $(".filter-control#filterTag").val(f.tag);
+    $(".filter-control#filterAmount").val(accounting.formatMoney(f.amount));
+}
+
+function clearSearchFilter() {
+    clearSearch();
+    readFilterFields();
+}
+
+function computeTotals() {
+
+    var runningExpenseTotal = 0;
+    var runningIncomeTotal = 0;
+    var message ='';
+
+    if ($('.transAmount').length == 0) {
+        message = 'No totals'
+    } else {
+
+        $('.transAmount').each(
+            function () {
+                var a = accounting.unformat($(this).text());
+                if (a < 0) { runningExpenseTotal += a; } else { runningIncomeTotal += a; }
+            }
+            );
+
+        message = 'Income: ' + accounting.formatMoney(runningIncomeTotal) + ' Expense: ' + accounting.formatMoney(runningExpenseTotal);
+    }
+
+    $('#totals').text(message);
+}
+
+function sendToTransactionFocus() {
+    var tf = transactionFocus();
+    readFieldsIntoFilter();
+    var f = getFilters();
+    tf.setFilter(f);
+    tf.includeAll = ($('input[type="checkbox"]').is(':checked') ? 1 : 0);
+    tf.arm();
+    tf.post();
 }

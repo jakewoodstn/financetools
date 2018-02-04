@@ -118,6 +118,30 @@
           <Property Name="taggedAt" Type="date" />
           <Property Name="splitTransactionId" Type="int" />
         </EntityType>
+        <!--Errors Found During Generation:
+warning 6002: The table/view 'Finances.dbo.BankTransactionCatNoSplit' does not have a primary key defined. The key has been inferred and the definition was created as a read-only table/view.-->
+        <EntityType Name="BankTransactionCatNoSplit">
+          <Key>
+            <PropertyRef Name="transactionId" />
+            <PropertyRef Name="categoryStatus" />
+          </Key>
+          <Property Name="transactionId" Type="bigint" Nullable="false" />
+          <Property Name="transactionDate" Type="date" />
+          <Property Name="loadedDate" Type="datetime" />
+          <Property Name="description" Type="varchar" MaxLength="1000" />
+          <Property Name="category" Type="varchar" MaxLength="100" />
+          <Property Name="amount" Type="money" />
+          <Property Name="accountId" Type="int" />
+          <Property Name="accountName" Type="nvarchar" MaxLength="50" />
+          <Property Name="categoryId" Type="int" />
+          <Property Name="origDescription" Type="varchar" MaxLength="1000" />
+          <Property Name="categoryStatus" Type="int" Nullable="false" />
+          <Property Name="bankOrigDescription" Type="varchar" MaxLength="1000" />
+          <Property Name="categoryName" Type="varchar" MaxLength="253" />
+          <Property Name="accountingDate" Type="date" />
+          <Property Name="tags" Type="nvarchar(max)" />
+          <Property Name="tagCount" Type="int" />
+        </EntityType>
         <Association Name="FK_simpleBudgetExpected_simpleBudget_simpleBudgetId">
           <End Role="simpleBudget" Type="Self.simpleBudget" Multiplicity="0..1" />
           <End Role="simpleBudgetExpected" Type="Self.simpleBudgetExpected" Multiplicity="*" />
@@ -180,6 +204,26 @@
           <EntitySet Name="simpleBudgetRule" EntityType="Self.simpleBudgetRule" Schema="dbo" store:Type="Tables" />
           <EntitySet Name="taggedEvent" EntityType="Self.taggedEvent" Schema="dbo" store:Type="Tables" />
           <EntitySet Name="transactionTaggedEvent" EntityType="Self.transactionTaggedEvent" Schema="dbo" store:Type="Tables" />
+          <EntitySet Name="BankTransactionCatNoSplit" EntityType="Self.BankTransactionCatNoSplit" store:Type="Views" store:Schema="dbo">
+            <DefiningQuery>SELECT 
+    [BankTransactionCatNoSplit].[transactionId] AS [transactionId], 
+    [BankTransactionCatNoSplit].[transactionDate] AS [transactionDate], 
+    [BankTransactionCatNoSplit].[loadedDate] AS [loadedDate], 
+    [BankTransactionCatNoSplit].[description] AS [description], 
+    [BankTransactionCatNoSplit].[category] AS [category], 
+    [BankTransactionCatNoSplit].[amount] AS [amount], 
+    [BankTransactionCatNoSplit].[accountId] AS [accountId], 
+    [BankTransactionCatNoSplit].[accountName] AS [accountName], 
+    [BankTransactionCatNoSplit].[categoryId] AS [categoryId], 
+    [BankTransactionCatNoSplit].[origDescription] AS [origDescription], 
+    [BankTransactionCatNoSplit].[categoryStatus] AS [categoryStatus], 
+    [BankTransactionCatNoSplit].[bankOrigDescription] AS [bankOrigDescription], 
+    [BankTransactionCatNoSplit].[categoryName] AS [categoryName], 
+    [BankTransactionCatNoSplit].[accountingDate] AS [accountingDate], 
+    [BankTransactionCatNoSplit].[tags] AS [tags], 
+    [BankTransactionCatNoSplit].[tagCount] AS [tagCount]
+    FROM [dbo].[BankTransactionCatNoSplit] AS [BankTransactionCatNoSplit]</DefiningQuery>
+          </EntitySet>
           <AssociationSet Name="FK_simpleBudgetExpected_simpleBudget_simpleBudgetId" Association="Self.FK_simpleBudgetExpected_simpleBudget_simpleBudgetId">
             <End Role="simpleBudget" EntitySet="simpleBudget" />
             <End Role="simpleBudgetExpected" EntitySet="simpleBudgetExpected" />
@@ -316,6 +360,7 @@
             <End Role="taggedEvent" EntitySet="taggedEvents" />
             <End Role="transactionTaggedEvent" EntitySet="transactionTaggedEvents" />
           </AssociationSet>
+          <EntitySet Name="BankTransactionCatNoSplits" EntityType="FinancesModel.BankTransactionCatNoSplit" />
         </EntityContainer>
         <Association Name="FK_simpleBudgetExpected_simpleBudget_simpleBudgetId">
           <End Type="FinancesModel.simpleBudget" Role="simpleBudget" Multiplicity="0..1" />
@@ -401,6 +446,28 @@
             </Dependent>
           </ReferentialConstraint>
         </Association>
+        <EntityType Name="BankTransactionCatNoSplit">
+          <Key>
+            <PropertyRef Name="transactionId" />
+            <PropertyRef Name="categoryStatus" />
+          </Key>
+          <Property Name="transactionId" Type="Int64" Nullable="false" />
+          <Property Name="transactionDate" Type="DateTime" Precision="0" />
+          <Property Name="loadedDate" Type="DateTime" Precision="3" />
+          <Property Name="description" Type="String" MaxLength="1000" FixedLength="false" Unicode="false" />
+          <Property Name="category" Type="String" MaxLength="100" FixedLength="false" Unicode="false" />
+          <Property Name="amount" Type="Decimal" Precision="19" Scale="4" />
+          <Property Name="accountId" Type="Int32" />
+          <Property Name="accountName" Type="String" MaxLength="50" FixedLength="false" Unicode="true" />
+          <Property Name="categoryId" Type="Int32" />
+          <Property Name="origDescription" Type="String" MaxLength="1000" FixedLength="false" Unicode="false" />
+          <Property Name="categoryStatus" Type="Int32" Nullable="false" />
+          <Property Name="bankOrigDescription" Type="String" MaxLength="1000" FixedLength="false" Unicode="false" />
+          <Property Name="categoryName" Type="String" MaxLength="253" FixedLength="false" Unicode="false" />
+          <Property Name="accountingDate" Type="DateTime" Precision="0" />
+          <Property Name="tags" Type="String" MaxLength="Max" FixedLength="false" Unicode="true" />
+          <Property Name="tagCount" Type="Int32" />
+        </EntityType>
       </Schema>
     </edmx:ConceptualModels>
     <!-- C-S mapping content -->
@@ -525,6 +592,28 @@
                 <ScalarProperty Name="taggedEventId" ColumnName="taggedEventId" />
                 <ScalarProperty Name="transactionId" ColumnName="transactionId" />
                 <ScalarProperty Name="transactionTaggedEventId" ColumnName="transactionTaggedEventId" />
+              </MappingFragment>
+            </EntityTypeMapping>
+          </EntitySetMapping>
+          <EntitySetMapping Name="BankTransactionCatNoSplits">
+            <EntityTypeMapping TypeName="FinancesModel.BankTransactionCatNoSplit">
+              <MappingFragment StoreEntitySet="BankTransactionCatNoSplit">
+                <ScalarProperty Name="tagCount" ColumnName="tagCount" />
+                <ScalarProperty Name="tags" ColumnName="tags" />
+                <ScalarProperty Name="accountingDate" ColumnName="accountingDate" />
+                <ScalarProperty Name="categoryName" ColumnName="categoryName" />
+                <ScalarProperty Name="bankOrigDescription" ColumnName="bankOrigDescription" />
+                <ScalarProperty Name="categoryStatus" ColumnName="categoryStatus" />
+                <ScalarProperty Name="origDescription" ColumnName="origDescription" />
+                <ScalarProperty Name="categoryId" ColumnName="categoryId" />
+                <ScalarProperty Name="accountName" ColumnName="accountName" />
+                <ScalarProperty Name="accountId" ColumnName="accountId" />
+                <ScalarProperty Name="amount" ColumnName="amount" />
+                <ScalarProperty Name="category" ColumnName="category" />
+                <ScalarProperty Name="description" ColumnName="description" />
+                <ScalarProperty Name="loadedDate" ColumnName="loadedDate" />
+                <ScalarProperty Name="transactionDate" ColumnName="transactionDate" />
+                <ScalarProperty Name="transactionId" ColumnName="transactionId" />
               </MappingFragment>
             </EntityTypeMapping>
           </EntitySetMapping>

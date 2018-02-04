@@ -46,6 +46,7 @@
 
     Dictionary<string, string> metrics = new Dictionary<string, string>();
     metrics.Add("actual", "Actual Spending");
+    metrics.Add("a2e", "Actual To Expected");
     metrics.Add("expected", "Expected Budget");
     metrics.Add("remaining", "Remains to Spend");
 
@@ -244,6 +245,7 @@
                 switch (br.metric)
                 {
                     case "actual": displayValue = value.actualAmount; break;
+                    case "a2e": displayValue = value.actualAmount; break;
                     case "expected": displayValue = (decimal)value.expectedAmount; break;
                     case "remaining": displayValue = (decimal)value.remainingAmount; break;
                     default: break;

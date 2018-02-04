@@ -16,6 +16,7 @@
         <EntityTypeShape EntityType="FinancesModel.taggedEvent" Width="1.5" PointX="14.375" PointY="2.875" />
         <EntityTypeShape EntityType="FinancesModel.transactionTaggedEvent" Width="1.5" PointX="16.75" PointY="2.875" />
         <AssociationConnector Association="FinancesModel.fk_transactionEvent_Event" />
+        <EntityTypeShape EntityType="FinancesModel.BankTransactionCatNoSplit" Width="1.5" PointX="0.75" PointY="7.75" />
       </Diagram>
     </edmx:Diagrams>
   </edmx:Designer>

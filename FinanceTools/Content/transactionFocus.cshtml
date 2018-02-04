@@ -1,0 +1,205 @@
+﻿@using FusionCharts.Charts;
+@using System.Dynamic;
+
+@functions{
+
+    FusionCharts.Charts.Chart makeChart(IDictionary<string, string> chartTypeOptions, IDictionary<string, string> chartStyleOptions, IDictionary<string, string> myData)
+    {
+
+        string chartType = chartTypeOptions["chartType"];
+        string chartId = chartTypeOptions["chartId"];
+        string chartWidth = chartTypeOptions["chartWidth"];
+        string chartHeight = chartTypeOptions["chartHeight"];
+
+
+        FusionCharts.Charts.Chart c = new FusionCharts.Charts.Chart(chartType, chartId, chartWidth, chartHeight, "json");
+        string chartOptionsJSON = Json.Encode(chartStyleOptions);
+
+        string dataArrayJSON = Json.Encode(data(myData));
+        string chartJSON = "{\"chart\":" + chartOptionsJSON + ",\"data\":" + dataArrayJSON + "}";
+        c.SetData(chartJSON, FusionCharts.Charts.Chart.DataFormat.json);
+
+        return c;
+    }
+
+
+    IDictionary<string, string> initializeChartTypeOptions()
+    {
+        IDictionary<string, string> _me = new Dictionary<string, string>();
+        _me.Add("chartType", "bar2d");
+        _me.Add("chartId", "");
+        _me.Add("chartWidth", "600");
+        _me.Add("chartHeight", "400");
+        //_me.Add("", "");
+
+        return _me;
+    }
+
+    IDictionary<string, string> initializeChartStyleOptions()
+    {
+        IDictionary<string, string> _me = new Dictionary<string, string>();
+        _me.Add("bgColor", "#FFFFFF");
+        _me.Add("caption", "Monthly Revenue");
+        _me.Add("subCaption", "Last Year");
+        _me.Add("xAxisName", "Month");
+        _me.Add("yAxisName", "Amount (USD)");
+        _me.Add("numberPrefix", "$");
+        _me.Add("showBorder", "0");
+        _me.Add("theme", "fint");
+        //_me.Add("", "");
+
+
+        return _me;
+    }
+
+    void modifyChartOption(IDictionary<string, string> optionDict, string optionLabel, string optionValue)
+    {
+        optionDict[optionLabel] = optionValue;
+    }
+
+    IDictionary<string, string> dataElement(string label, string value)
+    {
+        IDictionary<string, string> _me = new Dictionary<string, string>();
+        _me.Add("label", label);
+        _me.Add("value", value);
+        return _me;
+    }
+
+    List<IDictionary<string, string>> data(IDictionary<string, string> dataSet)
+    {
+        List<IDictionary<string, string>> _meList = new List<IDictionary<string, string>>();
+        foreach (KeyValuePair<string, string> entry in dataSet)
+        {
+            _meList.Add(dataElement(entry.Key, entry.Value));
+        }
+
+        return _meList;
+    }
+}
+
+
+@{
+
+    Layout = "~/Content/shared/_entry2Layout.cshtml";
+
+    string s = Request["filterOr"];
+
+    s = s == null ? "" : (s == "" ? s : ("\"" + s.Replace(",", "\",\"") + "\""));
+
+    var fe = new FinancesEntities();
+    DateTime dtMin = DateTime.Parse(Request["filterMinDate"]);
+    DateTime dtMax = DateTime.Parse(Request["filterMaxDate"]);
+
+    int includeAll = int.Parse(Request["filterIncludeAll"]) * -1;
+
+    int accountId = int.Parse(Request["filterAccountId"]);
+
+    String payee = Request["filterPayee"];
+    string payeeLike = ((payee.Substring(0, 1) == "%") ? (payee.Substring(payee.Length - 1, 1) == "%" ? "contains" : "startsWith") : (payee.Substring(payee.Length - 1, 1) == "%" ? "endsWith" : "equals"));
+    payee = payee.Replace("%", "");
+
+    decimal amount = decimal.Parse(Request["filterAmount"]);
+
+    String category = Request["filterCategory"];
+    string categoryLike = ((category.Substring(0, 1) == "%") ? (category.Substring(category.Length - 1, 1) == "%" ? "contains" : "startsWith") : (category.Substring(category.Length - 1, 1) == "%" ? "endsWith" : "equals"));
+    category = category.Replace("%", "");
+
+
+    String tag = Request["filterTag"];
+    tag = tag.Replace("%", "");
+    tag = tag == "" ? "" : tag + ";";
+
+    var transactionTest = (from bt in fe.BankTransactionCatNoSplits
+                           where bt.accountingDate >= dtMin && bt.accountingDate <= dtMax
+                           && bt.categoryStatus >= includeAll
+                           && (bt.accountId == accountId || accountId == 0)
+                           && (bt.amount == amount || amount == 0)
+                           select new { bt.accountingDate, bt.description, categoryName = (category == "" && (bt.categoryName == null) ? "" : bt.categoryName), tags = (tag == "" && (bt.tags == null) ? "" : bt.tags), bt.amount, bt.accountName })
+                .Where(p => (payeeLike == "contains" && p.description.Contains(payee)) || (payeeLike == "equals" && p.description.Equals(payee)))
+                .Where(c => (categoryLike == "contains" && c.categoryName.Contains(category)) || (categoryLike == "equals" && c.categoryName.Equals(category)))
+                .Where(c => c.tags.Contains(tag));
+
+    WebGrid wg = new WebGrid(canPage: false);
+    List<WebGridColumn> wgCols = new List<WebGridColumn>();
+
+    wgCols.Add(wg.Column("accountingDate", "Date", format: (item) => String.Format("{0:MM/dd/yyyy}", item.Value.accountingDate)));
+    wgCols.Add(wg.Column("description", "Description"));
+    wgCols.Add(wg.Column("categoryName", "Category"));
+    wgCols.Add(wg.Column("tags", "Tags"));
+    wgCols.Add(wg.Column("amount", "Amount", format: (item) => String.Format("{0:#.00}", item.Value.amount)));
+
+    IDictionary<string, string> testData1 = new Dictionary<string, string>();
+    testData1.Add("Jan", "400000");
+    testData1.Add("Feb", "500000");
+
+    IDictionary<string, string> testData2 = new Dictionary<string, string>();
+    testData2.Add("Jan", "40000");
+    testData2.Add("Feb", "50000");
+
+    IDictionary<string, string> chartType = initializeChartTypeOptions();
+    IDictionary<string, string> chartStyle = initializeChartStyleOptions();
+
+    modifyChartOption(chartType, "chartId", "mychart1");
+
+    FusionCharts.Charts.Chart chart1 = makeChart(chartType, chartStyle, testData1);
+
+    modifyChartOption(chartType, "chartId", "mychart2");
+
+    FusionCharts.Charts.Chart chart2 = makeChart(chartType, chartStyle, testData2);
+
+    wg.Bind(transactionTest);
+}
+
+
+@section headerScripts{
+    <script type="text/javascript" src="~/Scripts/fusionCharts/fusioncharts.js"></script>
+    <script type="text/javascript" src="/Scripts/finToolsScripts/sort.js"></script>
+    <script type="text/javascript" src="/Scripts/finToolsScripts/search.js"></script>
+    <script type="text/javascript" src="/Scripts/finToolsScripts/transtable2.js"></script>
+    <script type="text/javascript" src="/Scripts/finToolsScripts/transactionFocus.js"></script>
+
+    <script type="text/javascript">
+
+        var focusFilter;
+
+        function readFilterFromPost() {
+            var f = {};
+            initializeFilter(f);
+
+            f.payee = "@Html.Raw(Request["filterPayee"])";
+            f.minDate = moment('@Request["filterMinDate"]',"MM/DD/YYYY");
+            f.maxDate = moment('@Request["filterMaxDate"]',"MM/DD/YYYY");
+            f.category= "@Request["filterCategory"]";
+            f.accountId = [@Request["filterAccountId"]];
+            f.amount = "@Request["filterAmount"]";
+            f.tag = '@Request["filterTag"]';
+            f.or = [@Html.Raw(s)];
+
+            return f;
+        }
+
+        $(document).ready(function () {
+            includeAll = @Request["filterIncludeAll"];
+            focusFilter = readFilterFromPost();
+            setFilters(focusFilter);
+            $('#chart2Div').text(JSON.stringify(focusFilter));
+            applyFilter(transactionTable, true);
+        });
+
+    </script>
+}
+
+
+<link type="text/css" rel="stylesheet" href="~/Content/transcat.css" />
+
+<div class="row">
+    <div class="col-sm-12">
+        <div id="chart1Div">@wg.GetHtml(columns: wgCols, tableStyle: "table table-condensed")</div>
+    </div>
+</div>
+
+<div class="row">
+    <div class="col-sm-12">
+        <div id="chart2Div"></div>
+    </div>
+</div>
