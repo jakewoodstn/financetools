@@ -5,6 +5,26 @@
     <!-- SSDL content -->
     <edmx:StorageModels>
     <Schema Namespace="FinancesModel.Store" Provider="System.Data.SqlClient" ProviderManifestToken="2012" Alias="Self" xmlns:store="http://schemas.microsoft.com/ado/2007/12/edm/EntityStoreSchemaGenerator" xmlns:customannotation="http://schemas.microsoft.com/ado/2013/11/edm/customannotation" xmlns="http://schemas.microsoft.com/ado/2009/11/edm/ssdl">
+        <EntityType Name="account">
+          <Key>
+            <PropertyRef Name="accountId" />
+          </Key>
+          <Property Name="accountId" Type="int" StoreGeneratedPattern="Identity" Nullable="false" />
+          <Property Name="accountName" Type="nvarchar" MaxLength="50" />
+          <Property Name="createdAt" Type="date" />
+          <Property Name="closedOn" Type="date" />
+          <Property Name="importTransactions" Type="tinyint" />
+          <Property Name="ts" Type="timestamp" StoreGeneratedPattern="Computed" Nullable="false" />
+        </EntityType>
+        <EntityType Name="DailyBalance">
+          <Key>
+            <PropertyRef Name="accountId" />
+            <PropertyRef Name="MeasurementDate" />
+          </Key>
+          <Property Name="accountId" Type="int" Nullable="false" />
+          <Property Name="MeasurementDate" Type="date" Nullable="false" />
+          <Property Name="Amount" Type="money" />
+        </EntityType>
         <EntityType Name="DimDate">
           <Key>
             <PropertyRef Name="DateSK" />
@@ -197,6 +217,8 @@ warning 6002: The table/view 'Finances.dbo.BankTransactionCatNoSplit' does not h
           <Parameter Name="force" Type="int" Mode="In" />
         </Function>
         <EntityContainer Name="FinancesModelStoreContainer">
+          <EntitySet Name="account" EntityType="Self.account" Schema="dbo" store:Type="Tables" />
+          <EntitySet Name="DailyBalance" EntityType="Self.DailyBalance" Schema="dbo" store:Type="Tables" />
           <EntitySet Name="DimDate" EntityType="Self.DimDate" Schema="dbo" store:Type="Tables" />
           <EntitySet Name="simpleBudget" EntityType="Self.simpleBudget" Schema="dbo" store:Type="Tables" />
           <EntitySet Name="simpleBudgetCalculatedActual" EntityType="Self.simpleBudgetCalculatedActual" Schema="dbo" store:Type="Tables" />
@@ -361,6 +383,8 @@ warning 6002: The table/view 'Finances.dbo.BankTransactionCatNoSplit' does not h
             <End Role="transactionTaggedEvent" EntitySet="transactionTaggedEvents" />
           </AssociationSet>
           <EntitySet Name="BankTransactionCatNoSplits" EntityType="FinancesModel.BankTransactionCatNoSplit" />
+          <EntitySet Name="accounts" EntityType="FinancesModel.account" />
+          <EntitySet Name="DailyBalances" EntityType="FinancesModel.DailyBalance" />
         </EntityContainer>
         <Association Name="FK_simpleBudgetExpected_simpleBudget_simpleBudgetId">
           <End Type="FinancesModel.simpleBudget" Role="simpleBudget" Multiplicity="0..1" />
@@ -467,6 +491,26 @@ warning 6002: The table/view 'Finances.dbo.BankTransactionCatNoSplit' does not h
           <Property Name="accountingDate" Type="DateTime" Precision="0" />
           <Property Name="tags" Type="String" MaxLength="Max" FixedLength="false" Unicode="true" />
           <Property Name="tagCount" Type="Int32" />
+        </EntityType>
+        <EntityType Name="account">
+          <Key>
+            <PropertyRef Name="accountId" />
+          </Key>
+          <Property Name="accountId" Type="Int32" Nullable="false" annotation:StoreGeneratedPattern="Identity" />
+          <Property Name="accountName" Type="String" MaxLength="50" FixedLength="false" Unicode="true" />
+          <Property Name="createdAt" Type="DateTime" Precision="0" />
+          <Property Name="closedOn" Type="DateTime" Precision="0" />
+          <Property Name="importTransactions" Type="Byte" />
+          <Property Name="ts" Type="Binary" Nullable="false" MaxLength="8" FixedLength="true" annotation:StoreGeneratedPattern="Computed" />
+        </EntityType>
+        <EntityType Name="DailyBalance">
+          <Key>
+            <PropertyRef Name="accountId" />
+            <PropertyRef Name="MeasurementDate" />
+          </Key>
+          <Property Name="accountId" Type="Int32" Nullable="false" />
+          <Property Name="MeasurementDate" Type="DateTime" Nullable="false" Precision="0" />
+          <Property Name="Amount" Type="Decimal" Precision="19" Scale="4" />
         </EntityType>
       </Schema>
     </edmx:ConceptualModels>
@@ -614,6 +658,27 @@ warning 6002: The table/view 'Finances.dbo.BankTransactionCatNoSplit' does not h
                 <ScalarProperty Name="loadedDate" ColumnName="loadedDate" />
                 <ScalarProperty Name="transactionDate" ColumnName="transactionDate" />
                 <ScalarProperty Name="transactionId" ColumnName="transactionId" />
+              </MappingFragment>
+            </EntityTypeMapping>
+          </EntitySetMapping>
+          <EntitySetMapping Name="accounts">
+            <EntityTypeMapping TypeName="FinancesModel.account">
+              <MappingFragment StoreEntitySet="account">
+                <ScalarProperty Name="ts" ColumnName="ts" />
+                <ScalarProperty Name="importTransactions" ColumnName="importTransactions" />
+                <ScalarProperty Name="closedOn" ColumnName="closedOn" />
+                <ScalarProperty Name="createdAt" ColumnName="createdAt" />
+                <ScalarProperty Name="accountName" ColumnName="accountName" />
+                <ScalarProperty Name="accountId" ColumnName="accountId" />
+              </MappingFragment>
+            </EntityTypeMapping>
+          </EntitySetMapping>
+          <EntitySetMapping Name="DailyBalances">
+            <EntityTypeMapping TypeName="FinancesModel.DailyBalance">
+              <MappingFragment StoreEntitySet="DailyBalance">
+                <ScalarProperty Name="Amount" ColumnName="Amount" />
+                <ScalarProperty Name="MeasurementDate" ColumnName="MeasurementDate" />
+                <ScalarProperty Name="accountId" ColumnName="accountId" />
               </MappingFragment>
             </EntityTypeMapping>
           </EntitySetMapping>

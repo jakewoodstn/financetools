@@ -1,9 +1,40 @@
-﻿@{
+﻿@using FusionCharts.Charts;
+@using System.Dynamic;
+
+@{
     Layout = "~/Content/shared/_entry2Layout.cshtml";
-    int buttonCount = 18;
+    int buttonCount = 24;
     int buttonPerRow = 3;
     var db = Database.Open("Finances");
     var grpRs = db.Query("select distinct groupName from vSpendingCategories inner join spendingCategoryGroup on vSpendingCategories.groupid=spendingCategoryGroup.groupID where groupName in ('Expenses','Income','Savings','Investments') order by groupName");
+
+    var fe = new FinancesEntities();
+    fusionChartsWrapper fcw = new fusionChartsWrapper();
+
+    var work = (from bt in fe.BankTransactionCatNoSplits
+                select new { categoryStatus = bt.categoryStatus, accountingDate = bt.accountingDate, amount = bt.amount, tags = bt.tags }
+                   );
+
+    IDictionary<string, string> catWork = work.Where(c => c.categoryStatus == 0).GroupBy(s => s.accountingDate, s => s.amount, (groupedDate, amounts) => new { key = groupedDate, obs = amounts.Count() }).ToDictionary(s => s.key.ToString(), s => s.obs.ToString());
+    IDictionary<string, string> catWorkGrouped = catWork.AsQueryable().GroupBy(p => DateTime.Parse(p.Key).Year, p => int.Parse(p.Value), (groupedYear, amount) => new { key = groupedYear, obs = amount.Sum() }).OrderBy(p => p.key).ToDictionary(s => s.key.ToString(), s => s.obs.ToString());
+    IDictionary<string, string> tagWork = work.Where(t => t.tags == "").GroupBy(s => s.accountingDate, s => s.amount, (groupedDate, amounts) => new { key = groupedDate, obs = amounts.Count() }).ToDictionary(s => s.key.ToString(), s => s.obs.ToString());
+    IDictionary<string, string> tagWorkGrouped = tagWork.AsQueryable().GroupBy(p => DateTime.Parse(p.Key).Year, p => int.Parse(p.Value), (groupedYear, amount) => new { key = groupedYear, obs = amount.Sum() }).OrderBy(p => p.key).ToDictionary(s => s.key.ToString(), s => s.obs.ToString());
+
+
+    FusionCharts.Charts.Chart catWorkChart = new FusionCharts.Charts.Chart();
+    IDictionary<string, string> chartType = fcw.setType(chartType: "bar2d", chartId: "catWorkChart", chartWidth: "300");
+    IDictionary<string, string> chartStyle = fcw.setStyle(caption: "Categorization Work", subCaption: "", xAxisName: "Year", yAxisName: "Transaction Count", numberPrefix: "", drawAnchors: "0");
+    fcw.addData("Category Work", catWorkGrouped);
+    catWorkChart = fcw.makeChart();
+
+    fcw = new fusionChartsWrapper();
+
+    FusionCharts.Charts.Chart tagWorkChart = new FusionCharts.Charts.Chart();
+    chartType = fcw.setType(chartType: "bar2d", chartId: "tagWorkChart", chartWidth: "300");
+    chartStyle = fcw.setStyle(caption: "Tag Work", subCaption: "", xAxisName: "Year", yAxisName: "Transaction Count", numberPrefix: "", drawAnchors: "0");
+    fcw.addData("Tag Work", tagWorkGrouped);
+    tagWorkChart = fcw.makeChart();
+
 
 }
 <link type="text/css" rel="stylesheet" href="~/Content/transcat.css" />
@@ -14,6 +45,13 @@
     </ul>
 
 }
+@section headerScripts{
+
+
+    <script type="text/javascript" src="~/Scripts/fusionCharts/fusioncharts.js"></script>
+
+}
+
 @section scripts{
 
     <script type="text/javascript" src="/Scripts/finToolsScripts/catSelector.cshtml"></script>
@@ -25,10 +63,11 @@
     <script type="text/javascript" src="~/Scripts/finToolsScripts/datepicker.js"></script>
     <script type="text/javascript" src="~/Scripts/finToolsScripts/transactionFocus.js"></script>
 
+
     <script type="text/javascript">
         var numTopCat = 24;
         var durTopCat = 365;
-        
+
         function init() {
             $("#loadingDiv").toggle(true);
             fetchData(renderTrans);
@@ -153,9 +192,9 @@
                         <fieldset id="filterAndOr">
                             <legend>Filter on: </legend>
                             <label for="radio-1">Any</label>
-                            <input type="radio" name="radio-1" id="radio-1" checked>
+                            <input type="radio" name="radio-1" id="radio-1">
                             <label for="radio-2">All</label>
-                            <input type="radio" name="radio-1" id="radio-2">
+                            <input type="radio" name="radio-1" id="radio-2" checked>
                         </fieldset>
                     </div>
                     <div class="col-sm-10 well">
@@ -217,8 +256,26 @@
                 </div>
             </div>
         </div>
+        <div class="row dropSmall">
+            <div class="col-sm-2">
+                <span class="btn btn-info" onclick="copyTran();">Copy Transaction</span>
+            </div>
+            <div class="col-sm-2">
+                <button class="btn btn-info" onclick="pasteTran('payee');">Paste Payee</button>
+            </div>
+
+
+            <div class="col-sm-8 text-right">
+                <span id="selectedCount" class="h4"></span>
+            </div>
+        </div>
+        <div class="row text-right">
+            <div class="col-xs-12">
+                <button class="btn btn-info" onclick="sendToTransactionFocus();">Transaction Focus</button>
+            </div>
+        </div>
         <div class="row">
-            <div class="col-sm-8">
+            <div class="col-sm-12">
                 <div id="splitPanel" style="display: none;" class="col-sm-12">
                     <div id="splitPanelHeader" class=""><span class="h4">Split Transaction Detail</span></div>
                     <div class="row">
@@ -245,29 +302,6 @@
                         <input id="splitCancButton" class="splitPanelButton btn btn-danger" type="button" value="Cancel" onclick="$('#splitPanel').toggle(false);" />
                         <input id="splitSaveButton" class="splitPanelButton btn btn-success" type="button" value="Save" onclick="saveSplit()" />
                         <input id="splitDeleteAllButton" class="splitPanelButton btn btn-info btn-pink" type="button" value="Delete All" onclick="deleteAllSplits()" />
-                    </div>
-                </div>
-            </div>
-            <div class="col-sm-4">
-                <div class="row dropSmall" >
-                    <div class="col-sm-12 text-right">
-                        <span id="selectedCount" class="h4"></span>
-                    </div>
-                </div>
-                <div class="row dropTiny">
-                    <div class="col-sm-12 text-right">
-                        <span id="totals" class="h4"></span>
-                    </div>
-                </div>
-                <div class="row">
-                    <div class="col-sm-4">
-                        <span class="btn btn-info" onclick="copyTran();">Copy Transaction</span>
-                    </div>
-                    <div class="col-sm-4">
-                        <button class="btn btn-info" onclick="pasteTran('payee');">Paste Payee</button>
-                    </div>
-                    <div class="col-sm-4">
-                        <button class="btn btn-info" onclick="sendToTransactionFocus();">Transaction Focus</button>
                     </div>
                 </div>
             </div>
@@ -314,6 +348,22 @@
                     </div>
                     <div class="col-lg-5">
                         <button class="btn btn-info" id="lookupTagAll" onclick="getTags('all');">Show All Tags</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="row">
+            <div class="col-sm-12 foldable">
+                <div class="row"><div class="col-sm-10"><hr /></div></div>
+                <div class="row foldTrigger"><div class="col-lg-12 dropTiny"><span class="h4">Work:</span></div></div>
+                <div class="row folds">
+                    <div class="col-lg-10 dropTiny  " id="categoryWork">
+                        @Html.Raw(catWorkChart.Render())
+                    </div>
+                </div>
+                <div class="row folds">
+                    <div class="col-lg-10 dropTiny  " id="tagWork">
+                        @Html.Raw(tagWorkChart.Render())
                     </div>
                 </div>
             </div>

@@ -115,3 +115,17 @@ li.ui-menu-item{
     border: 0px solid #454545;
     max-width:30%;
 }*/
+.searchParam {
+    font-size:medium;
+    font-weight:bold;
+    color:#fff;
+    background-color:#337ab7;
+    border:2px solid #2e6da4;
+    margin:20px;
+    border-radius:7px;
+    padding:5px;
+}
+
+hr.region {
+    background-image:-webkit-linear-gradient(left,#fff,#000,#fff);
+}

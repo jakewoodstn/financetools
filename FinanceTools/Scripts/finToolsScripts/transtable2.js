@@ -57,7 +57,15 @@ function getPayeeCatStats() {
 
     var f = {};
     initializeFilter(f);
-    if ($('.transSelected').length > 0) { f.payee = $(".transSelected").first().find('.transDescription').text(); }
+    if ($('.transSelected').length > 0) {
+        f.payee = $(".transSelected").first().find('.transDescription').text();
+        f.category = "%";
+        f.subcategory = "%";
+        f.tag = "%";
+        f.amount = 0;
+        f.or = [];
+    }
+ 
     var searcher = JSON.stringify(f);
 
     $.ajax({
@@ -971,7 +979,7 @@ function readFieldsIntoFilter() {
     f.setFilter("minDate", moment($('.filter-control#filterMinDate').val(), 'MM/DD/YYYY'));
     f.setFilter("maxDate", moment($('.filter-control#filterMaxDate').val(), 'MM/DD/YYYY'));
     f.setFilter("accountId", [$('select.filter-control#accountSearch').children(':selected').first().index()]);
-    f.setFilter("payee", $('.filter-control#filterPayee').val());
+    if ($('.transSelected').length === 1) { f.setFilter("payee", $('.transSelected').children('.transDescription').text()); } else { f.setFilter("payee", $('.filter-control#filterPayee').val()); }
     f.setFilter("category", $('.filter-control#filterCategory').val());
     f.setFilter("tag", $('.filter-control#filterTag').val());
     f.setFilter("amount", accounting.formatNumber($('.filter-control#filterAmount').val(), 2));
@@ -1018,25 +1026,25 @@ function clearSearchFilter() {
 
 function computeTotals() {
 
-    var runningExpenseTotal = 0;
-    var runningIncomeTotal = 0;
-    var message ='';
+    //var runningExpenseTotal = 0;
+    //var runningIncomeTotal = 0;
+    //var message ='';
 
-    if ($('.transAmount').length == 0) {
-        message = 'No totals'
-    } else {
+    //if ($('.transAmount').length == 0) {
+    //    message = 'No totals'
+    //} else {
 
-        $('.transAmount').each(
-            function () {
-                var a = accounting.unformat($(this).text());
-                if (a < 0) { runningExpenseTotal += a; } else { runningIncomeTotal += a; }
-            }
-            );
+    //    $('.transAmount').each(
+    //        function () {
+    //            var a = accounting.unformat($(this).text());
+    //            if (a < 0) { runningExpenseTotal += a; } else { runningIncomeTotal += a; }
+    //        }
+    //        );
 
-        message = 'Income: ' + accounting.formatMoney(runningIncomeTotal) + ' Expense: ' + accounting.formatMoney(runningExpenseTotal);
-    }
+    //    message = 'Income: ' + accounting.formatMoney(runningIncomeTotal) + ' Expense: ' + accounting.formatMoney(runningExpenseTotal);
+    //}
 
-    $('#totals').text(message);
+    //$('#totals').text(message);
 }
 
 function sendToTransactionFocus() {

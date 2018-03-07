@@ -33,6 +33,8 @@ public partial class FinancesEntities : DbContext
     public virtual DbSet<taggedEvent> taggedEvents { get; set; }
     public virtual DbSet<transactionTaggedEvent> transactionTaggedEvents { get; set; }
     public virtual DbSet<BankTransactionCatNoSplit> BankTransactionCatNoSplits { get; set; }
+    public virtual DbSet<account> accounts { get; set; }
+    public virtual DbSet<DailyBalance> DailyBalances { get; set; }
 
     public virtual ObjectResult<string> materializeSimpleBudgetActual(Nullable<System.DateTime> startDate, Nullable<System.DateTime> endDate, Nullable<int> sendMessage, Nullable<int> force)
     {

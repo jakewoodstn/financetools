@@ -8,9 +8,15 @@
         return returner;
     }
 
-    void refreshActuals(FinancesEntities fc, DateTime startDate, DateTime endDate) {
-        fc.materializeSimpleBudgetActual(startDate, endDate, 1,1);
+    void refreshActuals(FinancesEntities fc, DateTime startDate, DateTime endDate)
+    {
+        fc.materializeSimpleBudgetActual(startDate, endDate, 1, 1);
     }
+
+}
+
+@section headerScripts{
+    <script type="text/javascript" src="~/Scripts/fusionCharts/fusioncharts.js"></script>
 
 }
 
@@ -64,7 +70,7 @@
 
     var fe = new FinancesEntities();
 
-    if (Request["whichButton"]=="matButton") { refreshActuals(fe, br.startDate, br.endDate); }
+    if (Request["whichButton"] == "matButton") { refreshActuals(fe, br.startDate, br.endDate); }
 
     //var res = fe.simpleBudgets.Where(x => x.label3 !="").Select(
     //        s =>
@@ -158,6 +164,8 @@
     var unionSource = br.depth == "budget" ? level2BudgetSummary : br.depth == "subbudget" ? level2BudgetSummary.Union(level3BudgetSummary) : level1BudgetSummary;
     var allBudgetSummary = level1BudgetSummary.Union(unionSource).OrderBy(x => x.sortOrder).OrderBy(x => x.label3 == "" ? (x.label2 == "" ? 2 : 1) : (x.label2 == "" ? 1 : 0));
 
+    IDictionary<string, IDictionary<string, string>> a2eData = new Dictionary<string, IDictionary<string, string>>();
+
     WebGrid wg = new WebGrid(canPage: false);
 
     List<WebGridColumn> wgCols = new List<WebGridColumn>();
@@ -201,11 +209,12 @@
                 switch (br.metric)
                 {
                     case "actual": displayValue = value.actualAmount; break;
+                    case "a2e": displayValue = (decimal)value.expectedAmount - value.actualAmount; break;
                     case "expected": displayValue = (decimal)value.expectedAmount; break;
                     case "remaining": displayValue = (decimal)value.remainingAmount; break;
                     default: break;
                 }
-
+                if (br.metric == "a2e") { }
                 row.Add(p.ActDate, displayValue);
             }
             result.Add(row);
@@ -290,6 +299,7 @@
                 switch (br.metric)
                 {
                     case "actual": displayValue = value.actualAmount; break;
+                    case "a2e": displayValue = value.actualAmount; break;
                     case "expected": displayValue = (decimal)value.expectedAmount; break;
                     case "remaining": displayValue = (decimal)value.remainingAmount; break;
                     default: break;
@@ -301,10 +311,179 @@
         }
     }
 
+    wg.Bind(result.OrderBy(x => x.sortOrder).ThenBy(x => x.label3 == "" ? (x.label2 == "" ? 2 : 1) : (x.label2 == "" ? 1 : 0)));
+
+
+
     if (br.depth == "budget") { wgCols.Remove(wgCols[2]); }
     if (br.depth == "incomeExpense") { wgCols.Remove(wgCols[2]); wgCols.Remove(wgCols[1]); }
 
-    wg.Bind(result.OrderBy(x => x.sortOrder).ThenBy(x => x.label3 == "" ? (x.label2 == "" ? 2 : 1) : (x.label2 == "" ? 1 : 0)));
+
+    #region charts
+
+
+    #region a2e
+
+    fusionChartsWrapper fcw;
+    FusionCharts.Charts.Chart a2eChart = new FusionCharts.Charts.Chart();
+    IDictionary<string, Dictionary<string, string>> a2eActuals = new Dictionary<string, Dictionary<string, string>>();
+    IDictionary<string, Dictionary<string, string>> a2eExpected;
+    IDictionary<string, FusionCharts.Charts.Chart> a2eChartList = new Dictionary<string, FusionCharts.Charts.Chart>();
+
+
+    if (br.metric == "a2e" && br.density == "month" && br.depth == "budget")
+    {
+
+        a2eActuals = allBudgetSummary.Where(s => s.label2 != "").GroupBy(abs => abs.ActDate)
+                        .ToDictionary(
+                            x => x.Key,
+                            x => x.GroupBy(a => new { a.label1, a.label2 }, a => a.actualAmount, (budget, amount) => new { key = budget.label1 + " - " + budget.label2, incomeExpense = budget.label1, sumActual = amount.Sum().ToString() })
+                                    .Where(s => s.incomeExpense == "Expenses")
+                                    .ToDictionary(y => y.key, y => y.sumActual)
+                        );
+
+        a2eExpected = allBudgetSummary.Where(s => s.label2 != "").GroupBy(abs => abs.ActDate)
+                        .ToDictionary(
+                            x => x.Key,
+                            x => x.GroupBy(a => new { a.label1, a.label2 }, a => a.expectedAmount, (budget, amount) => new { key = budget.label1 + " - " + budget.label2, incomeExpense = budget.label1, sumExpected = amount.Sum().ToString() }
+                                )
+                                .ToDictionary(y => y.key, y => y.sumExpected)
+                        );
+
+
+        foreach (string k in a2eActuals.Keys)
+        {
+            IDictionary<string, string> a2eRemaining = new Dictionary<string, string>();
+            IDictionary<string, string> a2eOverage = new Dictionary<string, string>();
+            IDictionary<string, string> a2eMerged = new Dictionary<string, string>();
+
+            IDictionary<string, string> thisActual = new Dictionary<string, string>();
+            IDictionary<string, string> thisExpected = new Dictionary<string, string>();
+
+            thisActual = a2eActuals[k];
+            thisExpected = a2eExpected[k];
+
+            foreach (string kk in thisExpected.Keys)
+            {
+                if (thisActual.ContainsKey(kk))
+                {
+                    if (Decimal.Parse(thisActual[kk]) < 0 && Decimal.Parse(thisActual[kk]) < Decimal.Parse(thisExpected[kk]))
+                    {
+                        a2eOverage.Add(kk, Math.Abs((Decimal.Parse(thisActual[kk]) - Decimal.Parse(thisExpected[kk]))).ToString());
+                        a2eMerged.Add(kk, Math.Abs(Decimal.Parse(thisExpected[kk])).ToString());
+                        a2eRemaining.Add(kk, "0");
+                    }
+                    if (Decimal.Parse(thisActual[kk]) < 0 && Decimal.Parse(thisActual[kk]) >= Decimal.Parse(thisExpected[kk]))
+                    {
+                        a2eRemaining.Add(kk, Math.Abs((Decimal.Parse(thisExpected[kk]) - Decimal.Parse(thisActual[kk]))).ToString());
+                        a2eMerged.Add(kk, Math.Abs(Decimal.Parse(thisActual[kk])).ToString());
+                        a2eOverage.Add(kk, "0");
+                    }
+                    if (Decimal.Parse(thisActual[kk]) > 0 && Decimal.Parse(thisActual[kk]) >= Decimal.Parse(thisExpected[kk]))
+                    {
+                        a2eOverage.Add(kk, Math.Abs((Decimal.Parse(thisActual[kk]) - Decimal.Parse(thisExpected[kk]))).ToString());
+                        a2eMerged.Add(kk, Math.Abs(Decimal.Parse(thisExpected[kk])).ToString());
+                        a2eRemaining.Add(kk, "0");
+                    }
+                    if (Decimal.Parse(thisActual[kk]) > 0 && Decimal.Parse(thisActual[kk]) < Decimal.Parse(thisExpected[kk]))
+                    {
+                        a2eRemaining.Add(kk, Math.Abs((Decimal.Parse(thisExpected[kk]) - Decimal.Parse(thisActual[kk]))).ToString());
+                        a2eMerged.Add(kk, Math.Abs(Decimal.Parse(thisActual[kk])).ToString());
+                        a2eOverage.Add(kk, "0");
+                    }
+                    if (Decimal.Parse(thisActual[kk]) == 0)
+                    {
+                        a2eMerged.Add(kk, "0");
+                        a2eRemaining.Add(kk, Math.Abs(Decimal.Parse(thisExpected[kk])).ToString());
+                        a2eOverage.Add(kk, "0");
+                    }
+                }
+                else
+                {
+                    a2eMerged.Add(kk, "0");
+                    a2eRemaining.Add(kk, thisExpected[kk]);
+                    a2eOverage.Add(kk, "0");
+                }
+            }
+
+            fcw = new fusionChartsWrapper();
+            fcw.setType(chartType: "stackedcolumn2d", chartId: "a2e_" + k, chartWidth: "1800", chartHeight: "600");
+            fcw.setStyle(caption: "Actual to Expected Budget Performance", subCaption: k, xAxisName: "Budget Category", yAxisName: "", showPercentValues: "0", labelDisplay: "rotate",showValues:"0",decimals:"0");
+            fcw.addData("Spending", a2eMerged,"#00009C");
+            fcw.addData("Remaining Spending", a2eRemaining,"#116611");
+            fcw.addData("Spending Overage", a2eOverage,"#A00A0A");
+            a2eChart = fcw.makeChart();
+            a2eChartList.Add(k, a2eChart);
+        }
+    }
+
+    #endregion
+
+    #region IncomeAndExpenseChart
+    IDictionary<string, IDictionary<string, string>> dataSetsForExpenseChart = new Dictionary<string, IDictionary<string, string>>();
+    IDictionary<string, IDictionary<string, string>> dataSetsForIncomeChart = new Dictionary<string, IDictionary<string, string>>();
+
+    var ee = (IDictionary<string, object>)result.First();
+    foreach (string k in ee.Keys)
+    {
+        if (k.Substring(0, 5) != "label" && k != "sortOrder")
+        {
+            dataSetsForExpenseChart.Add(k, new Dictionary<string, string>());
+            dataSetsForIncomeChart.Add(k, new Dictionary<string, string>());
+        }
+    }
+
+    foreach (var r in result)
+    {
+        if (!(r.label2 == "" && r.label3 == ""))
+        {
+            var rr = (IDictionary<string, object>)r;
+            string innerKey = r.label2.ToString() + (r.label3.ToString() == "" ? "" : " - " + r.label3.ToString());
+            foreach (string rrk in rr.Keys)
+            {
+                if (rrk.Substring(0, 5) != "label" && rrk != "sortOrder")
+                {
+                    if (r.label1 == "Expenses")
+                    {
+                        dataSetsForExpenseChart[rrk].Add(innerKey, Math.Abs((decimal)rr[rrk]).ToString());
+                    }
+                    if (r.label1 == "Income")
+                    {
+                        dataSetsForIncomeChart[rrk].Add(innerKey, Math.Abs((decimal)rr[rrk]).ToString());
+                    }
+                }
+            }
+        }
+    }
+    fcw = new fusionChartsWrapper();
+    FusionCharts.Charts.Chart budgetExpenseChart = new FusionCharts.Charts.Chart();
+
+    fcw.setType(chartType: dataSetsForExpenseChart.Keys.Count == 1 ? "column2d" : "msColumn2d", chartId: "budgetExpenseChart", chartWidth: "1800", chartHeight: "600");
+    fcw.setStyle(decimals: "0", xAxisName: "", yAxisName: "", caption: "Expense History", subCaption: "", labelDisplay: "rotate", showValues: br.depth == "subbudget" ? "0" : "1");
+
+    foreach (string k in dataSetsForExpenseChart.Keys)
+    {
+        fcw.addData(k, dataSetsForExpenseChart[k]);
+    }
+
+    budgetExpenseChart = fcw.makeChart();
+
+    fcw = new fusionChartsWrapper();
+
+    FusionCharts.Charts.Chart budgetIncomeChart = new FusionCharts.Charts.Chart();
+
+    fcw.setType(chartType: dataSetsForIncomeChart.Keys.Count == 1 ? "column2d" : "msColumn2d", chartId: "budgetIncomeChart", chartWidth: "1800", chartHeight: "600");
+    fcw.setStyle(decimals: "0", xAxisName: "", yAxisName: "", caption: "Income History", subCaption: "", labelDisplay: "rotate", showValues: br.depth == "subbudget" ? "0" : "1");
+
+    foreach (string k in dataSetsForIncomeChart.Keys)
+    {
+        fcw.addData(k, dataSetsForIncomeChart[k]);
+    }
+
+    budgetIncomeChart = fcw.makeChart();
+    #endregion
+
+    #endregion
 
 
 }
@@ -320,8 +499,6 @@
             <div class="affix">
                 <form id="parameterForm" name="parameterForm" method="post">
                     <div class="row">
-
-
                         <div id="parameters" class="col-xs-12 foldable">
                             <div class="row foldTrigger">
                                 <div class="col-xs-12">
@@ -380,7 +557,7 @@
                             </div>
                             <div class="row dropSmall folds">
                                 <div class="col-xs-12">
-                                    <input id="submitButton" name ="submitButton" type="button" class="btn btn-primary btn-block" value="Refresh" onclick="$('#whichButton').val('submitButton'); $('#parameterForm').submit();" />
+                                    <input id="submitButton" name="submitButton" type="button" class="btn btn-primary btn-block" value="Refresh" onclick="$('#whichButton').val('submitButton'); $('#parameterForm').submit();" />
                                 </div>
                             </div>
                             <div class="row dropSmall folds">
@@ -401,6 +578,34 @@
         <div class="col-sm-10">
             @wg.GetHtml(columns: wgCols, tableStyle: "table table-condensed", alternatingRowStyle: "info", selectedRowStyle: "active")
         </div>
+    </div>
+    <div class="row">
+        <div class="col-xs-10 col-xs-offset-2">
+            @{
+                string a2eChartOutput = "";
+                if (br.metric == "a2e" && br.density == "month" && br.depth == "budget")
+                {
+                    foreach (KeyValuePair<string, FusionCharts.Charts.Chart> c in a2eChartList)
+                    {
+                        string start = "<div class=\"row\"><div class=\"col-xs-12\">";
+                        string end = "</div></div>";
+                        a2eChartOutput += start + c.Value.Render() + end;
+                    }
+                }
+            }
+            @Html.Raw(a2eChartOutput)
+        </div>
+    </div>
+    <div class="row">
+        <div class="col-xs-10 col-xs-offset-2">
+            @Html.Raw(budgetExpenseChart.Render())
+        </div>
+    </div>
+    <div class="row">
+        <div class="col-xs-10 col-xs-offset-2">
+            @Html.Raw(budgetIncomeChart.Render())
+        </div>
+
     </div>
 </body>
 </html>

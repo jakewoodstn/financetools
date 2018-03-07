@@ -3,122 +3,359 @@
 
 @functions{
 
-    FusionCharts.Charts.Chart makeChart(IDictionary<string, string> chartTypeOptions, IDictionary<string, string> chartStyleOptions, IDictionary<string, string> myData)
+    DateTime startOfYear(DateTime inputDate)
     {
-
-        string chartType = chartTypeOptions["chartType"];
-        string chartId = chartTypeOptions["chartId"];
-        string chartWidth = chartTypeOptions["chartWidth"];
-        string chartHeight = chartTypeOptions["chartHeight"];
-
-
-        FusionCharts.Charts.Chart c = new FusionCharts.Charts.Chart(chartType, chartId, chartWidth, chartHeight, "json");
-        string chartOptionsJSON = Json.Encode(chartStyleOptions);
-
-        string dataArrayJSON = Json.Encode(data(myData));
-        string chartJSON = "{\"chart\":" + chartOptionsJSON + ",\"data\":" + dataArrayJSON + "}";
-        c.SetData(chartJSON, FusionCharts.Charts.Chart.DataFormat.json);
-
-        return c;
+        DateTime s = inputDate.AddDays(-1 * inputDate.DayOfYear).AddDays(1);
+        return s;
     }
 
-
-    IDictionary<string, string> initializeChartTypeOptions()
+    DateTime endOfYear(DateTime inputDate)
     {
-        IDictionary<string, string> _me = new Dictionary<string, string>();
-        _me.Add("chartType", "bar2d");
-        _me.Add("chartId", "");
-        _me.Add("chartWidth", "600");
-        _me.Add("chartHeight", "400");
-        //_me.Add("", "");
-
-        return _me;
+        DateTime e = startOfYear(inputDate).AddYears(1).AddDays(-1);
+        return e;
     }
 
-    IDictionary<string, string> initializeChartStyleOptions()
-    {
-        IDictionary<string, string> _me = new Dictionary<string, string>();
-        _me.Add("bgColor", "#FFFFFF");
-        _me.Add("caption", "Monthly Revenue");
-        _me.Add("subCaption", "Last Year");
-        _me.Add("xAxisName", "Month");
-        _me.Add("yAxisName", "Amount (USD)");
-        _me.Add("numberPrefix", "$");
-        _me.Add("showBorder", "0");
-        _me.Add("theme", "fint");
-        //_me.Add("", "");
-
-
-        return _me;
-    }
-
-    void modifyChartOption(IDictionary<string, string> optionDict, string optionLabel, string optionValue)
-    {
-        optionDict[optionLabel] = optionValue;
-    }
-
-    IDictionary<string, string> dataElement(string label, string value)
-    {
-        IDictionary<string, string> _me = new Dictionary<string, string>();
-        _me.Add("label", label);
-        _me.Add("value", value);
-        return _me;
-    }
-
-    List<IDictionary<string, string>> data(IDictionary<string, string> dataSet)
-    {
-        List<IDictionary<string, string>> _meList = new List<IDictionary<string, string>>();
-        foreach (KeyValuePair<string, string> entry in dataSet)
-        {
-            _meList.Add(dataElement(entry.Key, entry.Value));
-        }
-
-        return _meList;
-    }
 }
 
 
 @{
-
     Layout = "~/Content/shared/_entry2Layout.cshtml";
 
+
+    #region "Initialization"
+
+    fusionChartsWrapper fcwIncExLine = new fusionChartsWrapper();
+    fusionChartsWrapper fcwCumulIncExLine = new fusionChartsWrapper();
+    fusionChartsWrapper fcwExP = new fusionChartsWrapper();
+    fusionChartsWrapper fcwInP = new fusionChartsWrapper();
+    fusionChartsWrapper fcwThisLastExpense = new fusionChartsWrapper();
+    fusionChartsWrapper fcwThisLastIncome = new fusionChartsWrapper();
+    fusionChartsWrapper fcwTagExpense = new fusionChartsWrapper();
+    fusionChartsWrapper fcwTagIncome = new fusionChartsWrapper();
+
+    FusionCharts.Charts.Chart chartLineExpense = new FusionCharts.Charts.Chart();
+    FusionCharts.Charts.Chart chartLineExpenseCum = new FusionCharts.Charts.Chart();
+    FusionCharts.Charts.Chart chartLineThisLastExpense = new FusionCharts.Charts.Chart();
+    FusionCharts.Charts.Chart chartLineThisLastIncome = new FusionCharts.Charts.Chart();
+
+    IDictionary<string, string> chartType = new Dictionary<string, string>();
+    IDictionary<string, string> chartStyle = new Dictionary<string, string>();
     string s = Request["filterOr"];
 
     s = s == null ? "" : (s == "" ? s : ("\"" + s.Replace(",", "\",\"") + "\""));
 
     var fe = new FinancesEntities();
-    DateTime dtMin = DateTime.Parse(Request["filterMinDate"]);
-    DateTime dtMax = DateTime.Parse(Request["filterMaxDate"]);
+    int maxNumOfDays = 100;
+    int maxNumOfMonths = 27;
 
-    int includeAll = int.Parse(Request["filterIncludeAll"]) * -1;
+    DateTime dtMin = DateTime.Now.AddMonths(-6);
+    DateTime dtMax = DateTime.Now;
+    DateTime SOYdtMin;
+    DateTime SOYdtMax;
+    DateTime SOLastYdtMax;
+    int includeAll = -1;
+    int accountId = 0;
+    String payee = "%";
+    string payeeLike;
+    decimal amount = 0;
+    String category = "%";
+    string categoryLike;
+    String tag="%";
 
-    int accountId = int.Parse(Request["filterAccountId"]);
+    if (Request.Form.Count > 0)
+    {
+        dtMin = DateTime.Parse(Request["filterMinDate"]);
+        dtMax = DateTime.Parse(Request["filterMaxDate"]);
+        includeAll = int.Parse(Request["filterIncludeAll"]) * -1;
+        accountId = int.Parse(Request["filterAccountId"]);
+        payee = Request["filterPayee"];
+        amount = decimal.Parse(Request["filterAmount"]);
+        category = Request["filterCategory"];
+        tag = Request["filterTag"];
+    }
 
-    String payee = Request["filterPayee"];
-    string payeeLike = ((payee.Substring(0, 1) == "%") ? (payee.Substring(payee.Length - 1, 1) == "%" ? "contains" : "startsWith") : (payee.Substring(payee.Length - 1, 1) == "%" ? "endsWith" : "equals"));
+    SOYdtMin = startOfYear(dtMin);
+    SOYdtMax = startOfYear(dtMax);
+    SOLastYdtMax = SOYdtMax.AddYears(-1);
+
+    payeeLike = ((payee.Substring(0, 1) == "%") ? (payee.Substring(payee.Length - 1, 1) == "%" ? "contains" : "startsWith") : (payee.Substring(payee.Length - 1, 1) == "%" ? "endsWith" : "equals"));
     payee = payee.Replace("%", "");
 
-    decimal amount = decimal.Parse(Request["filterAmount"]);
-
-    String category = Request["filterCategory"];
-    string categoryLike = ((category.Substring(0, 1) == "%") ? (category.Substring(category.Length - 1, 1) == "%" ? "contains" : "startsWith") : (category.Substring(category.Length - 1, 1) == "%" ? "endsWith" : "equals"));
+    categoryLike = ((category.Substring(0, 1) == "%") ? (category.Substring(category.Length - 1, 1) == "%" ? "contains" : "startsWith") : (category.Substring(category.Length - 1, 1) == "%" ? "endsWith" : "equals"));
     category = category.Replace("%", "");
 
-
-    String tag = Request["filterTag"];
     tag = tag.Replace("%", "");
     tag = tag == "" ? "" : tag + ";";
 
+    DateTime QuarterlyMin = "1/1/1900".AsDateTime();
+    DateTime QuarterlyMax = "1/1/1900".AsDateTime();
+    DateTime monthlyMin = "1/1/1900".AsDateTime();
+    DateTime monthlyMax = "1/1/1900".AsDateTime();
+    DateTime dailyMin = dtMin;
+    DateTime dailyMax = dtMax;
+
+
     var transactionTest = (from bt in fe.BankTransactionCatNoSplits
-                           where bt.accountingDate >= dtMin && bt.accountingDate <= dtMax
-                           && bt.categoryStatus >= includeAll
+                           join dt in fe.DimDates on bt.accountingDate equals dt.FullDate
+                           where bt.accountingDate >= SOYdtMin && bt.accountingDate <= dtMax
                            && (bt.accountId == accountId || accountId == 0)
                            && (bt.amount == amount || amount == 0)
-                           select new { bt.accountingDate, bt.description, categoryName = (category == "" && (bt.categoryName == null) ? "" : bt.categoryName), tags = (tag == "" && (bt.tags == null) ? "" : bt.tags), bt.amount, bt.accountName })
-                .Where(p => (payeeLike == "contains" && p.description.Contains(payee)) || (payeeLike == "equals" && p.description.Equals(payee)))
-                .Where(c => (categoryLike == "contains" && c.categoryName.Contains(category)) || (categoryLike == "equals" && c.categoryName.Equals(category)))
-                .Where(c => c.tags.Contains(tag));
+                           && (!bt.tags.Contains("nonAnalytic"))
+                           select new { dt.WeekOfYearNumber, dt.ActQtr, dt.ActDate, bt.accountingDate, bt.description, categoryName = (category == "" && (bt.categoryName == null) ? "" : bt.categoryName), tags = (tag == "" && (bt.tags == null) ? "" : bt.tags), bt.amount, bt.accountName }
+                   )
+        .Where(p => (payeeLike == "contains" && p.description.Contains(payee)) || (payeeLike == "equals" && p.description.Equals(payee)))
+        .Where(c => (categoryLike == "contains" && c.categoryName.Contains(category)) || (categoryLike == "equals" && c.categoryName.Equals(category)))
+        .Where(c => c.tags.Contains(tag));
+    #endregion "Initialization"
 
+    #region KPI
+    var expenseKPI = transactionTest.Where(p => p.amount < 0).Sum(p => p.amount);
+    var incomeKPI = transactionTest.Where(p => p.amount > 0).Sum(p => p.amount);
+
+
+    #endregion
+
+    #region "Income and Expense Lines"
+
+    int recordCount = transactionTest.AsQueryable().Where(b => b.accountingDate >= dtMin).Select(p => p.accountingDate).Distinct().Count();
+    int useCompression = (recordCount > 90) ? 1 : 0;
+
+    if (useCompression == 1)
+    {
+        int durationDays = (dtMax - dtMin).Days;
+        int durationMonths = (dtMax.Month - dtMin.Month) + 12 * (dtMax.Year - dtMin.Year);
+
+
+        if (durationMonths > maxNumOfMonths)
+        {
+            DateTime FOM = dtMax.AddDays(-1 * dtMax.Day).AddDays(1);
+
+            QuarterlyMin = dtMin;
+            QuarterlyMax = FOM.AddMonths(-1 * maxNumOfMonths + 1).AddDays(-1);
+            QuarterlyMax = QuarterlyMax.AddMonths(-1 * (QuarterlyMax.Month % 3));
+
+            monthlyMin = QuarterlyMax.AddDays(1);
+            monthlyMax = FOM.AddMonths(-3).AddDays(-1);
+
+            dailyMin = monthlyMax.AddDays(1);
+        }
+        else if (durationDays > maxNumOfDays)
+        {
+            DateTime FOM = dtMax.AddDays(-1 * dtMax.Day).AddDays(1);
+
+            monthlyMin = dtMin;
+            monthlyMax = FOM.AddMonths(-3).AddDays(-1);
+
+            dailyMin = monthlyMax.AddDays(1);
+        }
+    }
+
+    var incomeDateGroupingQtr = transactionTest.AsQueryable().Where(p => p.amount > 0 && p.accountingDate >= QuarterlyMin && p.accountingDate <= QuarterlyMax).GroupBy(tran => tran.ActQtr, tran => Math.Abs(tran.amount.Value), (groupedAccountingDate, dailyTotal) => new { key = groupedAccountingDate, total = dailyTotal.Sum(), obs = dailyTotal.Count() });
+    var expenseDateGroupingQtr = transactionTest.AsQueryable().Where(p => p.amount < 0 && p.accountingDate >= QuarterlyMin && p.accountingDate <= QuarterlyMax).GroupBy(tran => tran.ActQtr, tran => Math.Abs(tran.amount.Value), (groupedAccountingDate, dailyTotal) => new { key = groupedAccountingDate, total = dailyTotal.Sum(), obs = dailyTotal.Count() });
+
+    var incomeDateGroupingMonth = transactionTest.AsQueryable().Where(p => p.amount > 0 && p.accountingDate >= monthlyMin && p.accountingDate <= monthlyMax).GroupBy(tran => tran.ActDate, tran => Math.Abs(tran.amount.Value), (groupedAccountingDate, dailyTotal) => new { key = groupedAccountingDate, total = dailyTotal.Sum(), obs = dailyTotal.Count() });
+    var expenseDateGroupingMonth = transactionTest.AsQueryable().Where(p => p.amount < 0 && p.accountingDate >= monthlyMin && p.accountingDate <= monthlyMax).GroupBy(tran => tran.ActDate, tran => Math.Abs(tran.amount.Value), (groupedAccountingDate, dailyTotal) => new { key = groupedAccountingDate, total = dailyTotal.Sum(), obs = dailyTotal.Count() });
+
+    var incomeDateGroupingDay = transactionTest.AsQueryable().Where(p => p.accountingDate >= dailyMin && p.accountingDate <= dailyMax).Where(p => p.amount > 0).GroupBy(tran => tran.accountingDate, tran => Math.Abs(tran.amount.Value), (groupedAccountingDate, dailyTotal) => new { key = groupedAccountingDate, total = dailyTotal.Sum(), obs = dailyTotal.Count() });
+    var expenseDateGroupingDay = transactionTest.AsQueryable().Where(p => p.accountingDate >= dailyMin && p.accountingDate <= dailyMax).Where(p => p.amount < 0).GroupBy(tran => tran.accountingDate, tran => Math.Abs(tran.amount.Value), (groupedAccountingDate, dailyTotal) => new { key = groupedAccountingDate, total = dailyTotal.Sum(), obs = dailyTotal.Count() });
+
+    IDictionary<string, string> expenseDateLineDataQ = expenseDateGroupingQtr.Select(p => new { p.key, p.total }).AsEnumerable().OrderBy(p => p.key).ToDictionary(ed => ed.key.ToString(), ed => ed.total.ToString());
+    IDictionary<string, string> expenseDateLineDataM = expenseDateGroupingMonth.Select(p => new { p.key, p.total }).AsEnumerable().OrderBy(p => p.key).ToDictionary(ed => ed.key.ToString(), ed => ed.total.ToString());
+    IDictionary<string, string> expenseDateLineDataD = expenseDateGroupingDay.Select(p => new { p.key, p.total }).AsEnumerable().OrderBy(p => p.key).ToDictionary(ed => ed.key.ToString(), ed => ed.total.ToString());
+
+    IDictionary<string, string> expenseDateLine = new Dictionary<string, string>();
+    foreach (var o in expenseDateLineDataQ.Union(expenseDateLineDataM).Union(expenseDateLineDataD))
+    {
+        DateTime d = new DateTime();
+        if (DateTime.TryParse(o.Key, out d))
+        {
+            expenseDateLine.Add(d.Date.ToString("yyyy-MM-dd"), o.Value);
+        }
+        else { expenseDateLine.Add(o.Key, o.Value); }
+    }
+
+
+    chartType = fcwIncExLine.setType(chartId: "expenseDateLine", chartType: "msline", chartWidth: "1125", missingValue: "0");
+    chartStyle = fcwIncExLine.setStyle(caption: "Income vs. Expenses", subCaption: "", drawAnchors: "0", showValues: "0", xAxisName: "", yAxisName: "");
+
+
+    IDictionary<string, string> IncomeDateLineDataQ = incomeDateGroupingQtr.Select(p => new { p.key, p.total }).AsEnumerable().OrderBy(p => p.key).ToDictionary(ed => ed.key.ToString(), ed => ed.total.ToString());
+    IDictionary<string, string> IncomeDateLineDataM = incomeDateGroupingMonth.Select(p => new { p.key, p.total }).AsEnumerable().OrderBy(p => p.key).ToDictionary(ed => ed.key.ToString(), ed => ed.total.ToString());
+    IDictionary<string, string> IncomeDateLineDataD = incomeDateGroupingDay.Select(p => new { p.key, p.total }).AsEnumerable().OrderBy(p => p.key).ToDictionary(ed => ed.key.ToString(), ed => ed.total.ToString());
+    IDictionary<string, string> IncomeDateLine = new Dictionary<string, string>();
+
+    foreach (var o in IncomeDateLineDataQ.Union(IncomeDateLineDataM).Union(IncomeDateLineDataD))
+    {
+        DateTime d = new DateTime();
+        if (DateTime.TryParse(o.Key, out d))
+        {
+            IncomeDateLine.Add(d.Date.ToString("yyyy-MM-dd"), o.Value);
+        }
+        else { IncomeDateLine.Add(o.Key, o.Value); }
+    }
+
+    fcwIncExLine.addData("Income", IncomeDateLine);
+    fcwIncExLine.addData("Expenses", expenseDateLine);
+
+    chartLineExpense = fcwIncExLine.makeChart();
+    #endregion
+
+    #region "Cumulative Income and Expense Lines"
+
+    IDictionary<string, string> expenseDateLineCumulative = new Dictionary<string, string>();
+    Double expenseCumulCounter = 0;
+    foreach (var o in expenseDateLineDataQ.Union(expenseDateLineDataM).Union(expenseDateLineDataD))
+    {
+        expenseCumulCounter += Double.Parse(o.Value);
+        DateTime d = new DateTime();
+        if (DateTime.TryParse(o.Key, out d))
+        {
+            expenseDateLineCumulative.Add(d.Date.ToString("yyyy-MM-dd"), expenseCumulCounter.ToString());
+        }
+        else { expenseDateLineCumulative.Add(o.Key, expenseCumulCounter.ToString()); }
+    }
+
+
+    chartType = fcwCumulIncExLine.setType(chartId: "expenseDateLineCumul", chartType: "msarea", chartWidth: "1125", missingValue: "last");
+    chartStyle = fcwCumulIncExLine.setStyle(caption: "Cumulative Income vs. Expenses", subCaption: "", drawAnchors: "0", showValues: "0", xAxisName: "", yAxisName: "");
+
+
+    IDictionary<string, string> IncomeDateLineCumulative = new Dictionary<string, string>();
+
+    Double IncomeCumulCounter = 0;
+    foreach (var o in IncomeDateLineDataQ.Union(IncomeDateLineDataM).Union(IncomeDateLineDataD))
+    {
+        IncomeCumulCounter += Double.Parse(o.Value);
+        DateTime d = new DateTime();
+        if (DateTime.TryParse(o.Key, out d))
+        {
+            IncomeDateLineCumulative.Add(d.Date.ToString("yyyy-MM-dd"), IncomeCumulCounter.ToString());
+        }
+        else { IncomeDateLineCumulative.Add(o.Key, IncomeCumulCounter.ToString()); }
+    }
+
+    fcwCumulIncExLine.addData("Income", IncomeDateLineCumulative);
+    fcwCumulIncExLine.addData("Expenses", expenseDateLineCumulative);
+
+    chartLineExpenseCum = fcwCumulIncExLine.makeChart();
+    #endregion
+
+    #region "CategoryPieCharts"
+
+    var transactionCatSummaryExpense = transactionTest.AsQueryable()
+        .Where(p => p.amount < 0)
+        .GroupBy(tran => tran.categoryName, tran => Math.Abs(tran.amount.Value), (descr, amounts) => new { key = descr, total = amounts.Sum(), obs = amounts.Count() });
+
+    var transactionCatSummaryIncome = transactionTest.AsQueryable()
+        .Where(p => p.amount > 0)
+        .GroupBy(tran => tran.categoryName, tran => Math.Abs(tran.amount.Value), (descr, amounts) => new { key = descr, total = amounts.Sum(), obs = amounts.Count() });
+
+    FusionCharts.Charts.Chart chartExpensePie = new FusionCharts.Charts.Chart();
+    FusionCharts.Charts.Chart chartIncomePie = new FusionCharts.Charts.Chart();
+
+    if (transactionCatSummaryExpense.ToList().Any())
+    {
+        decimal totalExpense = transactionCatSummaryExpense.Sum(p => p.total);
+        decimal catExpense = 0;
+        decimal uncatExpense = 0;
+        decimal d = 0;
+
+        if (transactionCatSummaryExpense.Where(p => p.key != "").ToList().Any())
+        {
+            catExpense = transactionCatSummaryExpense.Where(p => p.key != "").Sum(p => p.total);
+            d = catExpense - transactionCatSummaryExpense.Where(p => p.key != "").OrderByDescending(p => p.total).Take(10).Sum(p => p.total);
+        }
+
+        if (transactionCatSummaryExpense.Where(p => p.key == "").ToList().Any())
+        {
+            uncatExpense = transactionCatSummaryExpense.Where(p => p.key == "").Sum(p => p.total);
+        }
+
+        IDictionary<string, string> expensePieData = new Dictionary<string, string>();
+
+        if (catExpense > 0)
+        {
+            foreach (var o in transactionCatSummaryExpense.Where(p => p.key != "").OrderByDescending(p => p.total).Take(10))
+            {
+                expensePieData.Add(o.key, Math.Round(o.total).ToString());
+            }
+        }
+        else
+        {
+            foreach (var o in transactionCatSummaryExpense.OrderByDescending(p => p.total).Take(10))
+            {
+                expensePieData.Add(o.key, Math.Round(o.total).ToString());
+            }
+        }
+        if (d > 0) { expensePieData.Add("All other", Math.Round(d).ToString()); }
+
+        chartType = fcwExP.setType(chartId: "expensePie", chartType: "doughnut2d", chartWidth: "900");
+        chartStyle = fcwExP.setStyle(caption: "Expense Categories", subCaption: "Top 10 by total $", defaultCenterLabel: "Total: " + string.Format("{0:C0}", catExpense) + (catExpense < totalExpense ? "\r\n(" + string.Format("{0:C0}", totalExpense - catExpense) + ")" : ""), pieRadius: "125");
+        fcwExP.addData("expensePie", expensePieData);
+
+        chartExpensePie = fcwExP.makeChart();
+
+    }
+
+    if (transactionCatSummaryIncome.ToList().Any())
+    {
+        decimal totalIncome = transactionCatSummaryIncome.Sum(p => p.total);
+        decimal catIncome = 0;
+        decimal uncatIncome = 0;
+
+        if (transactionCatSummaryIncome.Where(p => p.key != "").ToList().Any())
+        {
+            catIncome = transactionCatSummaryIncome.Where(p => p.key != "").Sum(p => p.total);
+        }
+
+        if (transactionCatSummaryIncome.Where(p => p.key == "").ToList().Any())
+        {
+            uncatIncome = transactionCatSummaryIncome.Where(p => p.key == "").Sum(p => p.total);
+        }
+
+        chartType = fcwInP.setType(chartId: "incomePie", chartType: "doughnut2d", chartWidth: "900");
+        chartStyle = fcwInP.setStyle(caption: "Income Categories", subCaption: "", defaultCenterLabel: "Total: " + string.Format("{0:C0}", catIncome) + (catIncome < totalIncome ? "\r\n(" + string.Format("{0:C0}", totalIncome - catIncome) + ")" : ""), pieRadius: "125");
+        IDictionary<string, string> incomePieData = new Dictionary<string, string>();
+        if (catIncome > 0)
+        {
+            foreach (var o in transactionCatSummaryIncome.Where(p => p.key != ""))
+            {
+                incomePieData.Add(o.key, Math.Round(o.total).ToString());
+            }
+        }
+        else
+        {
+
+            foreach (var o in transactionCatSummaryIncome)
+            {
+                incomePieData.Add(o.key, Math.Round(o.total).ToString());
+            }
+
+        }
+
+        fcwInP.addData("incomePie", incomePieData);
+
+        chartIncomePie = fcwInP.makeChart();
+    }
+
+
+    //chartType = initializeChartTypeOptions(chartId: "expenseCatUncat", chartType: "stackedColumn2d");
+    //chartStyle = initializeChartStyleOptions(caption: "Categorized Expense Progress", subCaption: "", stack100Percent: "1");
+    //IDictionary<string, IDictionary<string, string>> expenseCatUncatData = new Dictionary<string, Dictionary<string, string>>();
+    //IDictionary<string, string> expenseCatTotal = new Dictionary<string, string>();
+    //expenseCatTotal.Add("Categorized", catExpense.ToString());
+
+    //expenseCatUncatData.Add("Categorized", expenseCatTotal);
+
+    //IDictionary<string, string> expenseUnCatTotal = new Dictionary<string, string>();
+    //expenseCatTotal.Add("Uncategorized", uncatExpense.ToString());
+    //expenseCatUncatData.Add("Uncategorized", expenseUnCatTotal);
+
+    //FusionCharts.Charts.Chart chartExpenseCatUncat = makeChart(chartType, chartStyle, expenseCatUncatData);
+
+    #endregion
+
+    #region "Data Grid"
     WebGrid wg = new WebGrid(canPage: false);
     List<WebGridColumn> wgCols = new List<WebGridColumn>();
 
@@ -128,30 +365,137 @@
     wgCols.Add(wg.Column("tags", "Tags"));
     wgCols.Add(wg.Column("amount", "Amount", format: (item) => String.Format("{0:#.00}", item.Value.amount)));
 
-    IDictionary<string, string> testData1 = new Dictionary<string, string>();
-    testData1.Add("Jan", "400000");
-    testData1.Add("Feb", "500000");
 
-    IDictionary<string, string> testData2 = new Dictionary<string, string>();
-    testData2.Add("Jan", "40000");
-    testData2.Add("Feb", "50000");
-
-    IDictionary<string, string> chartType = initializeChartTypeOptions();
-    IDictionary<string, string> chartStyle = initializeChartStyleOptions();
-
-    modifyChartOption(chartType, "chartId", "mychart1");
-
-    FusionCharts.Charts.Chart chart1 = makeChart(chartType, chartStyle, testData1);
-
-    modifyChartOption(chartType, "chartId", "mychart2");
-
-    FusionCharts.Charts.Chart chart2 = makeChart(chartType, chartStyle, testData2);
 
     wg.Bind(transactionTest);
-}
+
+    //@wg.GetHtml(columns: wgCols, tableStyle: "table table-condensed")
+    #endregion
+
+    #region Period Comparison
 
 
-@section headerScripts{
+    DateTime thisPeriodMin = startOfYear(dtMax);
+    DateTime lastPeriodMin = thisPeriodMin.AddYears(-1);
+    DateTime lastPeriodMax = dtMax.AddYears(-1);
+
+    var transactionPeriod = (from bt in fe.BankTransactionCatNoSplits
+                             join dt in fe.DimDates on bt.accountingDate equals dt.FullDate
+                             where ((bt.accountingDate >= lastPeriodMin && bt.accountingDate <= lastPeriodMax) || (bt.accountingDate >= thisPeriodMin && bt.accountingDate <= dtMax))
+                             && (bt.accountId == accountId || accountId == 0)
+                             && (bt.amount == amount || amount == 0)
+                             && (!bt.tags.Contains("nonAnalytic"))
+                             select new { dt.WeekOfYearNumber, dt.ActQtr, dt.ActDate, bt.accountingDate, bt.description, categoryName = (category == "" && (bt.categoryName == null) ? "" : bt.categoryName), tags = (tag == "" && (bt.tags == null) ? "" : bt.tags), bt.amount, bt.accountName }
+                   )
+        .Where(p => (payeeLike == "contains" && p.description.Contains(payee)) || (payeeLike == "equals" && p.description.Equals(payee)))
+        .Where(c => (categoryLike == "contains" && c.categoryName.Contains(category)) || (categoryLike == "equals" && c.categoryName.Equals(category)))
+        .Where(c => c.tags.Contains(tag));
+
+
+    var thisPeriod = transactionPeriod.Where(p => p.accountingDate >= thisPeriodMin && p.accountingDate <= dtMax);
+    var lastPeriod = transactionPeriod.Where(p => p.accountingDate >= lastPeriodMin && p.accountingDate <= lastPeriodMax);
+
+    IDictionary<string, string> thisPeriodExpense = thisPeriod.Where(p => p.amount < 0).GroupBy(tran => tran.WeekOfYearNumber, tran => Math.Abs(tran.amount.Value), (groupedWeekNumber, total) => new { key = groupedWeekNumber, weeklyTotal = total.Sum() }).ToDictionary(ed => ed.key.ToString("00"), ed => ed.weeklyTotal.ToString());
+    IDictionary<string, string> thisPeriodIncome = thisPeriod.Where(p => p.amount > 0).GroupBy(tran => tran.WeekOfYearNumber, tran => Math.Abs(tran.amount.Value), (groupedWeekNumber, total) => new { key = groupedWeekNumber, weeklyTotal = total.Sum() }).ToDictionary(ed => ed.key.ToString("00"), ed => ed.weeklyTotal.ToString());
+    IDictionary<string, string> lastPeriodExpense = lastPeriod.Where(p => p.amount < 0).GroupBy(tran => tran.WeekOfYearNumber, tran => Math.Abs(tran.amount.Value), (groupedWeekNumber, total) => new { key = groupedWeekNumber, weeklyTotal = total.Sum() }).ToDictionary(ed => ed.key.ToString("00"), ed => ed.weeklyTotal.ToString());
+    IDictionary<string, string> lastPeriodIncome = lastPeriod.Where(p => p.amount > 0).GroupBy(tran => tran.WeekOfYearNumber, tran => Math.Abs(tran.amount.Value), (groupedWeekNumber, total) => new { key = groupedWeekNumber, weeklyTotal = total.Sum() }).ToDictionary(ed => ed.key.ToString("00"), ed => ed.weeklyTotal.ToString());
+
+    chartType = fcwThisLastExpense.setType(chartId: "ThisLastExpenses", chartType: "msline", chartWidth: "1125", missingValue: "0");
+    chartStyle = fcwThisLastExpense.setStyle(caption: "This Year vs. Last - Expenses", subCaption: "", drawAnchors: "0", showValues: "0", xAxisName: "Week Number", yAxisName: "");
+
+    fcwThisLastExpense.addData("Last Year", lastPeriodExpense, "#f3c086");
+    fcwThisLastExpense.addData("This Year", thisPeriodExpense, "#aa7f39");
+
+    chartLineThisLastExpense = fcwThisLastExpense.makeChart();
+
+    chartType = fcwThisLastIncome.setType(chartId: "ThisLastIncome", chartType: "msline", chartWidth: "1125", missingValue: "0");
+    chartStyle = fcwThisLastIncome.setStyle(caption: "This Year vs. Last - Income", subCaption: "", drawAnchors: "0", showValues: "0", xAxisName: "Week Number", yAxisName: "");
+
+    fcwThisLastIncome.addData("Last Year", lastPeriodIncome);
+    fcwThisLastIncome.addData("This Year", thisPeriodIncome, "#2610C0");
+
+    chartLineThisLastIncome = fcwThisLastIncome.makeChart();
+
+    #endregion
+
+    #region "TagPieCharts"
+
+
+    var transactionTagSummary = (from bt in fe.BankTransactionCatNoSplits
+                                 join tte in fe.transactionTaggedEvents on bt.transactionId equals tte.transactionId
+                                 join te in fe.taggedEvents on tte.taggedEventId equals te.taggedEventId
+                                 where te.taggedEventTag != "nonAnalytic"
+                                    && bt.accountingDate >= SOYdtMin && bt.accountingDate <= dtMax
+                                    && (bt.accountId == accountId || accountId == 0)
+                                    && (bt.amount == amount || amount == 0)
+                                 select new { bt.description, bt.categoryName, bt.accountingDate, amount = Math.Abs(bt.amount.Value), incomeExpense = bt.amount > 0 ? "income" : "expense", tag = te.taggedEventTag }
+                                          )
+                    .Where(p => !p.tag.StartsWith("Check"))
+                    .Where(p => (payeeLike == "contains" && p.description.Contains(payee)) || (payeeLike == "equals" && p.description.Equals(payee)))
+                    .Where(c => (categoryLike == "contains" && c.categoryName.Contains(category)) || (categoryLike == "equals" && c.categoryName.Equals(category)))
+                    .Where(c => c.tag.Contains(tag))
+                    .GroupBy(tran => new { tran.tag, tran.incomeExpense }, tran => Math.Abs(tran.amount), (descr, amounts) => new { key = descr.tag, incomeExpense = descr.incomeExpense, total = amounts.Sum(), obs = amounts.Count() })
+                    .OrderByDescending(p => p.total);
+
+    IDictionary<string, string> transactionExpenseTagSummary = transactionTagSummary.AsQueryable().Where(p => p.incomeExpense == "expense").Select(p => new { p.key, p.total }).ToDictionary(tets => tets.key.ToString(), tets => tets.total.ToString());
+    IDictionary<string, string> transactionIncomeTagSummary = transactionTagSummary.AsQueryable().Where(p => p.incomeExpense == "income").Select(p => new { p.key, p.total }).ToDictionary(tits => tits.key.ToString(), tits => tits.total.ToString());
+
+    FusionCharts.Charts.Chart chartTagExpensePie = new FusionCharts.Charts.Chart();
+    FusionCharts.Charts.Chart chartTagIncomePie = new FusionCharts.Charts.Chart();
+
+    chartType = fcwTagExpense.setType(chartType: "bar2d", chartId: "tagExpenseBar", chartWidth: "900", chartHeight: "900");
+    chartStyle = fcwTagExpense.setStyle(caption: "Expenses by Tag", subCaption: "", drawAnchors: "0", showValues: "0", xAxisName: "Tag", yAxisName: "$");
+
+    fcwTagExpense.addData("Tagged Expenses", transactionExpenseTagSummary);
+
+    chartTagExpensePie = fcwTagExpense.makeChart();
+
+    chartType = fcwTagIncome.setType(chartType: "bar2d", chartId: "tagIncomeBar", chartWidth: "900", chartHeight: "900");
+    chartStyle = fcwTagIncome.setStyle(caption: "Income by Tag", subCaption: "", drawAnchors: "0", showValues: "0", xAxisName: "Tag", yAxisName: "$");
+
+    fcwTagIncome.addData("Tagged Incomes", transactionIncomeTagSummary);
+
+    chartTagIncomePie = fcwTagIncome.makeChart();
+    #endregion
+
+    #region dailyBalances
+
+    var dailyBalance = (from db in fe.DailyBalances
+                        join ac in fe.accounts on db.accountId equals ac.accountId
+                        where db.MeasurementDate >= dtMin
+                        select new { ac.accountId, ac.accountName, db.MeasurementDate, Amount=Math.Abs(db.Amount.Value) }
+        );
+
+    IDictionary<string, string> BABalance = dailyBalance.Where(p => p.accountId == 1).ToDictionary(bab => bab.MeasurementDate.ToString("MM/dd/yyyy"), bab => bab.Amount.ToString());
+
+    fusionChartsWrapper fcwBA = new fusionChartsWrapper();
+    FusionCharts.Charts.Chart BAChart = new FusionCharts.Charts.Chart();
+
+    chartType = fcwBA.setType(chartType: "line", chartId: "BABalances", chartWidth: "1125",missingValue:"last");
+    chartStyle = fcwBA.setStyle(caption: "Checking Account Balance", subCaption: "", xAxisName: "", yAxisName: "", decimals: "0", drawAnchors: "0",showValues:"0");
+
+    fcwBA.addData("Daily Balance", BABalance);
+    BAChart = fcwBA.makeChart();
+
+
+    IDictionary<string, string> ChaseBalance = dailyBalance.Where(p => p.accountId == 2).ToDictionary(bab => bab.MeasurementDate.ToString("MM/dd/yyyy"), bab => bab.Amount.ToString());
+
+    fusionChartsWrapper fcwChase = new fusionChartsWrapper();
+    FusionCharts.Charts.Chart ChaseChart = new FusionCharts.Charts.Chart();
+
+    chartType = fcwChase.setType(chartType: "line", chartId: "ChaseBalances", chartWidth: "1125", missingValue: "last");
+    chartStyle = fcwChase.setStyle(caption: "Credit Card Balance", subCaption: "", xAxisName: "", yAxisName: "", decimals: "0", drawAnchors: "0", showValues: "0");
+
+    fcwChase.addData("Daily Balance", ChaseBalance);
+    ChaseChart = fcwChase.makeChart();
+
+
+    #endregion
+
+    }
+
+
+    @section headerScripts{
     <script type="text/javascript" src="~/Scripts/fusionCharts/fusioncharts.js"></script>
     <script type="text/javascript" src="/Scripts/finToolsScripts/sort.js"></script>
     <script type="text/javascript" src="/Scripts/finToolsScripts/search.js"></script>
@@ -166,40 +510,166 @@
             var f = {};
             initializeFilter(f);
 
-            f.payee = "@Html.Raw(Request["filterPayee"])";
-            f.minDate = moment('@Request["filterMinDate"]',"MM/DD/YYYY");
-            f.maxDate = moment('@Request["filterMaxDate"]',"MM/DD/YYYY");
-            f.category= "@Request["filterCategory"]";
-            f.accountId = [@Request["filterAccountId"]];
-            f.amount = "@Request["filterAmount"]";
-            f.tag = '@Request["filterTag"]';
-            f.or = [@Html.Raw(s)];
 
+
+            if (@Request.Form.Count > 0){
+                f.payee = "@Html.Raw(Request["filterPayee"])";
+                f.minDate = moment("@Html.Raw(Request["filterMinDate"])","MM/DD/YYYY");
+                f.maxDate = moment("@Html.Raw(Request["filterMaxDate"])","MM/DD/YYYY");
+                f.category= "@Request["filterCategory"]";
+                f.accountId = [@Request["filterAccountId"]];
+                f.amount = "@Request["filterAmount"]";
+                f.tag = '@Request["filterTag"]';
+                f.or = [@Html.Raw(s)];
+            } else {
+                f.payee="%";
+                f.minDate = moment('@dtMin.ToShortDateString()',"MM/DD/YYYY");
+                f.maxDate = moment('@dtMax.ToShortDateString()',"MM/DD/YYYY");
+                f.category="%";
+                f.accountId=0;
+                f.amount=0;
+                f.tag="%"
+                f.or=[];
+            }
             return f;
         }
 
         $(document).ready(function () {
-            includeAll = @Request["filterIncludeAll"];
+            @*includeAll = @Request.Form.Count > 0 ? "@Request["filterIncludeAll"]" : -1;
             focusFilter = readFilterFromPost();
             setFilters(focusFilter);
-            $('#chart2Div').text(JSON.stringify(focusFilter));
-            applyFilter(transactionTable, true);
+            applyFilter(transactionTable, true);*@
+            $('.foldTrigger').click(foldHandler);
         });
-
     </script>
 }
-
 
 <link type="text/css" rel="stylesheet" href="~/Content/transcat.css" />
 
 <div class="row">
-    <div class="col-sm-12">
-        <div id="chart1Div">@wg.GetHtml(columns: wgCols, tableStyle: "table table-condensed")</div>
-    </div>
+    <div class="col-xs-12 "><h2>Search Parameters:</h2></div>
 </div>
-
 <div class="row">
-    <div class="col-sm-12">
-        <div id="chart2Div"></div>
+    <div class="col-xs-12" id="paramsDiv">
+        <span class="searchParam" id="dateParam">
+            @(dtMin.ToString("MM/dd/yyyy") + " to " + dtMax.ToString("MM/dd/yyyy"))
+        </span>
+        <span class="searchParam" id="catParam">
+            @(category == "" ? "All Categories" : category)
+        </span>
+        <span class="searchParam" id="tagParam">
+            @(tag == "" ? "All Tags" : tag)
+        </span>
+        <span class="searchParam" id="accountParam">
+            @(accountId == 0 ? "All Accounts" : (accountId == 1 ? "Bank of America Checking" : (accountId == 2 ? "Chase Credit Card" : "Unknown")))
+        </span>
+        <span class="searchParam" id="payeeParam">
+            @(payee == "" ? "All Payees" : payee)
+        </span>
     </div>
 </div>
+<hr class="region" />
+<div class="row">
+    <div class="col-xs-12 foldable">
+        <div class="row foldTrigger">
+            <div class="col-xs-12"><h2>Income vs. Expense:</h2></div>
+        </div>
+        <div class="row folds">
+            <div class="col-xs-2">
+                <div id="expenseKPIdiv">
+                    <h3>Total Expenses: @string.Format("{0:C}", expenseKPI)</h3>
+                </div>
+            </div>
+            <div class="col-xs-12 col-lg-6">
+                <div id="incomeKPI">
+                    <h3>Total Income: @string.Format("{0:C}", incomeKPI)</h3>
+                </div>
+            </div>
+        </div>
+        <div class="row folds">
+            <div class="col-xs-12 col-lg-6">
+                <div id="chartLine">
+                    @Html.Raw(chartLineExpense.Render())
+                </div>
+            </div>
+            <div class="col-xs-12 col-lg-6">
+                <div id="chartLine">
+                    @Html.Raw(chartLineExpenseCum.Render())
+                </div>
+            </div>
+        </div>
+        <div class="row folds">
+            <div class="col-xs-12 col-lg-6">
+                <div id="chartLine">
+                    @Html.Raw(chartLineThisLastExpense.Render())
+                </div>
+            </div>
+            <div class="col-xs-12 col-lg-6">
+                <div id="chartLine">
+                    @Html.Raw(chartLineThisLastIncome.Render())
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+<hr class="region" />
+<div class="row">
+    <div class="col-xs-12 foldable">
+        <div class="row foldTrigger">
+            <div class="col-xs-12"><h2>Categories:</h2></div>
+        </div>
+        <div class="row folds">
+            <div class="col-xs-12 col-lg-offset-1 col-lg-5">
+                <div id="chartExpensePieCatDiv">
+                    @Html.Raw(chartExpensePie.Render())
+                </div>
+            </div>
+            <div class="col-xs-12 col-lg-5">
+                <div id="chartIncomePieCatDiv">
+                    @Html.Raw(chartIncomePie.Render())
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+<hr class="region" />
+<div class="row">
+    <div class="col-xs-12 foldable">
+        <div class="row foldTrigger">
+            <div class="col-xs-12"><h2>Tags:</h2></div>
+        </div>
+        <div class="row folds">
+            <div class="col-xs-12 col-lg-offset-1 col-lg-5">
+                <div id="chartExpensePieCatDiv">
+                    @Html.Raw(chartTagExpensePie.Render())
+                </div>
+            </div>
+            <div class="col-xs-12 col-lg-5">
+                <div id="chartIncomePieCatDiv">
+                    @Html.Raw(chartTagIncomePie.Render())
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+<hr class="region" />
+<div class="row">
+    <div class="col-xs-12 foldable">
+        <div class="row foldTrigger">
+            <div class="col-xs-12"><h2>Account Balances:</h2></div>
+        </div>
+        <div class="row folds">
+            <div class="col-xs-12  col-lg-6">
+                <div id="accountBalBA">
+                    @Html.Raw(BAChart.Render())
+                </div>
+            </div>
+            <div class="col-xs-12 col-lg-6">
+                <div id="accountBalChase">
+                    @Html.Raw(ChaseChart.Render())
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+<hr class="region" />

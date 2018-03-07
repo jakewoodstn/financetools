@@ -10,6 +10,16 @@
 using System;
 using System.Collections.Generic;
 
+public partial class account
+{
+    public int accountId { get; set; }
+    public string accountName { get; set; }
+    public Nullable<System.DateTime> createdAt { get; set; }
+    public Nullable<System.DateTime> closedOn { get; set; }
+    public Nullable<byte> importTransactions { get; set; }
+    public byte[] ts { get; set; }
+}
+
 public partial class BankTransactionCatNoSplit
 {
     public long transactionId { get; set; }
@@ -28,6 +38,13 @@ public partial class BankTransactionCatNoSplit
     public Nullable<System.DateTime> accountingDate { get; set; }
     public string tags { get; set; }
     public Nullable<int> tagCount { get; set; }
+}
+
+public partial class DailyBalance
+{
+    public int accountId { get; set; }
+    public System.DateTime MeasurementDate { get; set; }
+    public Nullable<decimal> Amount { get; set; }
 }
 
 public partial class DimDate
