@@ -95,7 +95,7 @@
     DateTime dailyMax = dtMax;
 
 
-    var transactionTest = (from bt in fe.BankTransactionCatNoSplits
+    var transactionTest = (from bt in fe.BankTransactionCats
                            join dt in fe.DimDates on bt.accountingDate equals dt.FullDate
                            where bt.accountingDate >= SOYdtMin && bt.accountingDate <= dtMax
                            && (bt.accountId == accountId || accountId == 0)
@@ -109,8 +109,8 @@
     #endregion "Initialization"
 
     #region KPI
-    var expenseKPI = transactionTest.Where(p => p.amount < 0).Sum(p => p.amount);
-    var incomeKPI = transactionTest.Where(p => p.amount > 0).Sum(p => p.amount);
+    var expenseKPI = transactionTest.Where(p => p.amount < 0 && p.accountingDate>=dtMin).Sum(p => p.amount);
+    var incomeKPI = transactionTest.Where(p => p.amount > 0 && p.accountingDate>=dtMin).Sum(p => p.amount);
 
 
     #endregion
@@ -243,11 +243,11 @@
     #region "CategoryPieCharts"
 
     var transactionCatSummaryExpense = transactionTest.AsQueryable()
-        .Where(p => p.amount < 0)
+        .Where(p => p.amount < 0 && p.accountingDate>=dtMin)
         .GroupBy(tran => tran.categoryName, tran => Math.Abs(tran.amount.Value), (descr, amounts) => new { key = descr, total = amounts.Sum(), obs = amounts.Count() });
 
     var transactionCatSummaryIncome = transactionTest.AsQueryable()
-        .Where(p => p.amount > 0)
+        .Where(p => p.amount > 0 && p.accountingDate >= dtMin)
         .GroupBy(tran => tran.categoryName, tran => Math.Abs(tran.amount.Value), (descr, amounts) => new { key = descr, total = amounts.Sum(), obs = amounts.Count() });
 
     FusionCharts.Charts.Chart chartExpensePie = new FusionCharts.Charts.Chart();

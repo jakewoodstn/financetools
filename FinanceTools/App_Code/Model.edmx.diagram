@@ -12,13 +12,15 @@
         <AssociationConnector Association="FinancesModel.fk_simpleBudgetRule_simpleBudget" ManuallyRouted="false" />
         <AssociationConnector Association="FinancesModel.sbCalcActual_expected_fk" ManuallyRouted="false" />
         <AssociationConnector Association="FinancesModel.FK_simpleBudgetExpected_simpleBudget_simpleBudgetId" />
-        <EntityTypeShape EntityType="FinancesModel.DimDate" Width="2.5" PointX="11.375" PointY="1" />
-        <EntityTypeShape EntityType="FinancesModel.taggedEvent" Width="1.5" PointX="14.375" PointY="2.875" />
-        <EntityTypeShape EntityType="FinancesModel.transactionTaggedEvent" Width="1.5" PointX="16.75" PointY="2.875" />
+        <EntityTypeShape EntityType="FinancesModel.DimDate" Width="2.5" PointX="12.125" PointY="0.875" />
+        <EntityTypeShape EntityType="FinancesModel.taggedEvent" Width="1.5" PointX="14.875" PointY="2.875" />
+        <EntityTypeShape EntityType="FinancesModel.transactionTaggedEvent" Width="1.5" PointX="17.25" PointY="2.875" />
         <AssociationConnector Association="FinancesModel.fk_transactionEvent_Event" />
-        <EntityTypeShape EntityType="FinancesModel.BankTransactionCatNoSplit" Width="1.5" PointX="0.75" PointY="7.75" />
+        <EntityTypeShape EntityType="FinancesModel.BankTransactionCatNoSplit" Width="2.125" PointX="1.125" PointY="6.625" />
         <EntityTypeShape EntityType="FinancesModel.account" Width="1.5" PointX="2.5" PointY="0.75" />
         <EntityTypeShape EntityType="FinancesModel.DailyBalance" Width="1.5" PointX="0.75" PointY="0.75" />
+        <EntityTypeShape EntityType="FinancesModel.BankTransactionCat" Width="1.5" PointX="7.375" PointY="4.75" />
+        <EntityTypeShape EntityType="FinancesModel.vwMaterializedActualSpendingTransactionDetail" Width="1.5" PointX="9.25" PointY="6.375" />
       </Diagram>
     </edmx:Diagrams>
   </edmx:Designer>

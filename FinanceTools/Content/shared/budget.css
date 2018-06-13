@@ -1,0 +1,14 @@
+﻿#overlay {
+    position: fixed;
+    height: 100%;
+    width: 100%;
+    background: rgba(0,0,0,0.5);
+    display: none;
+}
+
+.recordDetail {
+  padding: 20px;
+  position: relative;
+  background: #fff;
+  margin:20px 25% 0px 40px;
+}

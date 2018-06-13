@@ -20,6 +20,27 @@ public partial class account
     public byte[] ts { get; set; }
 }
 
+public partial class BankTransactionCat
+{
+    public long transactionId { get; set; }
+    public Nullable<System.DateTime> transactionDate { get; set; }
+    public Nullable<System.DateTime> loadedDate { get; set; }
+    public string description { get; set; }
+    public string category { get; set; }
+    public Nullable<decimal> amount { get; set; }
+    public Nullable<int> accountId { get; set; }
+    public string accountName { get; set; }
+    public Nullable<int> categoryId { get; set; }
+    public string origDescription { get; set; }
+    public int categoryStatus { get; set; }
+    public string bankOrigDescription { get; set; }
+    public string categoryName { get; set; }
+    public Nullable<System.DateTime> accountingDate { get; set; }
+    public string tags { get; set; }
+    public Nullable<int> tagCount { get; set; }
+    public Nullable<long> splitTransactionId { get; set; }
+}
+
 public partial class BankTransactionCatNoSplit
 {
     public long transactionId { get; set; }
@@ -188,4 +209,21 @@ public partial class transactionTaggedEvent
     public Nullable<int> splitTransactionId { get; set; }
 
     public virtual taggedEvent taggedEvent { get; set; }
+}
+
+public partial class vwMaterializedActualSpendingTransactionDetail
+{
+    public long transactionId { get; set; }
+    public Nullable<long> splitTransactionId { get; set; }
+    public string accountName { get; set; }
+    public Nullable<System.DateTime> accountingDate { get; set; }
+    public string description { get; set; }
+    public Nullable<decimal> amount { get; set; }
+    public string categoryName { get; set; }
+    public string tags { get; set; }
+    public string label1 { get; set; }
+    public string label2 { get; set; }
+    public string label3 { get; set; }
+    public decimal actualAmount { get; set; }
+    public Nullable<decimal> expectedAmount { get; set; }
 }

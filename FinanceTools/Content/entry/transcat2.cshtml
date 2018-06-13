@@ -170,7 +170,15 @@
         <div class="row">
             <div id="filterDiv" class="col-sm-12 dropTiny ">
                 <div class="row">
-                    <div class="col-sm-1"><span class="h4">filter:</span></div>
+                    <div class="col-sm-1"><span class="h4" style="font-weight:bold">filter:</span></div>
+                </div>
+                <div class="row dropTiny">
+                    <div class="col-sm-2">
+                        <span class="h4">show all:</span>
+                    </div>
+                    <div class="col-sm-1">
+                        <input type="checkbox" class="form-control" id="searchIncludeAll">
+                    </div>
                 </div>
                 <div class="row dropTiny">
                     <div class="col-sm-2"><span class="h4">account:</span></div>
@@ -184,8 +192,50 @@
                 </div>
                 <div class="row dropSmall">
                     <div class="col-sm-2"><span class="h4">dates:</span></div>
-                    <div class="col-sm-4"><input type="text" class="span2 filter-control form-control" value="" id="filterMinDate" /></div>
-                    <div class="col-sm-4 col-sm-offset-1"><input type="text" class="span2 filter-control form-control" value="" id="filterMaxDate" /></div>
+                    <div class="col-sm-10">
+                        <div class="row">
+                            <div class="col-sm-2">
+                                <input type="button" class="btn btn-info" id="decrementMinDateM" value="<<" onclick="modDateAddMonth('#filterMinDate', -1);" />
+                                <input type="button" class="btn btn-info" id="decrementMinDateD" value="<" onclick="modDateAddDay('#filterMinDate', -1);" />
+                            </div>
+                            <div class="col-sm-2" style="padding:0">
+                                <input type="text" class="span2 filter-control form-control" value="" id="filterMinDate" />
+                            </div>
+                            <div class="col-sm-2">
+                                <input type="button" class="btn btn-info" id="incrementMinDateD" value=">" onclick="modDateAddDay('#filterMinDate', 1);" />
+                                <input type="button" class="btn btn-info" id="incrementMinDateM" value=">>" onclick="modDateAddMonth('#filterMinDate', 1);" />
+                            </div>
+                            <div class="col-sm-2 ">
+                                <input type="button" class="btn btn-info" id="decrementMaxDateM" value="<<" onclick="modDateAddMonth('#filterMaxDate', -1);" />
+                                <input type="button" class="btn btn-info" id="decrementMaxDateD" value="<" onclick="modDateAddDay('#filterMaxDate', -1);" />
+                            </div>
+                            <div class="col-sm-2" style="padding:0"><input type="text" class="span2 filter-control form-control" value="" id="filterMaxDate" /></div>
+                            <div class="col-sm-2">
+                                <input type="button" class="btn btn-info" id="incrementMaxDateD" value=">" onclick="modDateAddDay('#filterMaxDate', 1);" />
+                                <input type="button" class="btn btn-info" id="incrementMaxDateM" value=">>" onclick="modDateAddMonth('#filterMaxDate', 1);" />
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="row dropSmall">
+                    <div class="col-sm-2 col-sm-offset-2">
+                        <input type="button" class="btn btn-primary" value="This Month" id="setFilterToThisMonth" onclick="modDateThisMonth();" />
+                    </div>
+                    <div class="col-sm-2 ">
+                        <input type="button" class="btn btn-primary" value="Last Month" id="setFilterToLastMonth" onclick="modDateLastMonth();" />
+                    </div>
+
+                    <div class="col-sm-2 ">
+                        <input type="button" class="btn btn-primary" value="This Quarter" id="setFilterToThisQuarter" onclick="modDateThisQuarter();" />
+                    </div>
+                    <div class="col-sm-2 ">
+                        <input type="button" class="btn btn-primary" value="This Year" id="setFilterToThisYear" onclick="modDateThisYear();" />
+                    </div>
+                </div>
+                <div class="row dropSmall">
+                    <div class="col-sm-4 col-sm-offset-2 ">
+                        <input type="button" class="btn btn-primary" value="Since Last Month" id="setFilterToSinceLastMonth" onclick="modDateSinceLastMonth();" />
+                    </div>
                 </div>
                 <div class="row dropSmall">
                     <div class="col-sm-2">
@@ -227,6 +277,7 @@
             </div>
         </div>
         <hr />
+        <!--
         <div class="row">
             <div id="searchDiv" class="col-sm-12 dropTiny">
                 <label for="searcher">search term:</label>
@@ -242,7 +293,7 @@
                 <input type="button" id="clearSearch" class="searchButton btn btn-warning btn-block" value="Clear Search/Filter" />
             </div>
         </div>
-
+        -->
     </div>
     <div class="col-sm-6 ">
         <div class="row">

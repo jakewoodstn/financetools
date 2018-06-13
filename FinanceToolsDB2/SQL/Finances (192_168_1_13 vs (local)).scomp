@@ -136,11 +136,11 @@
     <PropertyValue Name="UseSchemaTransfer">false</PropertyValue>
     <PropertyValue Name="RefreshViews">true</PropertyValue>
     <PropertyValue Name="ExcludeDependencies">false</PropertyValue>
-    <PropertyValue Name="SynchronizeType">2</PropertyValue>
-    <PropertyValue Name="SynchronizationFileName" xml:space="preserve">U:\Household\Projects\FinanceTools\FinanceToolsDB2\Finances ((local) vs s1)_20160307-0057.sql</PropertyValue>
+    <PropertyValue Name="SynchronizeType">0</PropertyValue>
+    <PropertyValue Name="SynchronizationFileName" xml:space="preserve">C:\localdev\FinanceToolsDB2\SQL\Finances (192_168_1_13 vs (local))_20180610-1909.sql</PropertyValue>
     <PropertyValue Name="SynchronizationEditorFileName" xml:space="preserve">C:\Users\jakewoods\AppData\Local\Temp\Devart_fzcrvzvn.00y\sync.sql</PropertyValue>
     <PropertyValue Name="OpenScriptInEditor">false</PropertyValue>
-    <PropertyValue Name="RefreshAfterSynchronization">false</PropertyValue>
+    <PropertyValue Name="RefreshAfterSynchronization">true</PropertyValue>
     <PropertyValue Name="CommitToVersionControl">false</PropertyValue>
     <PropertyValue Name="CommentString" xml:space="preserve" />
     <PropertyValue Name="IncludePrintComments">false</PropertyValue>
@@ -200,6 +200,10 @@
       <Object SourceName="reporting.period" TargetName="reporting.period" SourceType="Table" TargetType="Table" State="Different" />
       <Object SourceName="reporting.snippet" TargetName="reporting.snippet" SourceType="Table" TargetType="Table" State="Different" />
       <Object SourceName="reporting.timeDensityDetail" TargetName="reporting.timeDensityDetail" SourceType="Table" TargetType="Table" State="Different" />
+      <Object SourceName="dbo.simpleBudgetHierarchy" TargetName="dbo.simpleBudgetHierarchy" SourceType="Table" TargetType="Table" State="Different" />
+      <Object SourceName="dbo.tagAutoApply" TargetName="dbo.tagAutoApply" SourceType="Table" TargetType="Table" State="Different" />
+      <Object SourceName="dbo.tagRemapping" TargetName="dbo.tagRemapping" SourceType="Table" TargetType="Table" State="Different" />
+      <Object SourceName="dbo.simpleBudgetMaterializedTransactions" TargetName="dbo.simpleBudgetMaterializedTransactions" SourceType="Table" TargetType="Table" State="Different" />
     </ComparedObjects>
   </Mapping>
 </CompareDocument>

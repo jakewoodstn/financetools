@@ -96,7 +96,7 @@
     </Schemas>
     <ComparedObjects>
       <Object SourceName="dbo.account" TargetName="dbo.account" SourceType="Table" TargetType="Table" IncludedInScript="False" />
-      <Object SourceName="dbo.aspnet_Applications" TargetName="dbo.aspnet_Applications" SourceType="Table" TargetType="Table" IncludedInScript="False">
+      <Object SourceName="dbo.aspnet_Applications" TargetName="dbo.aspnet_Applications" SourceType="Table" TargetType="Table" IncludedInScript="False" Unmapped="True">
         <ComparedColumns CustomMapped="True">
           <Column SourceName="dbo.aspnet_Applications.ApplicationName" TargetName="dbo.aspnet_Applications.ApplicationName" Included="False" />
           <Column SourceName="dbo.aspnet_Applications.LoweredApplicationName" TargetName="dbo.aspnet_Applications.LoweredApplicationName" Included="False" />
@@ -104,7 +104,7 @@
           <Column SourceName="dbo.aspnet_Applications.Description" TargetName="dbo.aspnet_Applications.Description" Included="False" />
         </ComparedColumns>
       </Object>
-      <Object SourceName="dbo.aspnet_Membership" TargetName="dbo.aspnet_Membership" SourceType="Table" TargetType="Table" IncludedInScript="False">
+      <Object SourceName="dbo.aspnet_Membership" TargetName="dbo.aspnet_Membership" SourceType="Table" TargetType="Table" IncludedInScript="False" Unmapped="True">
         <ComparedColumns CustomMapped="True">
           <Column SourceName="dbo.aspnet_Membership.ApplicationId" TargetName="dbo.aspnet_Membership.ApplicationId" Included="False" />
           <Column SourceName="dbo.aspnet_Membership.UserId" TargetName="dbo.aspnet_Membership.UserId" Included="False" />
@@ -129,7 +129,7 @@
           <Column SourceName="dbo.aspnet_Membership.Comment" TargetName="dbo.aspnet_Membership.Comment" Included="False" />
         </ComparedColumns>
       </Object>
-      <Object SourceName="dbo.aspnet_Roles" TargetName="dbo.aspnet_Roles" SourceType="Table" TargetType="Table" IncludedInScript="False">
+      <Object SourceName="dbo.aspnet_Roles" TargetName="dbo.aspnet_Roles" SourceType="Table" TargetType="Table" IncludedInScript="False" Unmapped="True">
         <ComparedColumns CustomMapped="True">
           <Column SourceName="dbo.aspnet_Roles.ApplicationId" TargetName="dbo.aspnet_Roles.ApplicationId" Included="False" />
           <Column SourceName="dbo.aspnet_Roles.RoleId" TargetName="dbo.aspnet_Roles.RoleId" Included="False" />
@@ -138,14 +138,14 @@
           <Column SourceName="dbo.aspnet_Roles.Description" TargetName="dbo.aspnet_Roles.Description" Included="False" />
         </ComparedColumns>
       </Object>
-      <Object SourceName="dbo.aspnet_SchemaVersions" TargetName="dbo.aspnet_SchemaVersions" SourceType="Table" TargetType="Table" IncludedInScript="False">
+      <Object SourceName="dbo.aspnet_SchemaVersions" TargetName="dbo.aspnet_SchemaVersions" SourceType="Table" TargetType="Table" IncludedInScript="False" Unmapped="True">
         <ComparedColumns CustomMapped="True">
           <Column SourceName="dbo.aspnet_SchemaVersions.Feature" TargetName="dbo.aspnet_SchemaVersions.Feature" Included="False" />
           <Column SourceName="dbo.aspnet_SchemaVersions.CompatibleSchemaVersion" TargetName="dbo.aspnet_SchemaVersions.CompatibleSchemaVersion" Included="False" />
           <Column SourceName="dbo.aspnet_SchemaVersions.IsCurrentVersion" TargetName="dbo.aspnet_SchemaVersions.IsCurrentVersion" Included="False" />
         </ComparedColumns>
       </Object>
-      <Object SourceName="dbo.aspnet_Users" TargetName="dbo.aspnet_Users" SourceType="Table" TargetType="Table" IncludedInScript="False">
+      <Object SourceName="dbo.aspnet_Users" TargetName="dbo.aspnet_Users" SourceType="Table" TargetType="Table" IncludedInScript="False" Unmapped="True">
         <ComparedColumns CustomMapped="True">
           <Column SourceName="dbo.aspnet_Users.ApplicationId" TargetName="dbo.aspnet_Users.ApplicationId" Included="False" />
           <Column SourceName="dbo.aspnet_Users.UserId" TargetName="dbo.aspnet_Users.UserId" Included="False" />
@@ -156,7 +156,7 @@
           <Column SourceName="dbo.aspnet_Users.LastActivityDate" TargetName="dbo.aspnet_Users.LastActivityDate" Included="False" />
         </ComparedColumns>
       </Object>
-      <Object SourceName="dbo.aspnet_UsersInRoles" TargetName="dbo.aspnet_UsersInRoles" SourceType="Table" TargetType="Table" IncludedInScript="False">
+      <Object SourceName="dbo.aspnet_UsersInRoles" TargetName="dbo.aspnet_UsersInRoles" SourceType="Table" TargetType="Table" IncludedInScript="False" Unmapped="True">
         <ComparedColumns CustomMapped="True">
           <Column SourceName="dbo.aspnet_UsersInRoles.UserId" TargetName="dbo.aspnet_UsersInRoles.UserId" Included="False" />
           <Column SourceName="dbo.aspnet_UsersInRoles.RoleId" TargetName="dbo.aspnet_UsersInRoles.RoleId" Included="False" />
@@ -182,7 +182,7 @@
         </ComparedColumns>
       </Object>
       <Object SourceName="dbo.bankTransactionLoad" TargetName="dbo.bankTransactionLoad" SourceType="Table" TargetType="Table" IncludedInScript="False" />
-      <Object SourceName="dbo.bankTransactionLoadHx" TargetName="dbo.bankTransactionLoadHx" SourceType="Table" TargetType="Table" IncludedInScript="False">
+      <Object SourceName="dbo.bankTransactionLoadHx" TargetName="dbo.bankTransactionLoadHx" SourceType="Table" TargetType="Table" IncludedInScript="False" Unmapped="True">
         <ComparedColumns CustomMapped="True">
           <Column SourceName="dbo.bankTransactionLoadHx.loadDate" TargetName="dbo.bankTransactionLoadHx.loadDate" Included="False" />
           <Column SourceName="dbo.bankTransactionLoadHx.transactionFile" TargetName="dbo.bankTransactionLoadHx.transactionFile" Included="False" />
@@ -208,7 +208,7 @@
       <Object SourceName="dbo.Note" TargetName="dbo.Note" SourceType="Table" TargetType="Table" IncludedInScript="False" />
       <Object SourceName="dbo.parameter" TargetName="dbo.parameter" SourceType="Table" TargetType="Table" IncludedInScript="False" />
       <Object SourceName="dbo.simpleBudget" TargetName="dbo.simpleBudget" SourceType="Table" TargetType="Table" IncludedInScript="False" />
-      <Object SourceName="dbo.simpleBudgetCalculatedActual" TargetName="dbo.simpleBudgetCalculatedActual" SourceType="Table" TargetType="Table" IncludedInScript="False">
+      <Object SourceName="dbo.simpleBudgetCalculatedActual" TargetName="dbo.simpleBudgetCalculatedActual" SourceType="Table" TargetType="Table" IncludedInScript="False" Unmapped="True">
         <Key Name="Columns" />
         <ComparedColumns CustomMapped="True">
           <Column SourceName="dbo.simpleBudgetCalculatedActual.simpleBudgetActualId" TargetName="dbo.simpleBudgetCalculatedActual.simpleBudgetActualId" Included="False" />
@@ -240,15 +240,15 @@
       <Object SourceName="dbo.spendingCategoryGroup" TargetName="dbo.spendingCategoryGroup" SourceType="Table" TargetType="Table" IncludedInScript="False" />
       <Object SourceName="dbo.sysdiagrams" TargetName="dbo.sysdiagrams" SourceType="Table" TargetType="Table" IncludedInScript="False" />
       <Object SourceName="dbo.taggedEvent" TargetName="dbo.taggedEvent" SourceType="Table" TargetType="Table" IncludedInScript="False" />
-      <Object SourceName="dbo.test" TargetName="dbo.test" SourceType="Table" TargetType="Table" IncludedInScript="False">
+      <Object SourceName="dbo.test" TargetName="dbo.test" SourceType="Table" TargetType="Table" IncludedInScript="False" Unmapped="True">
         <ComparedColumns CustomMapped="True">
           <Column SourceName="dbo.test.qui" TargetName="dbo.test.qui" Included="False" />
           <Column SourceName="dbo.test.val" TargetName="dbo.test.val" Included="False" />
         </ComparedColumns>
       </Object>
-      <Object SourceName="dbo.trace" TargetName="dbo.trace" SourceType="Table" TargetType="Table" IncludedInScript="False" />
+      <Object SourceName="dbo.trace" TargetName="dbo.trace" SourceType="Table" TargetType="Table" Included="False" IncludedInScript="False" />
       <Object SourceName="dbo.transactionAccount" TargetName="dbo.transactionAccount" SourceType="Table" TargetType="Table" IncludedInScript="False" />
-      <Object SourceName="dbo.transactions" TargetName="dbo.transactions" SourceType="Table" TargetType="Table" IncludedInScript="False">
+      <Object SourceName="dbo.transactions" TargetName="dbo.transactions" SourceType="Table" TargetType="Table" IncludedInScript="False" Unmapped="True">
         <ComparedColumns CustomMapped="True">
           <Column SourceName="dbo.transactions.transactionDate" TargetName="dbo.transactions.transactionDate" Included="False" />
           <Column SourceName="dbo.transactions.loadedDate" TargetName="dbo.transactions.loadedDate" Included="False" />
@@ -259,7 +259,7 @@
         </ComparedColumns>
       </Object>
       <Object SourceName="dbo.transactionTaggedEvent" TargetName="dbo.transactionTaggedEvent" SourceType="Table" TargetType="Table" IncludedInScript="False" />
-      <Object SourceName="dbo.[User]" TargetName="dbo.[User]" SourceType="Table" TargetType="Table" IncludedInScript="False">
+      <Object SourceName="dbo.[User]" TargetName="dbo.[User]" SourceType="Table" TargetType="Table" IncludedInScript="False" Unmapped="True">
         <ComparedColumns CustomMapped="True">
           <Column SourceName="dbo.[User].UserId" TargetName="dbo.[User].UserId" Included="False" />
           <Column SourceName="dbo.[User].Firstname" TargetName="dbo.[User].Firstname" Included="False" />
@@ -267,7 +267,7 @@
           <Column SourceName="dbo.[User].ts" TargetName="dbo.[User].ts" Included="False" />
         </ComparedColumns>
       </Object>
-      <Object SourceName="monitoring.dynamicSqlMonitor" TargetName="monitoring.dynamicSqlMonitor" SourceType="Table" TargetType="Table" IncludedInScript="False">
+      <Object SourceName="monitoring.dynamicSqlMonitor" TargetName="monitoring.dynamicSqlMonitor" SourceType="Table" TargetType="Table" IncludedInScript="False" Unmapped="True">
         <ComparedColumns CustomMapped="True">
           <Column SourceName="monitoring.dynamicSqlMonitor.procedureCalling" TargetName="monitoring.dynamicSqlMonitor.procedureCalling" Included="False" />
           <Column SourceName="monitoring.dynamicSqlMonitor.timeCalled" TargetName="monitoring.dynamicSqlMonitor.timeCalled" Included="False" />
@@ -282,6 +282,10 @@
       <Object SourceName="reporting.period" TargetName="reporting.period" SourceType="Table" TargetType="Table" IncludedInScript="False" />
       <Object SourceName="reporting.snippet" TargetName="reporting.snippet" SourceType="Table" TargetType="Table" IncludedInScript="False" />
       <Object SourceName="reporting.timeDensityDetail" TargetName="reporting.timeDensityDetail" SourceType="Table" TargetType="Table" IncludedInScript="False" />
+      <Object SourceName="dbo.simpleBudgetHierarchy" TargetName="dbo.simpleBudgetHierarchy" SourceType="Table" TargetType="Table" />
+      <Object SourceName="dbo.simpleBudgetMaterializedTransactions" TargetName="dbo.simpleBudgetMaterializedTransactions" SourceType="Table" TargetType="Table" IncludedInScript="False" Unmapped="True" />
+      <Object SourceName="dbo.tagAutoApply" TargetName="dbo.tagAutoApply" SourceType="Table" TargetType="Table" Included="False" IncludedInScript="False" />
+      <Object SourceName="dbo.tagRemapping" TargetName="dbo.tagRemapping" SourceType="Table" TargetType="Table" Included="False" IncludedInScript="False" />
     </ComparedObjects>
   </Mapping>
 </CompareDocument>
