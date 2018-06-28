@@ -98,6 +98,21 @@
           <Property Name="effectiveDate" Type="date" />
           <Property Name="retiredDate" Type="date" />
         </EntityType>
+        <EntityType Name="simpleBudgetMaterializedSummaryStatistics">
+          <Key>
+            <PropertyRef Name="statisticsKey" />
+            <PropertyRef Name="income_expense" />
+            <PropertyRef Name="budget" />
+            <PropertyRef Name="subBudget" />
+            <PropertyRef Name="statistic" />
+          </Key>
+          <Property Name="statisticsKey" Type="varchar" MaxLength="255" Nullable="false" />
+          <Property Name="income_expense" Type="varchar" MaxLength="255" Nullable="false" />
+          <Property Name="budget" Type="varchar" MaxLength="255" Nullable="false" />
+          <Property Name="subBudget" Type="varchar" MaxLength="255" Nullable="false" />
+          <Property Name="statistic" Type="varchar" MaxLength="255" Nullable="false" />
+          <Property Name="value" Type="varchar" MaxLength="255" Nullable="false" />
+        </EntityType>
         <EntityType Name="simpleBudgetRule">
           <Key>
             <PropertyRef Name="simpleBudgetRuleId" />
@@ -192,6 +207,7 @@ warning 6002: The table/view 'Finances.dbo.vwMaterializedActualSpendingTransacti
         <EntityType Name="vwMaterializedActualSpendingTransactionDetail">
           <Key>
             <PropertyRef Name="transactionId" />
+            <PropertyRef Name="simpleBudgetActualId" />
             <PropertyRef Name="actualAmount" />
           </Key>
           <Property Name="transactionId" Type="bigint" Nullable="false" />
@@ -205,6 +221,9 @@ warning 6002: The table/view 'Finances.dbo.vwMaterializedActualSpendingTransacti
           <Property Name="label1" Type="varchar" MaxLength="255" />
           <Property Name="label2" Type="varchar" MaxLength="255" />
           <Property Name="label3" Type="varchar" MaxLength="255" />
+          <Property Name="simpleBudgetActualId" Type="int" Nullable="false" />
+          <Property Name="simpleBudgetExpectedId" Type="int" />
+          <Property Name="simpleBudgetId" Type="int" />
           <Property Name="actualAmount" Type="smallmoney" Nullable="false" />
           <Property Name="expectedAmount" Type="smallmoney" />
         </EntityType>
@@ -256,6 +275,11 @@ warning 6002: The table/view 'Finances.dbo.vwMaterializedActualSpendingTransacti
             </Dependent>
           </ReferentialConstraint>
         </Association>
+        <Function Name="captureMaterializedSummaryStatistics" Aggregate="false" BuiltIn="false" NiladicFunction="false" IsComposable="false" ParameterTypeSemantics="AllowImplicitConversion" Schema="dbo">
+          <Parameter Name="timeframeType" Type="varchar" Mode="In" />
+          <Parameter Name="timeframeLabel" Type="varchar" Mode="In" />
+          <Parameter Name="budgetFilter" Type="varchar" Mode="In" />
+        </Function>
         <Function Name="materializeSimpleBudgetActual" Aggregate="false" BuiltIn="false" NiladicFunction="false" IsComposable="false" ParameterTypeSemantics="AllowImplicitConversion" Schema="dbo">
           <Parameter Name="startDate" Type="date" Mode="In" />
           <Parameter Name="endDate" Type="date" Mode="In" />
@@ -269,6 +293,7 @@ warning 6002: The table/view 'Finances.dbo.vwMaterializedActualSpendingTransacti
           <EntitySet Name="simpleBudget" EntityType="Self.simpleBudget" Schema="dbo" store:Type="Tables" />
           <EntitySet Name="simpleBudgetCalculatedActual" EntityType="Self.simpleBudgetCalculatedActual" Schema="dbo" store:Type="Tables" />
           <EntitySet Name="simpleBudgetExpected" EntityType="Self.simpleBudgetExpected" Schema="dbo" store:Type="Tables" />
+          <EntitySet Name="simpleBudgetMaterializedSummaryStatistics" EntityType="Self.simpleBudgetMaterializedSummaryStatistics" Schema="dbo" store:Type="Tables" />
           <EntitySet Name="simpleBudgetRule" EntityType="Self.simpleBudgetRule" Schema="dbo" store:Type="Tables" />
           <EntitySet Name="taggedEvent" EntityType="Self.taggedEvent" Schema="dbo" store:Type="Tables" />
           <EntitySet Name="transactionTaggedEvent" EntityType="Self.transactionTaggedEvent" Schema="dbo" store:Type="Tables" />
@@ -326,6 +351,9 @@ warning 6002: The table/view 'Finances.dbo.vwMaterializedActualSpendingTransacti
     [vwMaterializedActualSpendingTransactionDetail].[label1] AS [label1], 
     [vwMaterializedActualSpendingTransactionDetail].[label2] AS [label2], 
     [vwMaterializedActualSpendingTransactionDetail].[label3] AS [label3], 
+    [vwMaterializedActualSpendingTransactionDetail].[simpleBudgetActualId] AS [simpleBudgetActualId], 
+    [vwMaterializedActualSpendingTransactionDetail].[simpleBudgetExpectedId] AS [simpleBudgetExpectedId], 
+    [vwMaterializedActualSpendingTransactionDetail].[simpleBudgetId] AS [simpleBudgetId], 
     [vwMaterializedActualSpendingTransactionDetail].[actualAmount] AS [actualAmount], 
     [vwMaterializedActualSpendingTransactionDetail].[expectedAmount] AS [expectedAmount]
     FROM [dbo].[vwMaterializedActualSpendingTransactionDetail] AS [vwMaterializedActualSpendingTransactionDetail]</DefiningQuery>
@@ -471,6 +499,12 @@ warning 6002: The table/view 'Finances.dbo.vwMaterializedActualSpendingTransacti
           <EntitySet Name="DailyBalances" EntityType="FinancesModel.DailyBalance" />
           <EntitySet Name="BankTransactionCats" EntityType="FinancesModel.BankTransactionCat" />
           <EntitySet Name="vwMaterializedActualSpendingTransactionDetails" EntityType="FinancesModel.vwMaterializedActualSpendingTransactionDetail" />
+          <EntitySet Name="simpleBudgetMaterializedSummaryStatistics" EntityType="FinancesModel.simpleBudgetMaterializedSummaryStatistic" />
+          <FunctionImport Name="captureMaterializedSummaryStatistics">
+            <Parameter Name="timeframeType" Mode="In" Type="String" />
+            <Parameter Name="timeframeLabel" Mode="In" Type="String" />
+            <Parameter Name="budgetFilter" Mode="In" Type="String" />
+          </FunctionImport>
         </EntityContainer>
         <Association Name="FK_simpleBudgetExpected_simpleBudget_simpleBudgetId">
           <End Type="FinancesModel.simpleBudget" Role="simpleBudget" Multiplicity="0..1" />
@@ -625,6 +659,7 @@ warning 6002: The table/view 'Finances.dbo.vwMaterializedActualSpendingTransacti
           <Key>
             <PropertyRef Name="transactionId" />
             <PropertyRef Name="actualAmount" />
+            <PropertyRef Name="simpleBudgetActualId" />
           </Key>
           <Property Name="transactionId" Type="Int64" Nullable="false" />
           <Property Name="splitTransactionId" Type="Int64" />
@@ -639,6 +674,24 @@ warning 6002: The table/view 'Finances.dbo.vwMaterializedActualSpendingTransacti
           <Property Name="label3" Type="String" MaxLength="255" FixedLength="false" Unicode="false" />
           <Property Name="actualAmount" Type="Decimal" Nullable="false" Precision="10" Scale="4" />
           <Property Name="expectedAmount" Type="Decimal" Precision="10" Scale="4" />
+          <Property Name="simpleBudgetActualId" Type="Int32" Nullable="false" />
+          <Property Name="simpleBudgetExpectedId" Type="Int32" />
+          <Property Name="simpleBudgetId" Type="Int32" />
+        </EntityType>
+        <EntityType Name="simpleBudgetMaterializedSummaryStatistic">
+          <Key>
+            <PropertyRef Name="statisticsKey" />
+            <PropertyRef Name="income_expense" />
+            <PropertyRef Name="budget" />
+            <PropertyRef Name="subBudget" />
+            <PropertyRef Name="statistic" />
+          </Key>
+          <Property Name="statisticsKey" Type="String" Nullable="false" MaxLength="255" FixedLength="false" Unicode="false" />
+          <Property Name="income_expense" Type="String" Nullable="false" MaxLength="255" FixedLength="false" Unicode="false" />
+          <Property Name="budget" Type="String" Nullable="false" MaxLength="255" FixedLength="false" Unicode="false" />
+          <Property Name="subBudget" Type="String" Nullable="false" MaxLength="255" FixedLength="false" Unicode="false" />
+          <Property Name="statistic" Type="String" Nullable="false" MaxLength="255" FixedLength="false" Unicode="false" />
+          <Property Name="value" Type="String" Nullable="false" MaxLength="255" FixedLength="false" Unicode="false" />
         </EntityType>
       </Schema>
     </edmx:ConceptualModels>
@@ -836,6 +889,9 @@ warning 6002: The table/view 'Finances.dbo.vwMaterializedActualSpendingTransacti
           <EntitySetMapping Name="vwMaterializedActualSpendingTransactionDetails">
             <EntityTypeMapping TypeName="FinancesModel.vwMaterializedActualSpendingTransactionDetail">
               <MappingFragment StoreEntitySet="vwMaterializedActualSpendingTransactionDetail">
+                <ScalarProperty Name="simpleBudgetId" ColumnName="simpleBudgetId" />
+                <ScalarProperty Name="simpleBudgetExpectedId" ColumnName="simpleBudgetExpectedId" />
+                <ScalarProperty Name="simpleBudgetActualId" ColumnName="simpleBudgetActualId" />
                 <ScalarProperty Name="expectedAmount" ColumnName="expectedAmount" />
                 <ScalarProperty Name="actualAmount" ColumnName="actualAmount" />
                 <ScalarProperty Name="label3" ColumnName="label3" />
@@ -852,6 +908,19 @@ warning 6002: The table/view 'Finances.dbo.vwMaterializedActualSpendingTransacti
               </MappingFragment>
             </EntityTypeMapping>
           </EntitySetMapping>
+          <EntitySetMapping Name="simpleBudgetMaterializedSummaryStatistics">
+            <EntityTypeMapping TypeName="FinancesModel.simpleBudgetMaterializedSummaryStatistic">
+              <MappingFragment StoreEntitySet="simpleBudgetMaterializedSummaryStatistics">
+                <ScalarProperty Name="value" ColumnName="value" />
+                <ScalarProperty Name="statistic" ColumnName="statistic" />
+                <ScalarProperty Name="subBudget" ColumnName="subBudget" />
+                <ScalarProperty Name="budget" ColumnName="budget" />
+                <ScalarProperty Name="income_expense" ColumnName="income_expense" />
+                <ScalarProperty Name="statisticsKey" ColumnName="statisticsKey" />
+              </MappingFragment>
+            </EntityTypeMapping>
+          </EntitySetMapping>
+          <FunctionImportMapping FunctionImportName="captureMaterializedSummaryStatistics" FunctionName="FinancesModel.Store.captureMaterializedSummaryStatistics" />
         </EntityContainerMapping>
       </Mapping>
     </edmx:Mappings>

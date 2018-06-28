@@ -7,8 +7,49 @@
 }
 
 .recordDetail {
-  padding: 20px;
-  position: relative;
-  background: #fff;
-  margin:20px 25% 0px 40px;
+    padding: 20px;
+    position: relative;
+    background: #fff;
+    margin: 20px 25% 0px 40px;
+}
+
+.statistics {
+    background: linear-gradient(to right,#d9edf7,white,white);
+    font-size: large;
+    font-weight: bold;
+}
+
+    .statistics .observed-statistics {
+        background-color: #d9edf7;
+        border: 2px solid #aed3e5;
+    }
+
+    .statistics .all-statistics {
+        background-color: #d9edf7;
+        border: 2px solid #aed3e5;
+    }
+
+div.callout {
+    border-bottom: 1px #aed3e5 solid;
+}
+
+span.callout {
+    border-bottom: 2px #7daec6 solid;
+}
+
+.row.info {
+    background-color: #d9edf7;
+}
+
+.row.info2 {
+    background-color: #aed3e5;
+}
+
+.row.info3 {
+    background-color: #FFF;
+}
+
+div.header {
+    font-weight: bold;
+    font-size: 1.1em;
 }

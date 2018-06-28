@@ -161,6 +161,16 @@ public partial class simpleBudgetExpected
     public virtual simpleBudget simpleBudget { get; set; }
 }
 
+public partial class simpleBudgetMaterializedSummaryStatistic
+{
+    public string statisticsKey { get; set; }
+    public string income_expense { get; set; }
+    public string budget { get; set; }
+    public string subBudget { get; set; }
+    public string statistic { get; set; }
+    public string value { get; set; }
+}
+
 public partial class simpleBudgetRule
 {
     public int simpleBudgetRuleId { get; set; }
@@ -226,4 +236,7 @@ public partial class vwMaterializedActualSpendingTransactionDetail
     public string label3 { get; set; }
     public decimal actualAmount { get; set; }
     public Nullable<decimal> expectedAmount { get; set; }
+    public int simpleBudgetActualId { get; set; }
+    public Nullable<int> simpleBudgetExpectedId { get; set; }
+    public Nullable<int> simpleBudgetId { get; set; }
 }

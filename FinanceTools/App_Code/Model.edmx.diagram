@@ -21,6 +21,7 @@
         <EntityTypeShape EntityType="FinancesModel.DailyBalance" Width="1.5" PointX="0.75" PointY="0.75" />
         <EntityTypeShape EntityType="FinancesModel.BankTransactionCat" Width="1.5" PointX="7.375" PointY="4.75" />
         <EntityTypeShape EntityType="FinancesModel.vwMaterializedActualSpendingTransactionDetail" Width="1.5" PointX="9.25" PointY="6.375" />
+        <EntityTypeShape EntityType="FinancesModel.simpleBudgetMaterializedSummaryStatistic" Width="1.5" PointX="9.375" PointY="3.875" />
       </Diagram>
     </edmx:Diagrams>
   </edmx:Designer>

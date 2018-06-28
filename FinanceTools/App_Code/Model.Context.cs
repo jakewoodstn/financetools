@@ -37,6 +37,7 @@ public partial class FinancesEntities : DbContext
     public virtual DbSet<DailyBalance> DailyBalances { get; set; }
     public virtual DbSet<BankTransactionCat> BankTransactionCats { get; set; }
     public virtual DbSet<vwMaterializedActualSpendingTransactionDetail> vwMaterializedActualSpendingTransactionDetails { get; set; }
+    public virtual DbSet<simpleBudgetMaterializedSummaryStatistic> simpleBudgetMaterializedSummaryStatistics { get; set; }
 
     public virtual ObjectResult<string> materializeSimpleBudgetActual(Nullable<System.DateTime> startDate, Nullable<System.DateTime> endDate, Nullable<int> sendMessage, Nullable<int> force)
     {
@@ -57,5 +58,22 @@ public partial class FinancesEntities : DbContext
             new ObjectParameter("force", typeof(int));
 
         return ((IObjectContextAdapter)this).ObjectContext.ExecuteFunction<string>("materializeSimpleBudgetActual", startDateParameter, endDateParameter, sendMessageParameter, forceParameter);
+    }
+
+    public virtual int captureMaterializedSummaryStatistics(string timeframeType, string timeframeLabel, string budgetFilter)
+    {
+        var timeframeTypeParameter = timeframeType != null ?
+            new ObjectParameter("timeframeType", timeframeType) :
+            new ObjectParameter("timeframeType", typeof(string));
+
+        var timeframeLabelParameter = timeframeLabel != null ?
+            new ObjectParameter("timeframeLabel", timeframeLabel) :
+            new ObjectParameter("timeframeLabel", typeof(string));
+
+        var budgetFilterParameter = budgetFilter != null ?
+            new ObjectParameter("budgetFilter", budgetFilter) :
+            new ObjectParameter("budgetFilter", typeof(string));
+
+        return ((IObjectContextAdapter)this).ObjectContext.ExecuteFunction("captureMaterializedSummaryStatistics", timeframeTypeParameter, timeframeLabelParameter, budgetFilterParameter);
     }
 }
