@@ -153,6 +153,21 @@
           <Property Name="taggedAt" Type="date" />
           <Property Name="splitTransactionId" Type="int" />
         </EntityType>
+        <EntityType Name="whereDidMyMoneyGoBreakoutControl">
+          <Key>
+            <PropertyRef Name="whereDidMyMoneyGoBreakoutControlId" />
+          </Key>
+          <Property Name="whereDidMyMoneyGoBreakoutControlId" Type="int" StoreGeneratedPattern="Identity" Nullable="false" />
+          <Property Name="simpleBudgetId" Type="int" />
+          <Property Name="year" Type="int" />
+          <Property Name="weekNumberStarting" Type="int" />
+          <Property Name="weekNumberEnding" Type="int" />
+          <Property Name="breakoutIntoTransactions" Type="int" />
+          <Property Name="created_at" Type="datetime" Nullable="false" />
+          <Property Name="created_by" Type="varchar" MaxLength="255" Nullable="false" />
+          <Property Name="updated_at" Type="datetime" />
+          <Property Name="updated_by" Type="varchar" MaxLength="255" />
+        </EntityType>
         <!--Errors Found During Generation:
 warning 6002: The table/view 'Finances.dbo.BankTransactionCat' does not have a primary key defined. The key has been inferred and the definition was created as a read-only table/view.-->
         <EntityType Name="BankTransactionCat">
@@ -227,6 +242,18 @@ warning 6002: The table/view 'Finances.dbo.vwMaterializedActualSpendingTransacti
           <Property Name="actualAmount" Type="smallmoney" Nullable="false" />
           <Property Name="expectedAmount" Type="smallmoney" />
         </EntityType>
+        <Association Name="FK__whereDidM__simpl__62CF9BA3">
+          <End Role="simpleBudget" Type="Self.simpleBudget" Multiplicity="0..1" />
+          <End Role="whereDidMyMoneyGoBreakoutControl" Type="Self.whereDidMyMoneyGoBreakoutControl" Multiplicity="*" />
+          <ReferentialConstraint>
+            <Principal Role="simpleBudget">
+              <PropertyRef Name="simpleBudgetId" />
+            </Principal>
+            <Dependent Role="whereDidMyMoneyGoBreakoutControl">
+              <PropertyRef Name="simpleBudgetId" />
+            </Dependent>
+          </ReferentialConstraint>
+        </Association>
         <Association Name="FK_simpleBudgetExpected_simpleBudget_simpleBudgetId">
           <End Role="simpleBudget" Type="Self.simpleBudget" Multiplicity="0..1" />
           <End Role="simpleBudgetExpected" Type="Self.simpleBudgetExpected" Multiplicity="*" />
@@ -297,6 +324,7 @@ warning 6002: The table/view 'Finances.dbo.vwMaterializedActualSpendingTransacti
           <EntitySet Name="simpleBudgetRule" EntityType="Self.simpleBudgetRule" Schema="dbo" store:Type="Tables" />
           <EntitySet Name="taggedEvent" EntityType="Self.taggedEvent" Schema="dbo" store:Type="Tables" />
           <EntitySet Name="transactionTaggedEvent" EntityType="Self.transactionTaggedEvent" Schema="dbo" store:Type="Tables" />
+          <EntitySet Name="whereDidMyMoneyGoBreakoutControl" EntityType="Self.whereDidMyMoneyGoBreakoutControl" Schema="dbo" store:Type="Tables" />
           <EntitySet Name="BankTransactionCat" EntityType="Self.BankTransactionCat" store:Type="Views" store:Schema="dbo">
             <DefiningQuery>SELECT 
     [BankTransactionCat].[transactionId] AS [transactionId], 
@@ -358,6 +386,10 @@ warning 6002: The table/view 'Finances.dbo.vwMaterializedActualSpendingTransacti
     [vwMaterializedActualSpendingTransactionDetail].[expectedAmount] AS [expectedAmount]
     FROM [dbo].[vwMaterializedActualSpendingTransactionDetail] AS [vwMaterializedActualSpendingTransactionDetail]</DefiningQuery>
           </EntitySet>
+          <AssociationSet Name="FK__whereDidM__simpl__62CF9BA3" Association="Self.FK__whereDidM__simpl__62CF9BA3">
+            <End Role="simpleBudget" EntitySet="simpleBudget" />
+            <End Role="whereDidMyMoneyGoBreakoutControl" EntitySet="whereDidMyMoneyGoBreakoutControl" />
+          </AssociationSet>
           <AssociationSet Name="FK_simpleBudgetExpected_simpleBudget_simpleBudgetId" Association="Self.FK_simpleBudgetExpected_simpleBudget_simpleBudgetId">
             <End Role="simpleBudget" EntitySet="simpleBudget" />
             <End Role="simpleBudgetExpected" EntitySet="simpleBudgetExpected" />
@@ -394,6 +426,7 @@ warning 6002: The table/view 'Finances.dbo.vwMaterializedActualSpendingTransacti
           <Property Name="sortOrder" Type="Int32" />
           <NavigationProperty Name="simpleBudgetRules" Relationship="Self.fk_simpleBudgetRule_simpleBudget" FromRole="simpleBudget" ToRole="simpleBudgetRule" />
           <NavigationProperty Name="simpleBudgetExpecteds" Relationship="FinancesModel.FK_simpleBudgetExpected_simpleBudget_simpleBudgetId" FromRole="simpleBudget" ToRole="simpleBudgetExpected" />
+          <NavigationProperty Name="whereDidMyMoneyGoBreakoutControls" Relationship="FinancesModel.FK__whereDidM__simpl__62CF9BA3" FromRole="simpleBudget" ToRole="whereDidMyMoneyGoBreakoutControl" />
         </EntityType>
         <EntityType Name="simpleBudgetCalculatedActual">
           <Key>
@@ -505,6 +538,11 @@ warning 6002: The table/view 'Finances.dbo.vwMaterializedActualSpendingTransacti
             <Parameter Name="timeframeLabel" Mode="In" Type="String" />
             <Parameter Name="budgetFilter" Mode="In" Type="String" />
           </FunctionImport>
+          <EntitySet Name="whereDidMyMoneyGoBreakoutControls" EntityType="FinancesModel.whereDidMyMoneyGoBreakoutControl" />
+          <AssociationSet Name="FK__whereDidM__simpl__62CF9BA3" Association="FinancesModel.FK__whereDidM__simpl__62CF9BA3">
+            <End Role="simpleBudget" EntitySet="simpleBudgets" />
+            <End Role="whereDidMyMoneyGoBreakoutControl" EntitySet="whereDidMyMoneyGoBreakoutControls" />
+          </AssociationSet>
         </EntityContainer>
         <Association Name="FK_simpleBudgetExpected_simpleBudget_simpleBudgetId">
           <End Type="FinancesModel.simpleBudget" Role="simpleBudget" Multiplicity="0..1" />
@@ -693,6 +731,34 @@ warning 6002: The table/view 'Finances.dbo.vwMaterializedActualSpendingTransacti
           <Property Name="statistic" Type="String" Nullable="false" MaxLength="255" FixedLength="false" Unicode="false" />
           <Property Name="value" Type="String" Nullable="false" MaxLength="255" FixedLength="false" Unicode="false" />
         </EntityType>
+        <EntityType Name="whereDidMyMoneyGoBreakoutControl">
+          <Key>
+            <PropertyRef Name="whereDidMyMoneyGoBreakoutControlId" />
+          </Key>
+          <Property Name="whereDidMyMoneyGoBreakoutControlId" Type="Int32" Nullable="false" annotation:StoreGeneratedPattern="Identity" />
+          <Property Name="simpleBudgetId" Type="Int32" />
+          <Property Name="year" Type="Int32" />
+          <Property Name="weekNumberStarting" Type="Int32" />
+          <Property Name="weekNumberEnding" Type="Int32" />
+          <Property Name="breakoutIntoTransactions" Type="Int32" />
+          <Property Name="created_at" Type="DateTime" Nullable="false" Precision="3" />
+          <Property Name="created_by" Type="String" Nullable="false" MaxLength="255" FixedLength="false" Unicode="false" />
+          <Property Name="updated_at" Type="DateTime" Precision="3" />
+          <Property Name="updated_by" Type="String" MaxLength="255" FixedLength="false" Unicode="false" />
+          <NavigationProperty Name="simpleBudget" Relationship="FinancesModel.FK__whereDidM__simpl__62CF9BA3" FromRole="whereDidMyMoneyGoBreakoutControl" ToRole="simpleBudget" />
+        </EntityType>
+        <Association Name="FK__whereDidM__simpl__62CF9BA3">
+          <End Type="FinancesModel.simpleBudget" Role="simpleBudget" Multiplicity="0..1" />
+          <End Type="FinancesModel.whereDidMyMoneyGoBreakoutControl" Role="whereDidMyMoneyGoBreakoutControl" Multiplicity="*" />
+          <ReferentialConstraint>
+            <Principal Role="simpleBudget">
+              <PropertyRef Name="simpleBudgetId" />
+            </Principal>
+            <Dependent Role="whereDidMyMoneyGoBreakoutControl">
+              <PropertyRef Name="simpleBudgetId" />
+            </Dependent>
+          </ReferentialConstraint>
+        </Association>
       </Schema>
     </edmx:ConceptualModels>
     <!-- C-S mapping content -->
@@ -921,6 +987,22 @@ warning 6002: The table/view 'Finances.dbo.vwMaterializedActualSpendingTransacti
             </EntityTypeMapping>
           </EntitySetMapping>
           <FunctionImportMapping FunctionImportName="captureMaterializedSummaryStatistics" FunctionName="FinancesModel.Store.captureMaterializedSummaryStatistics" />
+          <EntitySetMapping Name="whereDidMyMoneyGoBreakoutControls">
+            <EntityTypeMapping TypeName="FinancesModel.whereDidMyMoneyGoBreakoutControl">
+              <MappingFragment StoreEntitySet="whereDidMyMoneyGoBreakoutControl">
+                <ScalarProperty Name="updated_by" ColumnName="updated_by" />
+                <ScalarProperty Name="updated_at" ColumnName="updated_at" />
+                <ScalarProperty Name="created_by" ColumnName="created_by" />
+                <ScalarProperty Name="created_at" ColumnName="created_at" />
+                <ScalarProperty Name="breakoutIntoTransactions" ColumnName="breakoutIntoTransactions" />
+                <ScalarProperty Name="weekNumberEnding" ColumnName="weekNumberEnding" />
+                <ScalarProperty Name="weekNumberStarting" ColumnName="weekNumberStarting" />
+                <ScalarProperty Name="year" ColumnName="year" />
+                <ScalarProperty Name="simpleBudgetId" ColumnName="simpleBudgetId" />
+                <ScalarProperty Name="whereDidMyMoneyGoBreakoutControlId" ColumnName="whereDidMyMoneyGoBreakoutControlId" />
+              </MappingFragment>
+            </EntityTypeMapping>
+          </EntitySetMapping>
         </EntityContainerMapping>
       </Mapping>
     </edmx:Mappings>

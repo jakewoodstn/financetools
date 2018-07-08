@@ -59,7 +59,7 @@ INSERT INTO @core
     AND COALESCE(bmt.splitTransactionId, 0) = COALESCE(btc.splitTransactionId, 0)
   INNER JOIN DimDate dd
     ON btc.accountingDate = dd.StandardDate
-  WHERE transactionDate BETWEEN '3/1/2018' AND '3/31/2018';
+  WHERE btc.accountingDate BETWEEN '3/1/2018' AND '3/31/2018';
 -- categorized expenses
 INSERT INTO @interim (subset, weekOfYearNumber, budget, subBudget, description, amount)
   SELECT

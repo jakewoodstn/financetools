@@ -1,0 +1,420 @@
+﻿@functions{
+
+    public class coreDataEntity
+    {
+        public string income_expense_category { get; set; }
+        public string budget { get; set; }
+        public string subBudget { get; set; }
+        public int sortOrder { get; set; }
+        public string description { get; set; }
+        public decimal amount { get; set; }
+        public DateTime accountingDate { get; set; }
+        public int simpleBudgetId { get; set; }
+        public int weekOfYearNumber { get; set; }
+        public string income_expense_actual { get; set; }
+
+    }
+
+    public class interimEntity
+    {
+        public int subset { get; set; }
+        public int weekOfYearNumber { get; set; }
+        public string budget { get; set; }
+        public string subBudget { get; set; }
+        public string description { get; set; }
+        public decimal amount { get; set; }
+        public int sortOrder { get; set; }
+    }
+
+    string headerFormat(string header)
+    {
+
+        string formattedHeader = "<span class=\"tableColumnHeader\">" + header + "</span>";
+        return formattedHeader;
+    }
+
+    string defaultLine()
+    {
+
+        string returnvalue = "<div class=\"row {0}\">";
+        returnvalue += "<div class=\"noColor col-sm-1\">";
+        returnvalue += "{1}</div>";
+        returnvalue += "<div class=\" col-sm-2\">";
+        returnvalue += "{2}</div>";
+        returnvalue += "<div class=\" col-sm-2\">";
+        returnvalue += "{3}</div>";
+        returnvalue += "<div class=\" col-sm-3\">";
+        returnvalue += "{4}</div>";
+        returnvalue += "<div class=\" col-sm-2\">";
+        returnvalue += "{5}</div>";
+        returnvalue += "<div class=\" col-sm-2\">";
+        returnvalue += "{6}</div>";
+        returnvalue += "</div>";
+
+        return returnvalue;
+    }
+
+    string accountingFormat(decimal moneyAmount, int decimalPlaces, int targetLength)
+    {
+
+        bool negative = moneyAmount < 0;
+
+        string currencyFormat = String.Format("{0:C" + decimalPlaces.ToString() + "}", moneyAmount);
+        int padding = targetLength - (currencyFormat.Length - 1 - (negative ? 1 : 0));
+        padding = padding < 0 ? 0 : padding;
+        string pad = "";
+        for (int i = 0; i < padding; i++)
+        {
+            pad += "&nbsp;";
+        }
+
+        string ret = "<span class=\"accounting\">$"+(negative?"(":"")+"</span><span class=\"accounting\">" + pad + currencyFormat.Replace("$", "").Replace("(","") + "</span>";
+
+        return ret;
+
+    }
+
+    string expenseBodySectionHeader()
+    {
+        string header = string.Format(defaultLine(), "header dropSmall folds", "", headerFormat("Budget"), headerFormat("Sub Budget"), headerFormat("Description"), headerFormat("Amount"), headerFormat("Burndown"));
+        return header;
+    }
+
+    string expenseLine(interimEntity expenseLineData, int lineCounter, decimal burndown)
+    {
+        string rowclass = lineCounter % 2 == 1 ? "folds oddInfo" : "folds info";
+
+        int weekNumber = expenseLineData.weekOfYearNumber;
+
+        string returnLine = string.Format(defaultLine(), rowclass, lineCounter == 1 ? "<span class=\"sectionLabel foldTrigger\">Week " + weekNumber.ToString() + ":</span>" : "&nbsp;", expenseLineData.budget == null ? "&nbsp;" : expenseLineData.budget, expenseLineData.subBudget == null ? "&nbsp;" : expenseLineData.subBudget, expenseLineData.description == null ? "&nbsp;" : expenseLineData.description, accountingFormat(expenseLineData.amount, 0, 8), accountingFormat(burndown, 0, 8));
+        return returnLine;
+    }
+
+    string expenseBodySectionFooter(int weekNumber, decimal total, decimal burndownTotal)
+    {
+        string footer = string.Format(defaultLine(), "footer foldTrigger", "", "", "", "Week " + weekNumber.ToString() + " Total:", accountingFormat(total, 0, 8), accountingFormat(burndownTotal, 0, 8));
+        return footer;
+    }
+
+    string expenseBodySection(IQueryable<interimEntity> expenseData, decimal burndown)
+    {
+        string body = expenseBodySectionHeader();
+        int lineCounter = 1;
+        int weekNumber = expenseData.Select(a => a.weekOfYearNumber).First();
+        decimal total = expenseData.Sum(a => a.amount);
+        foreach (interimEntity expenseDataLine in expenseData)
+        {
+            burndown += expenseDataLine.amount;
+            body += expenseLine(expenseDataLine, lineCounter, burndown);
+            lineCounter++;
+        }
+
+        body += expenseBodySectionFooter(weekNumber, total, burndown);
+        return body;
+    }
+
+
+    string expenseBody(IQueryable<interimEntity> expenseData, decimal burndown)
+    {
+
+        string body = "";
+
+        List<int> weeks = expenseData.Select(a => new { a.weekOfYearNumber }).OrderBy(a => a.weekOfYearNumber).Distinct().ToDictionary(a => a.weekOfYearNumber).Keys.ToList();
+        foreach (int week in weeks)
+        {
+            IQueryable<interimEntity> thisData = expenseData.Where(a => a.weekOfYearNumber == week);
+            body += "<div class=\"foldable\">" + expenseBodySection(thisData, burndown) + "</div>";
+            burndown += thisData.Sum(a => a.amount);
+        }
+
+        return body;
+
+    }
+
+    string expenseSection(IQueryable<interimEntity> expenseData, decimal totalIncome)
+    {
+        if (expenseData.Count() == 0) { return ""; }
+
+        string section = "<div class=\"row\"><div class=\"col-sm-10 col-sm-offset-1\">{0}</div></div>";
+        string body = expenseBody(expenseData, totalIncome);
+        decimal totalExpenses = expenseData.Sum(a => a.amount);
+        string footer = string.Format(defaultLine(), "footer dropMedium", "", "", "", "Total Income:", accountingFormat(totalIncome, 0, 8), "") +
+                        string.Format(defaultLine(), "footer", "", "", "", "Total Expenses:", accountingFormat(totalExpenses, 0, 8), "") +
+                        string.Format(defaultLine(), "footer", "", "", "", "Net Income:", accountingFormat(totalExpenses + totalIncome, 0, 8), "");
+
+
+        section = string.Format(section, body + footer);
+
+
+
+        return section;
+
+    }
+
+    string incomeLine(interimEntity incomeLineData, int lineCounter)
+    {
+        string rowclass = lineCounter % 2 == 1 ? "oddInfo folds" : "info folds";
+
+        string returnLine = string.Format(defaultLine(), rowclass, lineCounter == 1 ? "<span class=\"sectionLabel foldTrigger\">Income:</span>" : "&nbsp;", incomeLineData.budget, incomeLineData.subBudget, "&nbsp;", accountingFormat(incomeLineData.amount, 0, 8), "&nbsp;");
+        return returnLine;
+    }
+
+    string incomeBody(IQueryable<interimEntity> incomeData)
+    {
+        string body = "";
+        int lineCounter = 1;
+        foreach (interimEntity incomeDataLine in incomeData)
+        {
+            body += incomeLine(incomeDataLine, lineCounter);
+            lineCounter++;
+        }
+
+        return body;
+    }
+
+    string incomeSection(IQueryable<interimEntity> incomeData)
+    {
+        if (incomeData.Count() == 0) { return ""; }
+
+        string section = "<div class=\"row\"><div class=\"col-sm-10 col-sm-offset-1 foldable\">{0}</div></div>";
+
+        string body = incomeBody(incomeData);
+
+        decimal totalIncome = incomeData.Sum(a => a.amount);
+
+        string header = String.Format(defaultLine(), "header folds", "", headerFormat("Budget"), headerFormat("Subbudget"), "", headerFormat("Income"), "");
+        string footer = string.Format(defaultLine(), "footer foldTrigger", "", "", "", "Total Income:", accountingFormat(totalIncome, 0, 8), "");
+
+        section = String.Format(section, header + body + footer);
+
+        return section;
+    }
+
+    IQueryable<coreDataEntity> core(FinancesEntities fe, DateTime startDate, DateTime endDate)
+    {
+
+        var returnSet = from sb in fe.simpleBudgets
+                        from sbe in sb.simpleBudgetExpecteds
+                        from sbca in sbe.simpleBudgetCalculatedActuals
+                        join vt in fe.vwMaterializedActualSpendingTransactionDetails on sbca.simpleBudgetActualId equals vt.simpleBudgetActualId
+                        join btc in fe.BankTransactionCats on new { vt.transactionId, splitTransactionId = vt.splitTransactionId == null ? -1 : vt.splitTransactionId } equals new { btc.transactionId, splitTransactionId = btc.splitTransactionId == null ? -1 : btc.splitTransactionId }
+                        join dd in fe.DimDates on System.Data.Entity.DbFunctions.TruncateTime(btc.accountingDate) equals dd.FullDate
+                        where btc.accountingDate >= startDate && btc.accountingDate <= endDate
+                        select new coreDataEntity() { income_expense_category = sb.label1, budget = sb.label2, subBudget = sb.label3, sortOrder = sb.sortOrder ?? default(int), description = btc.description, amount = btc.amount ?? default(decimal), accountingDate = btc.accountingDate ?? default(DateTime), simpleBudgetId = sb.simpleBudgetId, weekOfYearNumber = dd.WeekOfYearNumber, income_expense_actual = btc.amount > 0 ? "Income" : "Expenses" };
+
+        return returnSet;
+    }
+
+    IQueryable<interimEntity> getInterimRecordset(IQueryable<coreDataEntity> coreData, FinancesEntities fe, string expenseOrIncome, string budgetOrLineItem)
+    {
+
+        IQueryable<interimEntity> returnEntity = null;
+
+
+        if (budgetOrLineItem == "budget")
+        {
+            returnEntity = from cd in coreData
+                           from breakCtl in fe.whereDidMyMoneyGoBreakoutControls.Where(
+                                             ctl => ctl.simpleBudgetId == cd.simpleBudgetId
+                                             && ctl.year == cd.accountingDate.Year
+                                             && ctl.breakoutIntoTransactions == 1
+                                             && cd.weekOfYearNumber >= ctl.weekNumberStarting
+                                             && cd.weekOfYearNumber <= ctl.weekNumberEnding).DefaultIfEmpty()
+                           where breakCtl.simpleBudgetId == null && cd.income_expense_actual == expenseOrIncome
+                           group cd by new
+                           {
+                               weekOfYearNumber = expenseOrIncome == "Expenses" ? cd.weekOfYearNumber : 0,
+                               budget = cd.budget,
+                               subBudget = cd.subBudget,
+                               sortorder = (expenseOrIncome == "Income" ? ((cd.income_expense_category == "income") ? (cd.budget == "Transfer Payments" ? 1000 : 1) : 100) : 1) * cd.sortOrder,
+                               income_expense_category = cd.income_expense_category,
+                               income_expense_actual = cd.income_expense_actual
+
+                           } into cdg
+                           orderby cdg.Key.sortorder
+                           select new interimEntity() { subset = 1, weekOfYearNumber = cdg.Key.weekOfYearNumber, budget = cdg.Key.budget, subBudget = cdg.Key.subBudget, description = default(string), amount = cdg.Sum(s => s.amount), sortOrder = cdg.Key.sortorder };
+
+        }
+        else if (budgetOrLineItem == "lineItem")
+        {
+
+            returnEntity = from cd in coreData
+                           from breakCtl in fe.whereDidMyMoneyGoBreakoutControls.Where(
+                                             ctl => ctl.simpleBudgetId == cd.simpleBudgetId
+                                             && ctl.year == cd.accountingDate.Year
+                                             && ctl.breakoutIntoTransactions == 1
+                                             && cd.weekOfYearNumber >= ctl.weekNumberStarting
+                                             && cd.weekOfYearNumber <= ctl.weekNumberEnding)
+                           where cd.income_expense_actual == expenseOrIncome
+                           group cd by new
+                           {
+                               weekOfYearNumber = expenseOrIncome == "Expenses" ? cd.weekOfYearNumber : 0,
+                               description = cd.description,
+                               sortorder = cd.sortOrder * 1000,
+                               income_expense_category = cd.income_expense_category,
+                               income_expense_actual = cd.income_expense_actual
+
+                           } into cdg
+                           orderby cdg.Key.description descending
+                           select new interimEntity() { subset = 2, weekOfYearNumber = cdg.Key.weekOfYearNumber, budget = default(string), subBudget = default(string), description = cdg.Key.description, amount = cdg.Sum(s => s.amount), sortOrder = cdg.Key.sortorder };
+        }
+
+
+        return returnEntity;
+
+    }
+
+        }
+        @section scripts{
+    <script type="text/javascript">
+        function init() {
+            $('.foldTrigger').click(foldHandler);
+            }
+
+            function foldHandler(evt) {
+                evt.preventDefault();
+                targ = $(this).parents('.foldable');
+                foldToggler(targ);
+            }
+
+            function foldToggler(targ) {
+            $(targ).find('.folds').slideToggle();
+            }
+
+        $(document).ready(init);
+    </script>
+}
+
+
+@{
+    Layout = "~/Content/shared/_entry2Layout.cshtml";
+    FinancesEntities fe = new FinancesEntities();
+        DateTime startDate = Request["startDate"] == null ? System.DateTime.Parse(System.DateTime.Now.Month + "/1/" + System.DateTime.Now.Year) : System.DateTime.Parse(Request["startDate"]);
+        DateTime endDate = Request["endDate"] == null ? startDate.AddMonths(1).AddDays(-1) : System.DateTime.Parse(Request["endDate"]);
+
+        IQueryable<coreDataEntity> coreData = core(fe, startDate, endDate);
+        IQueryable<interimEntity> incomeBudgetData = getInterimRecordset(coreData, fe, "Income", "budget");
+        IQueryable<interimEntity> incomeLines = getInterimRecordset(coreData, fe, "Income", "lineItem");
+        IQueryable<interimEntity> allIncome = incomeBudgetData.Union(incomeLines);
+        IQueryable<interimEntity> expenseBudgetData = getInterimRecordset(coreData, fe, "Expenses", "budget");
+        IQueryable<interimEntity> expenseLines = getInterimRecordset(coreData, fe, "Expenses", "lineItem");
+        IQueryable<interimEntity> allExpenses = expenseBudgetData.Union(expenseLines);
+
+
+        Dictionary<string, string> densities = new Dictionary<string, string>();
+        densities.Add("month", "Monthly");
+    densities.Add("quarter", "Quarterly");
+    densities.Add("year", "Anually");
+
+    Dictionary<string, string> depths = new Dictionary<string, string>();
+        depths.Add("incomeExpense", "High Level");
+    depths.Add("budget", "Budgets");
+    depths.Add("subbudget", "Subbudgets");
+
+    budgetReport br = new budgetReport();
+        br.startDate = Request["startDate"] == null ? System.DateTime.Parse(System.DateTime.Now.Month + "/1/" + System.DateTime.Now.Year) : System.DateTime.Parse(Request["startDate"]);
+    br.endDate = Request["endDate"] == null ? System.DateTime.Today : System.DateTime.Parse(Request["endDate"]);
+        br.density = (Request["densitySelect"] == "" || Request["densitySelect"] == null) ? "month" : densities.Where(i => i.Key == Request["densitySelect"]).First().Key;
+    br.depth = (Request["depthSelect"] == null || Request["depthSelect"] == "") ? "subbudget" : depths.Where(i => i.Key == Request["depthSelect"]).First().Key;
+
+
+    //original webgrid visualiztion
+    //string incomeTotal = String.Format("{0:C0}", allIncome.Sum(a => a.amount).ToString().AsDecimal());
+
+    /*WebGrid wgIncome = new WebGrid(canPage: false, canSort: false);
+    IList<WebGridColumn> wgIncomeCols = new List<WebGridColumn>();
+    wgIncomeCols.Add(wgIncome.Column("budget", "Budget", null, null, false));
+    wgIncomeCols.Add(wgIncome.Column("subbudget", "Sub Budget", null, null, false));
+    wgIncomeCols.Add(wgIncome.Column("description", "Description", null, null, false));
+    wgIncomeCols.Add(wgIncome.Column("amount", "$", d => String.Format("{0:C0}", d.amount), null, false));
+
+    wgIncome.Bind(allIncome.Select(a => new { a.budget, a.subBudget, a.description, a.amount, a.sortOrder }).OrderBy(o => o.sortOrder).ThenBy(o => o.description).ToList());
+    */
+    //string expenseTotal = String.Format("{0:C0}", allExpenses.Sum(a => a.amount).ToString().AsDecimal());
+
+    //WebGrid wgExpense = new WebGrid(canPage: false, canSort: false);
+    //IList<WebGridColumn> wgExpenseCols = new List<WebGridColumn>();
+    //wgExpenseCols.Add(wgExpense.Column("weekOfYearNumber", "Week", null, null, false));
+    //wgExpenseCols.Add(wgExpense.Column("budget", "Budget", null, null, false));
+    //wgExpenseCols.Add(wgExpense.Column("subbudget", "Sub Budget", null, null, false));
+    //wgExpenseCols.Add(wgExpense.Column("description", "Description", null, null, false));
+    //wgExpenseCols.Add(wgExpense.Column("amount", "$", d => String.Format("{0:C0}", d.amount), null, false));
+
+    //wgExpense.Bind(allExpenses.Select(a => new { a.weekOfYearNumber, a.budget, a.subBudget, a.description, a.amount, a.sortOrder }).OrderBy(o => o.weekOfYearNumber).ThenBy(o => o.sortOrder).ThenBy(o => o.description).ToList());
+    //wgIncome.GetHtml(htmlAttributes: new { id = "burndownIncome" }, columns: wgIncomeCols, tableStyle: "table table-sm", rowStyle: "oddInfo", alternatingRowStyle: "info", selectedRowStyle: "active")
+    //wgExpense.GetHtml(htmlAttributes: new { id = "burndownExpense" }, columns: wgExpenseCols, tableStyle: "table table-sm", rowStyle: "oddInfo", alternatingRowStyle: "info", selectedRowStyle: "active")
+
+}
+<!DOCTYPE html>
+<html>
+<head>
+    <title></title>
+    <link type="text/css" rel="stylesheet" href="~/Content/transcat.css" />
+    <link type="text/css" rel="stylesheet" href="~/Content/shared/budget.css" />
+    <script type="text/javascript" src="~/Scripts/finToolsScripts/search.js"></script>
+</head>
+<body>
+    <div class="row">
+        <div class="col-sm-12">
+            <form id="parameterForm" name="parameterForm" method="post">
+                <div class="row">
+                    <div id="parameters" class="col-xs-12 foldable">
+                        <div class="row ">
+                            <div class="col-xs-2 foldTrigger">
+                                @Html.Label("Report Parameters", new { id = "mainLabel", name = "mainLabel" })
+                            </div>
+                            <div class="col-xs-1">
+                                <input id="collapseAll" name="collapseAll" type="button" class="btn btn-pink btn-block" value="-/+" onclick="$('.folds').slideToggle();" />
+                            </div>         
+                        </div>
+                        <div class="row folds dropTiny">
+                            <div class="col-xs-1">
+                                @Html.Label("Start Date", new { @class = "folds" })
+                            </div>
+                            <div class="col-xs-2">
+                                @Html.TextBox("startDate", br.startDate, new { @class = "folds form-control" })
+                            </div>
+                            <div class="col-xs-1">
+                                @Html.Label("End Date", new { @class = "folds" })
+                            </div>
+                            <div class="col-xs-2">
+                                @Html.TextBox("endDate", br.endDate, new { @class = "folds form-control" })
+                            </div>
+                            <div class="col-xs-1">
+                                <input id="submitButton" name="submitButton" type="button" class="btn btn-primary btn-block" value="Refresh" onclick="$('#whichButton').val('submitButton'); $('#parameterForm').submit();" />
+                            </div>
+                                         </div>
+                        <div class="row folds dropTiny">
+                            <div class="col-xs-1 col-xs-offset-1">
+                                <input type="button" class="btn btn-info" id="decrementStartDateM" value="<<" onclick="modDateAddMonth('#startDate', -1,'Y-MM-DD');" />
+                                <input type="button" class="btn btn-info" id="decrementStartDateD" value="<" onclick="modDateAddDay('#startDate', -1,'Y-MM-DD');" />
+                            </div><div class="col-xs-1">
+                                <input type="button" class="btn btn-info" id="incrementStartDateD" value=">" onclick="modDateAddDay('#startDate', 1,'Y-MM-DD');" />
+                                <input type="button" class="btn btn-info" id="incrementStartDateM" value=">>" onclick="modDateAddMonth('#startDate', 1,'Y-MM-DD');" />
+                            </div>
+                            <div class="col-xs-1 col-xs-offset-1">
+                                <input type="button" class="btn btn-info" id="decrementEndDateM" value="<<" onclick="modDateAddMonth('#endDate', -1,'Y-MM-DD');" />
+                                <input type="button" class="btn btn-info" id="decrementEndDateD" value="<" onclick="modDateAddDay('#endDate', -1,'Y-MM-DD');" />
+                            </div>
+                            <div class="col-xs-1">
+                                <input type="button" class="btn btn-info" id="incrementEndDateD" value=">" onclick="modDateAddDay('#endDate', 1,'Y-MM-DD');" />
+                                <input type="button" class="btn btn-info" id="incrementEndDateM" value=">>" onclick="modDateAddMonth('#endDate', 1,'Y-MM-DD');" />
+                            </div>
+                        </div>
+
+                        <div class="row dropSmall folds">
+                            <div class="col-xs-12">
+                                @Html.Hidden("whichButton")
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </form>
+        </div>
+    </div>
+
+
+    <div class="row"><div class="col-xs-12">@Html.Raw(incomeSection(allIncome))</div></div>
+    <div class="row"><div class="col-xs-12">@Html.Raw(expenseSection(allExpenses, allIncome.Count()==0?0:allIncome.Sum(a => a.amount)))</div></div>
+</body>
+</html>

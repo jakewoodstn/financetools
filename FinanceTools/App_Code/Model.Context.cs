@@ -38,6 +38,7 @@ public partial class FinancesEntities : DbContext
     public virtual DbSet<BankTransactionCat> BankTransactionCats { get; set; }
     public virtual DbSet<vwMaterializedActualSpendingTransactionDetail> vwMaterializedActualSpendingTransactionDetails { get; set; }
     public virtual DbSet<simpleBudgetMaterializedSummaryStatistic> simpleBudgetMaterializedSummaryStatistics { get; set; }
+    public virtual DbSet<whereDidMyMoneyGoBreakoutControl> whereDidMyMoneyGoBreakoutControls { get; set; }
 
     public virtual ObjectResult<string> materializeSimpleBudgetActual(Nullable<System.DateTime> startDate, Nullable<System.DateTime> endDate, Nullable<int> sendMessage, Nullable<int> force)
     {

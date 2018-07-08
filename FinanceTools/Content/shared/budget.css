@@ -37,8 +37,18 @@ span.callout {
     border-bottom: 2px #7daec6 solid;
 }
 
-.row.info {
+.row.oddInfo {
+    background-color: #fff;
+    font-family: Cambria;
+    padding-top: 5px;
+    padding-bottom: 5px;
+}
+
+.row.info div{
     background-color: #d9edf7;
+    font-family: Cambria;
+    padding-top: 3px;
+    padding-bottom: 3px;
 }
 
 .row.info2 {
@@ -49,7 +59,32 @@ span.callout {
     background-color: #FFF;
 }
 
-div.header {
+div.header span {
     font-weight: bold;
     font-size: 1.1em;
+    border-bottom: 3px solid lightgray;
+    font-family: Cambria;
+}
+
+span.accounting {
+    font-family: 'Lucida Console';
+}
+
+.row div.noColor {
+    background-color: #fff;
+    padding:0px;
+    margin:0px;
+}
+
+span.sectionLabel {
+    font-size:1.3em;
+    font-weight:bolder;
+    border-bottom:2px solid black;
+
+}
+
+div.footer {
+    font-size:1.2em;
+    font-weight:bold;
+    font-family:Cambria;
 }

@@ -112,6 +112,7 @@ public partial class simpleBudget
     {
         this.simpleBudgetRules = new HashSet<simpleBudgetRule>();
         this.simpleBudgetExpecteds = new HashSet<simpleBudgetExpected>();
+        this.whereDidMyMoneyGoBreakoutControls = new HashSet<whereDidMyMoneyGoBreakoutControl>();
     }
 
     public int simpleBudgetId { get; set; }
@@ -128,6 +129,8 @@ public partial class simpleBudget
     public virtual ICollection<simpleBudgetRule> simpleBudgetRules { get; set; }
     [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Usage", "CA2227:CollectionPropertiesShouldBeReadOnly")]
     public virtual ICollection<simpleBudgetExpected> simpleBudgetExpecteds { get; set; }
+    [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Usage", "CA2227:CollectionPropertiesShouldBeReadOnly")]
+    public virtual ICollection<whereDidMyMoneyGoBreakoutControl> whereDidMyMoneyGoBreakoutControls { get; set; }
 }
 
 public partial class simpleBudgetCalculatedActual
@@ -239,4 +242,20 @@ public partial class vwMaterializedActualSpendingTransactionDetail
     public int simpleBudgetActualId { get; set; }
     public Nullable<int> simpleBudgetExpectedId { get; set; }
     public Nullable<int> simpleBudgetId { get; set; }
+}
+
+public partial class whereDidMyMoneyGoBreakoutControl
+{
+    public int whereDidMyMoneyGoBreakoutControlId { get; set; }
+    public Nullable<int> simpleBudgetId { get; set; }
+    public Nullable<int> year { get; set; }
+    public Nullable<int> weekNumberStarting { get; set; }
+    public Nullable<int> weekNumberEnding { get; set; }
+    public Nullable<int> breakoutIntoTransactions { get; set; }
+    public System.DateTime created_at { get; set; }
+    public string created_by { get; set; }
+    public Nullable<System.DateTime> updated_at { get; set; }
+    public string updated_by { get; set; }
+
+    public virtual simpleBudget simpleBudget { get; set; }
 }
