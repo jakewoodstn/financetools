@@ -4,7 +4,7 @@
 <CompareDocument>
   <Properties>
     <DatabaseProvider>aa8afe9c-7d62-4564-b477-c12e62e0f440</DatabaseProvider>
-    <ProviderVersion>4.0.52.0</ProviderVersion>
+    <ProviderVersion>5.6.104.0</ProviderVersion>
     <SchemaVersion>2.0</SchemaVersion>
   </Properties>
   <Source Type="Database">
@@ -24,11 +24,14 @@
   <Options>
     <PropertyValue Name="MappingIgnoreSpaces">true</PropertyValue>
     <PropertyValue Name="IgnoreBlobColumns">false</PropertyValue>
-    <PropertyValue Name="HideSystemSchemas">false</PropertyValue>
+    <PropertyValue Name="CompareMemoryOptimizedTables">false</PropertyValue>
+    <PropertyValue Name="CompareColumnStoreTables">false</PropertyValue>
+    <PropertyValue Name="IgnoreTemporalHistoryTable">false</PropertyValue>
+    <PropertyValue Name="IgnoreTemporalTableSysColumns">false</PropertyValue>
+    <PropertyValue Name="CompareClrTypesAsBinary">false</PropertyValue>
     <PropertyValue Name="IgnoreTimestampColumns">false</PropertyValue>
     <PropertyValue Name="IgnoreRowguidColumns">false</PropertyValue>
     <PropertyValue Name="IgnoreIdentityColumns">false</PropertyValue>
-    <PropertyValue Name="CompareClrTypesAsBinary">false</PropertyValue>
     <PropertyValue Name="MappingIgnoreCase">false</PropertyValue>
     <PropertyValue Name="MappingIgnoreUnderscores">false</PropertyValue>
     <PropertyValue Name="IgnoreColumnsByMask">false</PropertyValue>
@@ -42,6 +45,7 @@
     <PropertyValue Name="CompareViews">false</PropertyValue>
     <PropertyValue Name="RoundFloatTypes">false</PropertyValue>
     <PropertyValue Name="RoundFloatTypesUpTo" xml:space="preserve">3</PropertyValue>
+    <PropertyValue Name="IgnoreLeadingSpaces">false</PropertyValue>
     <PropertyValue Name="IgnoreTrailingSpaces">false</PropertyValue>
     <PropertyValue Name="IgnoreCase">false</PropertyValue>
     <PropertyValue Name="IgnoreEndOfLine">false</PropertyValue>
@@ -54,35 +58,47 @@
   </Options>
   <ModifiedObjects />
   <SynchronizationOptions>
-    <PropertyValue Name="UseSchemaNamePrefix">true</PropertyValue>
+    <PropertyValue Name="BackupDatabase">true</PropertyValue>
+    <PropertyValue Name="BackupExtension">false</PropertyValue>
     <PropertyValue Name="CreateBackupFolder">true</PropertyValue>
+    <PropertyValue Name="NeedCompressBackup">true</PropertyValue>
+    <PropertyValue Name="AddBackupType">false</PropertyValue>
+    <PropertyValue Name="BackupType">0</PropertyValue>
+    <PropertyValue Name="ExecuteAsSingleTransaction">true</PropertyValue>
+    <PropertyValue Name="AddingErrorHandling">false</PropertyValue>
+    <PropertyValue Name="AddTransactionIsolationLevel">false</PropertyValue>
+    <PropertyValue Name="TransactionIsolationLevel">0</PropertyValue>
+    <PropertyValue Name="DeployDatabaseInSingleUserMode">false</PropertyValue>
+    <PropertyValue Name="UseSchemaNamePrefix">false</PropertyValue>
+    <PropertyValue Name="IncludeUseDatabase">true</PropertyValue>
+    <PropertyValue Name="CheckConcurrencyUpdates">false</PropertyValue>
     <PropertyValue Name="DisableForeignKeys">true</PropertyValue>
     <PropertyValue Name="DropKeys">false</PropertyValue>
     <PropertyValue Name="DropCheckConstraints">false</PropertyValue>
     <PropertyValue Name="DisableDmlTriggers">true</PropertyValue>
+    <PropertyValue Name="DisableDdlTriggers">false</PropertyValue>
+    <PropertyValue Name="SynchronizeViaFiles">false</PropertyValue>
+    <PropertyValue Name="DisableSecurityPolicy">true</PropertyValue>
+    <PropertyValue Name="IncludePrintComments">false</PropertyValue>
+    <PropertyValue Name="ExcludeComments">false</PropertyValue>
     <PropertyValue Name="BulkInsert">false</PropertyValue>
-    <PropertyValue Name="BackupDatabase">true</PropertyValue>
-    <PropertyValue Name="ExecuteAsSingleTransaction">true</PropertyValue>
+    <PropertyValue Name="BackupPathName" xml:space="preserve">C:\databases\backup</PropertyValue>
+    <PropertyValue Name="BackupExtensionName" xml:space="preserve">.bak</PropertyValue>
     <PropertyValue Name="GenerateScriptHeader">true</PropertyValue>
     <PropertyValue Name="UseSqlExtensionCommands">true</PropertyValue>
+    <PropertyValue Name="AllowDefaultValues">false</PropertyValue>
     <PropertyValue Name="ReseedIdentityColumns">true</PropertyValue>
     <PropertyValue Name="UseExec">true</PropertyValue>
     <PropertyValue Name="RestoreConstraintsWithCheck">false</PropertyValue>
-    <PropertyValue Name="DisableDdlTriggers">false</PropertyValue>
-    <PropertyValue Name="SynchronizeViaFiles">false</PropertyValue>
-    <PropertyValue Name="CheckConcurrencyUpdates">false</PropertyValue>
+    <PropertyValue Name="UseSubSchemaNamePrefix">true</PropertyValue>
     <PropertyValue Name="SynchronizeType">0</PropertyValue>
     <PropertyValue Name="SynchronizationFileName" xml:space="preserve">C:\FinanceToolsDB2\SQL\Finances (192_168_1_13 vs (local))_20170418-2214.sql</PropertyValue>
     <PropertyValue Name="SynchronizationEditorFileName" xml:space="preserve" />
     <PropertyValue Name="OpenScriptInEditor">false</PropertyValue>
     <PropertyValue Name="RefreshAfterSynchronization">true</PropertyValue>
-    <PropertyValue Name="CommitToVersionControl">false</PropertyValue>
-    <PropertyValue Name="CommentString" xml:space="preserve" />
-    <PropertyValue Name="IncludePrintComments">false</PropertyValue>
-    <PropertyValue Name="ExcludeComments">false</PropertyValue>
+    <PropertyValue Name="OpenScriptsFolder">false</PropertyValue>
     <PropertyValue Name="PureScript">false</PropertyValue>
     <PropertyValue Name="IsPartOfScript">false</PropertyValue>
-    <PropertyValue Name="BackupPathName" xml:space="preserve">C:\databases\backup</PropertyValue>
     <PropertyValue Name="IgnoreEncryptionProperty">false</PropertyValue>
     <PropertyValue Name="UseCommitMode">false</PropertyValue>
     <PropertyValue Name="CommitPageLength" xml:space="preserve">0</PropertyValue>
@@ -95,7 +111,16 @@
       <Object SourceName="reporting" TargetName="reporting" State="DefaultMapped" Included="True" />
     </Schemas>
     <ComparedObjects>
-      <Object SourceName="dbo.account" TargetName="dbo.account" SourceType="Table" TargetType="Table" IncludedInScript="False" />
+      <Object SourceName="dbo.account" TargetName="dbo.account" SourceType="Table" TargetType="Table" IncludedInScript="False">
+        <ComparedColumns CustomMapped="True">
+          <Column SourceName="dbo.account.accountId" TargetName="dbo.account.accountId" />
+          <Column SourceName="dbo.account.accountName" TargetName="dbo.account.accountName" />
+          <Column SourceName="dbo.account.createdAt" TargetName="dbo.account.createdAt" />
+          <Column SourceName="dbo.account.closedOn" TargetName="dbo.account.closedOn" />
+          <Column SourceName="dbo.account.importTransactions" TargetName="dbo.account.importTransactions" />
+          <Column SourceName="dbo.account.ts" TargetName="dbo.account.ts" Included="False" />
+        </ComparedColumns>
+      </Object>
       <Object SourceName="dbo.aspnet_Applications" TargetName="dbo.aspnet_Applications" SourceType="Table" TargetType="Table" IncludedInScript="False" Unmapped="True">
         <ComparedColumns CustomMapped="True">
           <Column SourceName="dbo.aspnet_Applications.ApplicationName" TargetName="dbo.aspnet_Applications.ApplicationName" Included="False" />
@@ -209,7 +234,6 @@
       <Object SourceName="dbo.parameter" TargetName="dbo.parameter" SourceType="Table" TargetType="Table" IncludedInScript="False" />
       <Object SourceName="dbo.simpleBudget" TargetName="dbo.simpleBudget" SourceType="Table" TargetType="Table" IncludedInScript="False" />
       <Object SourceName="dbo.simpleBudgetCalculatedActual" TargetName="dbo.simpleBudgetCalculatedActual" SourceType="Table" TargetType="Table" IncludedInScript="False" Unmapped="True">
-        <Key Name="Columns" />
         <ComparedColumns CustomMapped="True">
           <Column SourceName="dbo.simpleBudgetCalculatedActual.simpleBudgetActualId" TargetName="dbo.simpleBudgetCalculatedActual.simpleBudgetActualId" Included="False" />
           <Column SourceName="dbo.simpleBudgetCalculatedActual.simpleBudgetExpectedId" TargetName="dbo.simpleBudgetCalculatedActual.simpleBudgetExpectedId" Included="False" />
@@ -282,10 +306,12 @@
       <Object SourceName="reporting.period" TargetName="reporting.period" SourceType="Table" TargetType="Table" IncludedInScript="False" />
       <Object SourceName="reporting.snippet" TargetName="reporting.snippet" SourceType="Table" TargetType="Table" IncludedInScript="False" />
       <Object SourceName="reporting.timeDensityDetail" TargetName="reporting.timeDensityDetail" SourceType="Table" TargetType="Table" IncludedInScript="False" />
-      <Object SourceName="dbo.simpleBudgetHierarchy" TargetName="dbo.simpleBudgetHierarchy" SourceType="Table" TargetType="Table" />
+      <Object SourceName="dbo.simpleBudgetHierarchy" TargetName="dbo.simpleBudgetHierarchy" SourceType="Table" TargetType="Table" IncludedInScript="False" />
       <Object SourceName="dbo.simpleBudgetMaterializedTransactions" TargetName="dbo.simpleBudgetMaterializedTransactions" SourceType="Table" TargetType="Table" IncludedInScript="False" Unmapped="True" />
       <Object SourceName="dbo.tagAutoApply" TargetName="dbo.tagAutoApply" SourceType="Table" TargetType="Table" Included="False" IncludedInScript="False" />
       <Object SourceName="dbo.tagRemapping" TargetName="dbo.tagRemapping" SourceType="Table" TargetType="Table" Included="False" IncludedInScript="False" />
+      <Object SourceName="dbo.simpleBudgetMaterializedSummaryStatistics" TargetName="dbo.simpleBudgetMaterializedSummaryStatistics" SourceType="Table" TargetType="Table" Included="False" IncludedInScript="False" />
+      <Object SourceName="dbo.whereDidMyMoneyGoBreakoutControl" TargetName="dbo.whereDidMyMoneyGoBreakoutControl" SourceType="Table" TargetType="Table" IncludedInScript="False" />
     </ComparedObjects>
   </Mapping>
 </CompareDocument>

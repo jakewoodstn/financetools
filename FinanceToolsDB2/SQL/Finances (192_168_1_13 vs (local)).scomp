@@ -4,7 +4,7 @@
 <CompareDocument>
   <Properties>
     <DatabaseProvider>aa8afe9c-7d62-4564-b477-c12e62e0f440</DatabaseProvider>
-    <ProviderVersion>4.0.52.0</ProviderVersion>
+    <ProviderVersion>5.6.104.0</ProviderVersion>
     <SchemaVersion>1.5</SchemaVersion>
   </Properties>
   <Source Type="Database">
@@ -22,53 +22,93 @@
   <GroupType Value="Status" />
   <Filter Value="0" />
   <ComparisonOptions>
-    <UseSubSchemaNamePrefix>true</UseSubSchemaNamePrefix>
+    <DisableDependencyAnalysis>false</DisableDependencyAnalysis>
     <IgnorePermissions>false</IgnorePermissions>
+    <QuoteObjectNames>false</QuoteObjectNames>
     <IgnoreColumnOrderInIndexes>false</IgnoreColumnOrderInIndexes>
+    <IgnoreConstraintsNames>false</IgnoreConstraintsNames>
     <IgnoreForeignKeys>false</IgnoreForeignKeys>
+    <TargetAzureEdition xml:space="preserve" />
     <CountColumnsToDropUK>true</CountColumnsToDropUK>
+    <MappingIgnoreSpaces>false</MappingIgnoreSpaces>
+    <MappingIgnoreCase>false</MappingIgnoreCase>
+    <MappingSimilar>false</MappingSimilar>
+    <MappingSimilarPercent xml:space="preserve">80</MappingSimilarPercent>
     <ForceColumnOrder>true</ForceColumnOrder>
+    <IgnoreParserErrors>false</IgnoreParserErrors>
     <IgnoreCase>false</IgnoreCase>
     <IgnoreComments>false</IgnoreComments>
     <IgnoreWhiteSpace>true</IgnoreWhiteSpace>
+    <IgnoreObjectNamesInDefinitions>false</IgnoreObjectNamesInDefinitions>
     <CompareSecurityObjectPrivileges>false</CompareSecurityObjectPrivileges>
-    <IgnoreCollations>false</IgnoreCollations>
+    <CompareDatabaseProperties>true</CompareDatabaseProperties>
+    <UserDataTypesToSystem>false</UserDataTypesToSystem>
     <IgnoreAuthorization>false</IgnoreAuthorization>
+    <IgnoreChangeTracking>false</IgnoreChangeTracking>
+    <IgnoreCollations>false</IgnoreCollations>
+    <IgnoreDataCompression>true</IgnoreDataCompression>
+    <IgnoreDatabaseInSynonyms>true</IgnoreDatabaseInSynonyms>
+    <IgnoreDatabaseExtendedProperties>true</IgnoreDatabaseExtendedProperties>
+    <IgnoreDatabaseObjectExtendedProperties>false</IgnoreDatabaseObjectExtendedProperties>
     <IgnoreEventNotificationOnQueues>false</IgnoreEventNotificationOnQueues>
-    <IgnoreExtendedProperties>false</IgnoreExtendedProperties>
-    <IgnoreIndexes>false</IgnoreIndexes>
-    <IgnoreTriggerFireOrder>false</IgnoreTriggerFireOrder>
-    <IgnoreStatistics>false</IgnoreStatistics>
-    <IgnoreDMLTriggers>false</IgnoreDMLTriggers>
-    <IgnoreLogins>true</IgnoreLogins>
-    <IgnoreNotForReplication>false</IgnoreNotForReplication>
-    <IgnoreFullTextSearch>false</IgnoreFullTextSearch>
-    <IgnoreFullTextCatalogPath>false</IgnoreFullTextCatalogPath>
     <IgnoreFilegroupsPartitionSchemes>false</IgnoreFilegroupsPartitionSchemes>
+    <IgnoreFullTextCatalogPath>false</IgnoreFullTextCatalogPath>
+    <IgnoreFullTextSearch>false</IgnoreFullTextSearch>
+    <IgnoreNextFilegroups>false</IgnoreNextFilegroups>
+    <IgnoreSemicolons>false</IgnoreSemicolons>
+    <IgnoreSequenceMax>false</IgnoreSequenceMax>
+    <IgnoreSequenceMin>false</IgnoreSequenceMin>
+    <IgnoreSequenceStart>false</IgnoreSequenceStart>
+    <IgnoreTSQLtFramework>false</IgnoreTSQLtFramework>
     <IgnoreUserDefaultSchema>true</IgnoreUserDefaultSchema>
     <PopulateFullTextIndexes>false</PopulateFullTextIndexes>
-    <CompareDatabaseProperties>true</CompareDatabaseProperties>
+    <IgnoreUserPermissions>false</IgnoreUserPermissions>
+    <IgnoreUserDefaultLanguage>false</IgnoreUserDefaultLanguage>
+    <IgnoreLogins>true</IgnoreLogins>
+    <IgnoreDataTypesInColumn>false</IgnoreDataTypesInColumn>
+    <IgnoreClrDataTypesInColumn>false</IgnoreClrDataTypesInColumn>
+    <IgnoreRules>false</IgnoreRules>
+    <IgnoreIdentitySeedIncrementValues>false</IgnoreIdentitySeedIncrementValues>
+    <IgnoreIdentity>false</IgnoreIdentity>
+    <IgnoreDefaultCollations>true</IgnoreDefaultCollations>
+    <IgnoreBoundRulesDefaults>false</IgnoreBoundRulesDefaults>
+    <IgnoreLockEscalation>true</IgnoreLockEscalation>
+    <IgnoreTemporalHistoryTableName>true</IgnoreTemporalHistoryTableName>
+    <IgnoreTableDMLTriggers>false</IgnoreTableDMLTriggers>
+    <IgnoreInsteadOfTriggers>false</IgnoreInsteadOfTriggers>
+    <IgnoreDMLTriggerState>false</IgnoreDMLTriggerState>
+    <IgnoreDDLTriggerState>false</IgnoreDDLTriggerState>
+    <IgnoreTriggerFireOrder>false</IgnoreTriggerFireOrder>
+    <IgnoreIndexes>false</IgnoreIndexes>
+    <IgnoreStatistics>false</IgnoreStatistics>
     <IgnoreIndexesNames>false</IgnoreIndexesNames>
     <IgnoreStatisticsNorecompute>false</IgnoreStatisticsNorecompute>
     <IgnorePadIndexAndFillfactor>false</IgnorePadIndexAndFillfactor>
-    <IgnoreDataCompression>true</IgnoreDataCompression>
-    <IgnoreChangeTracking>false</IgnoreChangeTracking>
     <IgnoreIndexColumnsSortOrder>false</IgnoreIndexColumnsSortOrder>
     <IgnoreIndexPageAndRowLock>false</IgnoreIndexPageAndRowLock>
-    <QuoteObjectNames>false</QuoteObjectNames>
     <IgnoreCheckConstraints>false</IgnoreCheckConstraints>
-    <IgnoreRules>false</IgnoreRules>
     <IgnoreDefaultConstraints>false</IgnoreDefaultConstraints>
-    <IgnoreIdentitySeedIncrementValues>false</IgnoreIdentitySeedIncrementValues>
-    <IgnoreIdentity>false</IgnoreIdentity>
+    <IgnoreNocheck>false</IgnoreNocheck>
+    <IgnoreWithNocheck>false</IgnoreWithNocheck>
+    <IgnoreConstraintSystemNames>true</IgnoreConstraintSystemNames>
+    <IgnoreNotNullConstraints>false</IgnoreNotNullConstraints>
+    <IgnoreForeignKeyActions>false</IgnoreForeignKeyActions>
     <IgnorePrimaryKeys>false</IgnorePrimaryKeys>
     <IgnoreUniqueKeys>false</IgnoreUniqueKeys>
-    <IgnoreNocheck>false</IgnoreNocheck>
+    <IgnoreNotForReplication>false</IgnoreNotForReplication>
+    <IgnoreReplicatedTables>true</IgnoreReplicatedTables>
+    <IgnoreReplicationTriggers>false</IgnoreReplicationTriggers>
+    <IgnoreReplicatedProcedures>false</IgnoreReplicatedProcedures>
+    <IgnoreReplicatedSchemas>false</IgnoreReplicatedSchemas>
+    <IgnoreReplicatedRoles>false</IgnoreReplicatedRoles>
     <DecryptEncryptedObjects>true</DecryptEncryptedObjects>
+    <IgnoreWithEncryption>false</IgnoreWithEncryption>
     <IgnoreSignatures>false</IgnoreSignatures>
     <IgnoreWithOptionOrder>true</IgnoreWithOptionOrder>
     <IgnoreKeywordReduction>true</IgnoreKeywordReduction>
     <IgnoreQuotedIdentifierAndANSINulls>false</IgnoreQuotedIdentifierAndANSINulls>
+    <IgnoreDropIndexes>false</IgnoreDropIndexes>
+    <IgnoreDropDMLTriggers>false</IgnoreDropDMLTriggers>
     <CheckInconsistency>false</CheckInconsistency>
     <SetDelimiter>true</SetDelimiter>
     <UseDelimiter>true</UseDelimiter>
@@ -79,10 +119,8 @@
     <IncludeFilesAndFilegroups>false</IncludeFilesAndFilegroups>
     <IgnoreMemoryOptimizedProperty>false</IgnoreMemoryOptimizedProperty>
     <IncludeSetNoExec>true</IncludeSetNoExec>
-    <IncludeUseDatabase>true</IncludeUseDatabase>
     <CompareServerObjects>false</CompareServerObjects>
     <IgnoreObjectTypeFilter>false</IgnoreObjectTypeFilter>
-    <IgnoreConstraintsNames>false</IgnoreConstraintsNames>
   </ComparisonOptions>
   <ObjectFilter>
     <Include>Table</Include>
@@ -90,7 +128,7 @@
     <Include>Procedure</Include>
     <Include>Function</Include>
     <Include>User</Include>
-    <Include>Role</Include>
+    <Include>DatabaseRole</Include>
     <Include>ApplicationRole</Include>
     <Include>Rule</Include>
     <Include>Default</Include>
@@ -121,33 +159,51 @@
   </ModifiedObjects>
   <SynchronizationOptions>
     <PropertyValue Name="BackupDatabase">false</PropertyValue>
+    <PropertyValue Name="BackupExtension">false</PropertyValue>
     <PropertyValue Name="CreateBackupFolder">false</PropertyValue>
+    <PropertyValue Name="NeedCompressBackup">true</PropertyValue>
+    <PropertyValue Name="AddBackupType">false</PropertyValue>
+    <PropertyValue Name="BackupType">0</PropertyValue>
     <PropertyValue Name="ExecuteAsSingleTransaction">true</PropertyValue>
-    <PropertyValue Name="GenerateScriptHeader">true</PropertyValue>
+    <PropertyValue Name="AddingErrorHandling">false</PropertyValue>
+    <PropertyValue Name="AddTransactionIsolationLevel">false</PropertyValue>
+    <PropertyValue Name="TransactionIsolationLevel">0</PropertyValue>
+    <PropertyValue Name="DeployDatabaseInSingleUserMode">false</PropertyValue>
+    <PropertyValue Name="AddWithEncryption">false</PropertyValue>
+    <PropertyValue Name="IncludeUseDatabase">true</PropertyValue>
+    <PropertyValue Name="AffectedFileReadOnly">true</PropertyValue>
     <PropertyValue Name="UseSchemaNamePrefix">false</PropertyValue>
+    <PropertyValue Name="IncludePrintComments">false</PropertyValue>
+    <PropertyValue Name="ExcludeComments">false</PropertyValue>
+    <PropertyValue Name="BackupPathName" xml:space="preserve">C:\MSSQL\Bkup</PropertyValue>
+    <PropertyValue Name="BackupExtensionName" xml:space="preserve">.bak</PropertyValue>
+    <PropertyValue Name="GenerateScriptHeader">true</PropertyValue>
     <PropertyValue Name="UseSqlExtensionCommands">true</PropertyValue>
+    <PropertyValue Name="AllowDefaultValues">false</PropertyValue>
+    <PropertyValue Name="AssembliesStoragePath" xml:space="preserve" />
+    <PropertyValue Name="UseCreateOrAlter">true</PropertyValue>
+    <PropertyValue Name="AddWithNocheck">false</PropertyValue>
     <PropertyValue Name="DisableDdlTriggers">false</PropertyValue>
     <PropertyValue Name="VerifyTableData">false</PropertyValue>
-    <PropertyValue Name="AddWithNocheck">false</PropertyValue>
-    <PropertyValue Name="CommentDdlForKeysCertificates">true</PropertyValue>
-    <PropertyValue Name="SynchronizeAsmViaFiles">false</PropertyValue>
-    <PropertyValue Name="AssembliesStoragePath" xml:space="preserve" />
     <PropertyValue Name="CheckObjectExistence">false</PropertyValue>
     <PropertyValue Name="UseSchemaTransfer">false</PropertyValue>
+    <PropertyValue Name="DropCreateOnly">false</PropertyValue>
+    <PropertyValue Name="DropCreateOnlyTables">false</PropertyValue>
+    <PropertyValue Name="DropCreateOnlyAssemblies">false</PropertyValue>
+    <PropertyValue Name="SynchronizeAsmViaFiles">false</PropertyValue>
     <PropertyValue Name="RefreshViews">true</PropertyValue>
+    <PropertyValue Name="UseSubSchemaNamePrefix">true</PropertyValue>
+    <PropertyValue Name="CommentDdlForKeysCertificates">true</PropertyValue>
     <PropertyValue Name="ExcludeDependencies">false</PropertyValue>
+    <PropertyValue Name="CanSqlExecutorAddError">true</PropertyValue>
     <PropertyValue Name="SynchronizeType">0</PropertyValue>
-    <PropertyValue Name="SynchronizationFileName" xml:space="preserve">C:\localdev\FinanceToolsDB2\SQL\Finances (192_168_1_13 vs (local))_20180610-1909.sql</PropertyValue>
+    <PropertyValue Name="SynchronizationFileName" xml:space="preserve">C:\localdev\FinanceToolsDB2\SQL\Finances (192_168_1_13 vs (local))_20190210-1837.sql</PropertyValue>
     <PropertyValue Name="SynchronizationEditorFileName" xml:space="preserve">C:\Users\jakewoods\AppData\Local\Temp\Devart_fzcrvzvn.00y\sync.sql</PropertyValue>
     <PropertyValue Name="OpenScriptInEditor">false</PropertyValue>
     <PropertyValue Name="RefreshAfterSynchronization">true</PropertyValue>
-    <PropertyValue Name="CommitToVersionControl">false</PropertyValue>
-    <PropertyValue Name="CommentString" xml:space="preserve" />
-    <PropertyValue Name="IncludePrintComments">false</PropertyValue>
-    <PropertyValue Name="ExcludeComments">false</PropertyValue>
+    <PropertyValue Name="OpenScriptsFolder">false</PropertyValue>
     <PropertyValue Name="PureScript">false</PropertyValue>
     <PropertyValue Name="IsPartOfScript">false</PropertyValue>
-    <PropertyValue Name="BackupPathName" xml:space="preserve">C:\MSSQL\Bkup</PropertyValue>
     <PropertyValue Name="IgnoreEncryptionProperty">false</PropertyValue>
     <PropertyValue Name="UseCommitMode">false</PropertyValue>
     <PropertyValue Name="CommitPageLength" xml:space="preserve">0</PropertyValue>
@@ -204,6 +260,9 @@
       <Object SourceName="dbo.tagAutoApply" TargetName="dbo.tagAutoApply" SourceType="Table" TargetType="Table" State="Different" />
       <Object SourceName="dbo.tagRemapping" TargetName="dbo.tagRemapping" SourceType="Table" TargetType="Table" State="Different" />
       <Object SourceName="dbo.simpleBudgetMaterializedTransactions" TargetName="dbo.simpleBudgetMaterializedTransactions" SourceType="Table" TargetType="Table" State="Different" />
+      <Object SourceName="dbo.simpleBudgetMaterializedSummaryStatistics" TargetName="dbo.simpleBudgetMaterializedSummaryStatistics" SourceType="Table" TargetType="Table" State="Different" />
+      <Object SourceName="dbo.whereDidMyMoneyGoBreakoutControl" TargetName="dbo.whereDidMyMoneyGoBreakoutControl" SourceType="Table" TargetType="Table" State="Different" />
+      <Object SourceName="dbo.adjunctBalances" TargetName="dbo.adjunctBalances" SourceType="Table" TargetType="Table" State="Different" />
     </ComparedObjects>
   </Mapping>
 </CompareDocument>

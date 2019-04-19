@@ -64,6 +64,7 @@ function getPayeeCatStats() {
         f.tag = "%";
         f.amount = 0;
         f.or = [];
+        f.minDate = moment("9/1/2011", "MM/DD/YYYY");
     }
  
     var searcher = JSON.stringify(f);
