@@ -1,0 +1,48 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio 14
+VisualStudioVersion = 14.0.25420.1
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{E24C65DC-7377-472B-9ABA-BC803B73C61A}") = "FinanceTools", "\\Mac\Home\Documents\MyDev\financetools\FinanceTools\", "{C5F6284A-AEAD-4C57-990C-078B361366F2}"
+	ProjectSection(WebsiteProperties) = preProject
+		TargetFrameworkMoniker = ".NETFramework,Version%3Dv4.5.2"
+		Debug.AspNetCompiler.VirtualPath = "/localhost_50932"
+		Debug.AspNetCompiler.PhysicalPath = "\\Mac\Home\Documents\MyDev\financetools\FinanceTools\"
+		Debug.AspNetCompiler.TargetPath = "PrecompiledWeb\localhost_50932\"
+		Debug.AspNetCompiler.Updateable = "true"
+		Debug.AspNetCompiler.ForceOverwrite = "true"
+		Debug.AspNetCompiler.FixedNames = "false"
+		Debug.AspNetCompiler.Debug = "True"
+		Release.AspNetCompiler.VirtualPath = "/localhost_50932"
+		Release.AspNetCompiler.PhysicalPath = "\\Mac\Home\Documents\MyDev\financetools\FinanceTools\"
+		Release.AspNetCompiler.TargetPath = "PrecompiledWeb\localhost_50932\"
+		Release.AspNetCompiler.Updateable = "true"
+		Release.AspNetCompiler.ForceOverwrite = "true"
+		Release.AspNetCompiler.FixedNames = "false"
+		Release.AspNetCompiler.Debug = "False"
+		VWDPort = "50932"
+		SlnRelativePath = "\\Mac\Home\Documents\MyDev\financetools\FinanceTools\"
+		DefaultWebSiteLanguage = "Visual C#"
+	EndProjectSection
+EndProject
+Project("{159641D6-6404-4A2A-AE62-294DE0FE8301}") = "DataImport", "DataImport\DataImport.dtproj", "{16F471AB-60C2-4E41-B040-964214F4F347}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Development|Any CPU = Development|Any CPU
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{C5F6284A-AEAD-4C57-990C-078B361366F2}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{C5F6284A-AEAD-4C57-990C-078B361366F2}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{C5F6284A-AEAD-4C57-990C-078B361366F2}.Development|Any CPU.ActiveCfg = Debug|Any CPU
+		{C5F6284A-AEAD-4C57-990C-078B361366F2}.Development|Any CPU.Build.0 = Debug|Any CPU
+		{16F471AB-60C2-4E41-B040-964214F4F347}.Debug|Any CPU.ActiveCfg = Development
+		{16F471AB-60C2-4E41-B040-964214F4F347}.Debug|Any CPU.Build.0 = Development
+		{16F471AB-60C2-4E41-B040-964214F4F347}.Development|Any CPU.ActiveCfg = Development
+		{16F471AB-60C2-4E41-B040-964214F4F347}.Development|Any CPU.Build.0 = Development
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+EndGlobal
