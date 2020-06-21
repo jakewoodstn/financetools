@@ -2,18 +2,18 @@
 <BuildLog xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:xsd="http://www.w3.org/2001/XMLSchema">
   <ProjectInfo>
     <Name>DataImport</Name>
-    <LastWriteTime>2018-12-29T20:07:25.7679618Z</LastWriteTime>
+    <LastWriteTime>2020-01-19T22:01:59.9976203Z</LastWriteTime>
     <LastKnownProtectionLevel>EncryptSensitiveWithUserKey</LastKnownProtectionLevel>
   </ProjectInfo>
   <LastBuildInfos>
     <ProjectBuildItemInfo>
       <Name>ImportTransactionsDeprecated.dtsx</Name>
-      <LastWriteTime>2017-12-21T02:26:09Z</LastWriteTime>
+      <LastWriteTime>2019-04-20T01:12:09.4635024Z</LastWriteTime>
       <LastKnownProtectionLevel>EncryptSensitiveWithUserKey</LastKnownProtectionLevel>
     </ProjectBuildItemInfo>
     <ProjectBuildItemInfo>
       <Name>ImportTransactions.dtsx</Name>
-      <LastWriteTime>2018-12-29T20:07:20.9553078Z</LastWriteTime>
+      <LastWriteTime>2020-02-03T00:25:58.3094787Z</LastWriteTime>
       <LastKnownProtectionLevel>EncryptSensitiveWithUserKey</LastKnownProtectionLevel>
     </ProjectBuildItemInfo>
   </LastBuildInfos>

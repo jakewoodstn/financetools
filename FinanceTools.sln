@@ -1,7 +1,7 @@
 ﻿
 Microsoft Visual Studio Solution File, Format Version 12.00
-# Visual Studio 14
-VisualStudioVersion = 14.0.25420.1
+# Visual Studio Version 16
+VisualStudioVersion = 16.0.28803.202
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{E24C65DC-7377-472B-9ABA-BC803B73C61A}") = "FinanceTools", "\\Mac\Home\Documents\MyDev\financetools\FinanceTools\", "{C5F6284A-AEAD-4C57-990C-078B361366F2}"
 	ProjectSection(WebsiteProperties) = preProject
@@ -27,6 +27,8 @@ Project("{E24C65DC-7377-472B-9ABA-BC803B73C61A}") = "FinanceTools", "\\Mac\Home\
 EndProject
 Project("{159641D6-6404-4A2A-AE62-294DE0FE8301}") = "DataImport", "DataImport\DataImport.dtproj", "{16F471AB-60C2-4E41-B040-964214F4F347}"
 EndProject
+Project("{D2ABAB84-BF74-430A-B69E-9DC6D40DDA17}") = "FinanceDWModel", "FinanceDWModel\FinanceDWModel.dwproj", "{80EA1A49-6F42-41DA-84B7-FC51CF479385}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -41,8 +43,17 @@ Global
 		{16F471AB-60C2-4E41-B040-964214F4F347}.Debug|Any CPU.Build.0 = Development
 		{16F471AB-60C2-4E41-B040-964214F4F347}.Development|Any CPU.ActiveCfg = Development
 		{16F471AB-60C2-4E41-B040-964214F4F347}.Development|Any CPU.Build.0 = Development
+		{80EA1A49-6F42-41DA-84B7-FC51CF479385}.Debug|Any CPU.ActiveCfg = Development
+		{80EA1A49-6F42-41DA-84B7-FC51CF479385}.Debug|Any CPU.Build.0 = Development
+		{80EA1A49-6F42-41DA-84B7-FC51CF479385}.Debug|Any CPU.Deploy.0 = Development
+		{80EA1A49-6F42-41DA-84B7-FC51CF479385}.Development|Any CPU.ActiveCfg = Development
+		{80EA1A49-6F42-41DA-84B7-FC51CF479385}.Development|Any CPU.Build.0 = Development
+		{80EA1A49-6F42-41DA-84B7-FC51CF479385}.Development|Any CPU.Deploy.0 = Development
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(ExtensibilityGlobals) = postSolution
+		SolutionGuid = {DA7D4247-A4A1-458E-9BDE-E6365EED89F2}
 	EndGlobalSection
 EndGlobal
