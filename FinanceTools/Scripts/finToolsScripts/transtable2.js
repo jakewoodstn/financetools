@@ -47,6 +47,9 @@ function pasteTran(pasteTarget) {
             case 'payee':
                 saveMultiple(clipboard.payee);
                 break;
+            case 'tags':
+                saveTagsToMultipleTransactions(clipboard.tags);
+                break;
         }
     }
 }
@@ -647,8 +650,18 @@ function clearTags(tdef) {
 
 }
 
-function saveTags(tdef) {
-    var v = $(tdef).find('input').val()
+function saveTagsToMultipleTransactions(value) {
+    if (value == undefined) { return; }
+    var myArr = selectedTransArray();
+    for (var i = 0; i < myArr.length; i++) {
+        var elem = $("#Tags" + myArr[i]);
+        saveTags(elem[0],value);
+    }
+}
+
+function saveTags(tdef,incomingValue) {
+    var v = incomingValue;
+    if(v==undefined) {v = $(tdef).find('input').val();}
     var update = true;
 
     if (v == null || v == '') { v = $(tdef).attr('priorText'); update = false; }

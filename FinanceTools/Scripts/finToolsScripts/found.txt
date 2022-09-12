@@ -1,0 +1,39 @@
+./transactionFocus.js:22:        this.form.append($('<input>', { "type": "hidden", "name": "filterCategory", "id": "filterCategory", "value": this.filter.category }));
+./transtable2.js:77:            "procedure": "transactionStatsJSON",
+./transtable2.js:86:        dataType: "json",
+./transtable2.js:332:            procedure = 'tagCloudForTransaction';
+./transtable2.js:337:            procedure = 'tagCloudUniversal';
+./transtable2.js:349:        dataType: 'json',
+./transtable2.js:364:                "procedure": "changeDescription",
+./transtable2.js:397:            "procedure": "typicalPayeeMapping",
+./transtable2.js:401:        dataType: "json",
+./transtable2.js:433:            "procedure": "approveCat",
+./transtable2.js:452:            "procedure": "assignCat",
+./transtable2.js:480:                "procedure": "changeDescription",
+./transtable2.js:519:            "procedure": "topCatJSON",
+./transtable2.js:526:        dataType: "json",
+./transtable2.js:595:                "procedure": "changeAcctingDate",
+./transtable2.js:618:                "procedure": "changeDescription",
+./transtable2.js:628:function clearTags(tdef) {
+./transtable2.js:634:            "procedure": "clearTags",
+./transtable2.js:667:                "procedure": "changeTags",
+./transtable2.js:864:    $(edTag).click({ 'valueAttr': 'tagValue', 'saveFunction': saveTags, 'clearFunction': clearTags, 'autoCompleteSproc': 'tagAutocomplete' }, editInPlace);
+./transtable2.js:891:        $("#transactionsDiv").toggle(false);
+./transtable2.js:903:            $('#transactions').append(tr);
+./transtable2.js:907:    $("#transactionsDiv").toggle(true);
+./transtable2.js:908:    $("#recordCount").html('<a href="#">' + $("#transactions").children().length + ' records displayed.</a>')
+./transtable2.js:913:    $("#transactionsDiv").text(disp);
+./transtable2.js:921:    $('#transactionsDiv').html('<div id="transactions" class="col-sm-12"></div>');
+./transtable2.js:930:            "procedure": "transactionsJSON",
+./transtable2.js:939:        dataType: "json",
+./transtable2.js:955:            "procedure": "transactionStatsJSON",
+./transtable2.js:964:        dataType: "json",
+./transtable2.js:984:    f.setFilter("category", $('.filter-control#filterCategory').val());
+./transtable2.js:1018:    $(".filter-control#filterCategory").val(f.category);
+./autocomplete.js:15:        dataType: "json",
+./split.js:21:function deleteAllSplits() {
+./split.js:26:            "procedure": 'deleteAllSplits',
+./split.js:38:function saveSplit() {
+./split.js:56:                    data: { "procedure": 'saveSplit',
+./split.js:71:                    data: { "procedure": 'deleteSplit',
+./split.js:240:                dataType: "json",
