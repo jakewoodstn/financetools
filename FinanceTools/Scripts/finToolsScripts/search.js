@@ -102,9 +102,10 @@ function modDateThisQuarter() {
 
     today = moment();
     dts = [];
-    dts[0] = firstOfMonth(today).add((firstOfMonth(today).month() % 3) * -1, "month");
-    dts[1] = firstOfMonth(today).add((firstOfMonth(today).month() % 3) * -1, "month").add(3, "month").add(-1, "days");
-
+    //dts[0] = firstOfMonth(today).add((firstOfMonth(today).month() % 3) * -1, "month");
+    //dts[1] = firstOfMonth(today).add((firstOfMonth(today).month() % 3) * -1, "month").add(3, "month").add(-1, "days");
+    dts[0] = '01/01/2019'
+    dts[1] = today
     modDate("#filterMinDate", dts[0]);
     modDate("#filterMaxDate", dts[1]);
 

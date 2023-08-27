@@ -7,7 +7,7 @@
 USE financeReporting
 GO
 
-declare @fullLoad INT =0
+declare @fullLoad INT =1
 IF @fullLoad>0
 BEGIN
 
@@ -44,4 +44,4 @@ END
 
 EXEC loadWarehouse '1/1/2019','12/31/2022'
 
-
+GO
