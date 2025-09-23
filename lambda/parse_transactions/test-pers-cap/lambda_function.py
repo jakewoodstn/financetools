@@ -2,6 +2,7 @@ import json
 import pandas as pd
 import boto3
 from io import BytesIO
+import pyodbc
 
 def lambda_handler(event, context):
     # TODO implement
@@ -14,6 +15,8 @@ def lambda_handler(event, context):
         'body':parseFile(bucket,file)
     }
     
+def uploadFile(df):
+    return None
     
 def parseFile(bucket, file):
     
@@ -26,5 +29,4 @@ def parseFile(bucket, file):
     
     # Load bytes-like object directly into a DataFrame
     df = pd.read_csv(BytesIO(file_content))
-    
-    return df.head(10).to_json()
+    return df
