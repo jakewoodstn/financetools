@@ -1,0 +1,55 @@
+{
+  "database": "Finances",
+  "exported_at": "2026-06-21T21:55:41.641800+00:00",
+  "host": "database-1.cmvbubhpyb1l.us-east-2.rds.amazonaws.com",
+  "modules_written": 62,
+  "modules_skipped": 0,
+  "tables_written": 29,
+  "inventory": [
+    {
+      "type_desc": "CLR_SCALAR_FUNCTION",
+      "object_count": 6
+    },
+    {
+      "type_desc": "DEFAULT_CONSTRAINT",
+      "object_count": 20
+    },
+    {
+      "type_desc": "FOREIGN_KEY_CONSTRAINT",
+      "object_count": 13
+    },
+    {
+      "type_desc": "PRIMARY_KEY_CONSTRAINT",
+      "object_count": 21
+    },
+    {
+      "type_desc": "SEQUENCE_OBJECT",
+      "object_count": 1
+    },
+    {
+      "type_desc": "SQL_SCALAR_FUNCTION",
+      "object_count": 12
+    },
+    {
+      "type_desc": "SQL_STORED_PROCEDURE",
+      "object_count": 44
+    },
+    {
+      "type_desc": "SQL_TABLE_VALUED_FUNCTION",
+      "object_count": 1
+    },
+    {
+      "type_desc": "UNIQUE_CONSTRAINT",
+      "object_count": 3
+    },
+    {
+      "type_desc": "USER_TABLE",
+      "object_count": 29
+    },
+    {
+      "type_desc": "VIEW",
+      "object_count": 5
+    }
+  ],
+  "errors": []
+}
