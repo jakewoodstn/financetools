@@ -1,0 +1,39 @@
+{
+  "database": "financeReporting",
+  "exported_at": "2026-06-21T21:55:42.578115+00:00",
+  "host": "database-1.cmvbubhpyb1l.us-east-2.rds.amazonaws.com",
+  "modules_written": 58,
+  "modules_skipped": 0,
+  "tables_written": 20,
+  "inventory": [
+    {
+      "type_desc": "DEFAULT_CONSTRAINT",
+      "object_count": 9
+    },
+    {
+      "type_desc": "FOREIGN_KEY_CONSTRAINT",
+      "object_count": 15
+    },
+    {
+      "type_desc": "PRIMARY_KEY_CONSTRAINT",
+      "object_count": 16
+    },
+    {
+      "type_desc": "SQL_SCALAR_FUNCTION",
+      "object_count": 1
+    },
+    {
+      "type_desc": "SQL_STORED_PROCEDURE",
+      "object_count": 26
+    },
+    {
+      "type_desc": "USER_TABLE",
+      "object_count": 20
+    },
+    {
+      "type_desc": "VIEW",
+      "object_count": 31
+    }
+  ],
+  "errors": []
+}

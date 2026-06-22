@@ -1,17 +1,65 @@
-Thumbs.db
+# macOS
+.DS_Store
+**/.DS_Store
 .AppleDouble
+._*
+.Spotlight-V100
+.Trashes
+
+# Windows
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+
+# Editors / IDE
+.vs/
 *.suo
-OldGui
-FinanceToolsDB
-*.tmp
+*.user
+*.userosscache
+*.sln.docstates
+.idea/
+*.swp
+*.swo
+*~
+
+# .NET / Visual Studio
 FinanceTools/packages/*
 FinanceTools/bin/*
+/fusioncharts
+
+# Python / uv
+__pycache__/
+**/__pycache__/
+*.py[cod]
+*$py.class
+*.egg-info/
+.eggs/
+dist/
+build/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+htmlcov/
+tools/.venv/
+.venv/
+
+# Secrets / local env (MSSQL export credentials, etc.)
+.env
+.env.*
+!.env.example
+
+# Logs and temp
+*.log
+*.tmp
+
+# Project-specific paths
+OldGui
+FinanceToolsDB
+FinanceToolsDB2
 HoursTrackerIntegration
 KC7764
 KCState
 scholarship
 StPhilipNight
 /trelloTracker
-/FinanceToolsDB2
-/fusioncharts
-.vs/

@@ -1,0 +1,18 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "financetools-export"
+version = "0.1.0"
+description = "Bulk-export SQL Server schema from RDS without SSMS"
+requires-python = ">=3.10"
+dependencies = [
+    "pymssql>=2.3.0",
+]
+
+[project.scripts]
+dump-mssql-schema = "dump_mssql_schema:main"
+
+[tool.hatch.build.targets.wheel]
+only-include = ["dump_mssql_schema.py"]
