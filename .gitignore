@@ -43,6 +43,8 @@ build/
 htmlcov/
 tools/.venv/
 .venv/
+finance_app/.venv/
+finance_app/.env
 
 # Secrets / local env (MSSQL export credentials, etc.)
 .env

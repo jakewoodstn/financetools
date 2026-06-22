@@ -1,0 +1,59 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Transaction Categorization</title>
+  <script src="https://cdn.jsdelivr.net/npm/htmx.org@2.0.4/dist/htmx.min.js"></script>
+  <link rel="stylesheet" href="/static/css/transcat.css">
+</head>
+<body>
+  <header class="page-header">
+    <h1>Transaction Categorization</h1>
+    <p class="subtitle">Python replatform — initial shell</p>
+  </header>
+
+  <main class="layout">
+    <aside class="panel categories-panel">
+      <h2>Categories</h2>
+      <ul>
+        {% for cat in categories %}
+        <li>{{ cat.category_name }}</li>
+        {% else %}
+        <li class="muted">No categories loaded (empty database)</li>
+        {% endfor %}
+      </ul>
+    </aside>
+
+    <section class="panel transactions-panel">
+      <h2>Transactions <span class="count">({{ transactions|length }})</span></h2>
+      <table>
+        <thead>
+          <tr>
+            <th>Date</th>
+            <th>Payee</th>
+            <th>Category</th>
+            <th class="amount">Amount</th>
+            <th>Account</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for txn in transactions %}
+          <tr>
+            <td>{{ txn.accounting_date or txn.transaction_date or "" }}</td>
+            <td>{{ txn.description or "" }}</td>
+            <td>{{ txn.category_name or "" }}</td>
+            <td class="amount">{{ txn.amount if txn.amount is not none else "" }}</td>
+            <td>{{ txn.account_name or txn.account_id }}</td>
+          </tr>
+          {% else %}
+          <tr>
+            <td colspan="5" class="muted">No transactions loaded (empty database)</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </section>
+  </main>
+</body>
+</html>
