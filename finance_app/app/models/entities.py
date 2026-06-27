@@ -16,7 +16,7 @@ class Account(Base):
     closed_on: Mapped[date | None] = mapped_column(Date)
     import_transactions: Mapped[int | None] = mapped_column(SmallInteger)
 
-    bank_transactions: Mapped[list["BankTransaction"]] = relationship(back_populates="account")
+    bank_transactions: Mapped[list["BankTransaction"]] = relationship(back_populates="account_rel")
 
 
 class TransactionAccount(Base):
@@ -45,7 +45,7 @@ class SpendingCategory(Base):
     group_id: Mapped[int] = mapped_column(ForeignKey("spending_category_group.group_id"), default=0)
 
     group: Mapped[SpendingCategoryGroup] = relationship(back_populates="categories")
-    transactions: Mapped[list["BankTransaction"]] = relationship(back_populates="category")
+    transactions: Mapped[list["BankTransaction"]] = relationship(back_populates="spending_category")
     splits: Mapped[list["CategorySplitDetail"]] = relationship(back_populates="spending_category")
 
 
