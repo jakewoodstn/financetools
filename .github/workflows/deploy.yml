@@ -1,0 +1,100 @@
+name: Deploy
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - "finance_app/**"
+      - "deploy/**"
+      - "dbt/**"
+      - "orchestration/**"
+      - ".github/workflows/deploy.yml"
+
+permissions:
+  id-token: write
+  contents: read
+
+defaults:
+  run:
+    working-directory: finance_app
+
+jobs:
+  build:
+    name: Build and test
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: finance
+          POSTGRES_PASSWORD: finance
+          POSTGRES_DB: finances
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U finance -d finances"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 5
+    env:
+      DATABASE_URL: postgresql+psycopg://finance:finance@localhost:5432/finances
+      APP_DEBUG: "false"
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v5
+        with:
+          enable-cache: true
+      - run: uv python install 3.12
+      - run: uv sync --dev
+      - run: uv run alembic upgrade head
+      - run: uv run pytest -v
+
+  deploy:
+    name: Deploy to production
+    needs: build
+    runs-on: ubuntu-latest
+    environment: production
+    if: github.ref == 'refs/heads/main'
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Validate env template renders
+        working-directory: .
+        env:
+          POSTGRES_USER: ${{ vars.POSTGRES_USER }}
+          POSTGRES_PASSWORD: ${{ secrets.POSTGRES_PASSWORD }}
+          POSTGRES_DB: ${{ vars.POSTGRES_DB }}
+          APP_DEBUG: ${{ vars.APP_DEBUG }}
+          LLM_PROVIDER: ${{ vars.LLM_PROVIDER }}
+          ANTHROPIC_MODEL: ${{ vars.ANTHROPIC_MODEL }}
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+          SIMPLEFIN_ACCESS_URL: ${{ secrets.SIMPLEFIN_ACCESS_URL }}
+          DBT_TARGET: ${{ vars.DBT_TARGET }}
+        run: |
+          chmod +x deploy/render-env.sh
+          if [[ -z "${POSTGRES_PASSWORD:-}" ]]; then
+            echo "Production secrets not configured yet — skipping render (OK for Phase 0b)"
+            exit 0
+          fi
+          deploy/render-env.sh /tmp/finance.env
+          test -s /tmp/finance.env
+          grep -q "DATABASE_URL=" /tmp/finance.env
+
+      - name: Configure AWS credentials (OIDC)
+        if: vars.AWS_ROLE_ARN != ''
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ vars.AWS_ROLE_ARN }}
+          aws-region: us-east-2
+
+      - name: Deploy to EC2
+        if: vars.EC2_HOST != '' && secrets.EC2_SSH_PRIVATE_KEY != ''
+        env:
+          EC2_HOST: ${{ vars.EC2_HOST }}
+          EC2_APP_DIR: ${{ vars.EC2_APP_DIR }}
+        run: echo "EC2 deploy wired in Phase 9 — host ${EC2_HOST}"
+
+      - name: Deploy placeholder
+        if: vars.EC2_HOST == '' || secrets.EC2_SSH_PRIVATE_KEY == ''
+        run: echo "Deploy skeleton OK. Configure production environment in Phase 9."
