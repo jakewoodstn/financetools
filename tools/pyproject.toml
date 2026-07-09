@@ -9,6 +9,7 @@ description = "Bulk-export SQL Server schema from RDS without SSMS"
 requires-python = ">=3.10"
 dependencies = [
     "pymssql>=2.3.0",
+    "psycopg[binary]>=3.2.0",
 ]
 
 [project.scripts]
