@@ -18,7 +18,7 @@ def list_transactions(
     limit: int = DEFAULT_LIMIT,
 ) -> list[TransactionOut]:
     category_label = case(
-        (SpendingCategoryGroup.group_id.in_([-1, 2]), SpendingCategory.category_name),
+        (SpendingCategoryGroup.id.in_([-1, 2]), SpendingCategory.category_name),
         else_=func.concat(SpendingCategoryGroup.group_name, " - ", SpendingCategory.category_name),
     )
 
@@ -28,10 +28,13 @@ def list_transactions(
             category_label.label("category_name"),
             Account.account_name,
         )
-        .outerjoin(SpendingCategory, BankTransaction.category_id == SpendingCategory.category_id)
-        .outerjoin(SpendingCategoryGroup, SpendingCategory.group_id == SpendingCategoryGroup.group_id)
-        .join(Account, BankTransaction.account_id == Account.account_id)
-        .order_by(BankTransaction.accounting_date.desc(), BankTransaction.transaction_id.desc())
+        .outerjoin(SpendingCategory, BankTransaction.spending_category_id == SpendingCategory.id)
+        .outerjoin(
+            SpendingCategoryGroup,
+            SpendingCategory.spending_category_group_id == SpendingCategoryGroup.id,
+        )
+        .join(Account, BankTransaction.account_id == Account.id)
+        .order_by(BankTransaction.accounting_date.desc(), BankTransaction.external_id.desc())
         .limit(limit)
     )
 
@@ -46,11 +49,11 @@ def list_transactions(
     for txn, category_name, account_name in rows:
         results.append(
             TransactionOut(
-                transaction_id=txn.transaction_id,
+                transaction_id=txn.external_id,
                 transaction_date=txn.transaction_date,
                 accounting_date=txn.accounting_date,
                 description=txn.description,
-                category_id=txn.category_id,
+                category_id=txn.spending_category_id,
                 category_name=category_name,
                 amount=txn.amount,
                 bank_orig_description=txn.bank_orig_description,
@@ -64,20 +67,27 @@ def list_transactions(
 
 def list_categories(db: Session) -> list[CategoryOut]:
     category_label = case(
-        (SpendingCategoryGroup.group_id.in_([-1, 2]), SpendingCategory.category_name),
+        (SpendingCategoryGroup.id.in_([-1, 2]), SpendingCategory.category_name),
         else_=func.concat(SpendingCategoryGroup.group_name, " - ", SpendingCategory.category_name),
     )
     stmt = (
         select(
-            SpendingCategory.category_id,
+            SpendingCategory.id,
             category_label.label("category_name"),
-            SpendingCategory.group_id,
+            SpendingCategory.spending_category_group_id,
         )
-        .join(SpendingCategoryGroup, SpendingCategory.group_id == SpendingCategoryGroup.group_id)
-        .order_by(SpendingCategoryGroup.group_id, category_label)
+        .join(
+            SpendingCategoryGroup,
+            SpendingCategory.spending_category_group_id == SpendingCategoryGroup.id,
+        )
+        .order_by(SpendingCategoryGroup.id, category_label)
     )
     rows = db.execute(stmt).all()
     return [
-        CategoryOut(category_id=row.category_id, category_name=row.category_name, group_id=row.group_id)
+        CategoryOut(
+            category_id=row.id,
+            category_name=row.category_name,
+            group_id=row.spending_category_group_id,
+        )
         for row in rows
     ]

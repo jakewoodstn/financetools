@@ -42,6 +42,7 @@ build/
 .coverage
 htmlcov/
 tools/.venv/
+tools/reports/
 .venv/
 finance_app/.venv/
 finance_app/.env

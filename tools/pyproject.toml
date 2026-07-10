@@ -12,6 +12,15 @@ dependencies = [
     "psycopg[binary]>=3.2.0",
 ]
 
+[dependency-groups]
+dev = [
+    "pytest>=8.0",
+]
+
+[tool.pytest.ini_options]
+pythonpath = ["."]
+testpaths = ["tests"]
+
 [project.scripts]
 dump-mssql-schema = "dump_mssql_schema:main"
 

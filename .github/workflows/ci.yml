@@ -63,3 +63,21 @@ jobs:
 
       - name: Pytest
         run: uv run pytest -v
+
+      - name: Install tools dependencies
+        working-directory: tools
+        run: uv sync --dev
+
+      - name: Install psql client
+        run: sudo apt-get update && sudo apt-get install -y postgresql-client
+
+      - name: Load migration sample fixture
+        working-directory: tools
+        run: |
+          PGPASSWORD=finance psql -h localhost -U finance -d finances -v ON_ERROR_STOP=1 -f fixtures/sample/data.sql
+
+      - name: Migration acceptance tests
+        working-directory: tools
+        env:
+          PG_DSN: postgresql://finance:finance@localhost:5432/finances
+        run: uv run pytest -v
