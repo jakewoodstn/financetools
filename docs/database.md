@@ -28,7 +28,7 @@ Operational GL tables live in the Postgres `public` schema. Alembic migrations a
 
 - **accounts** — financial accounts (checking, credit card, etc.)
 - **spending_category_groups** / **spending_categories** — category taxonomy
-- **transaction_accounts** — import source account names mapped to accounts
+- **transaction_accounts** — import source account names mapped to accounts (includes SimpleFIN Bridge names)
 - **bank_transactions** — categorized ledger entries
 - **category_split_details** — split allocations for a single transaction
 
@@ -62,5 +62,16 @@ uv run python validate_migration.py                 # Layers 1–3 vs RDS
 ```
 
 Legacy `transactionId` values land in `bank_transactions.external_id`. Split rows resolve `bank_transaction_id` via that mapping.
+
+### SimpleFIN → accounts mapping
+
+| SimpleFIN account name | `accounts.id` | Account |
+|---|---|---|
+| Adv Plus Banking- 8971 (8971) | 1 | Bank of America Checking |
+| Rapid Rewards Priority (2985) | 2 | Chase Southwest Rewards Credit Card |
+| Savings Account (8193) | 3 | Ally Bank - General Savings |
+| Money Market Savings Account (2395) | 4 | Ally Bank - Tax Withholding |
+
+Stored in `transaction_accounts.name` (upserted on each migration run).
 
 CI loads `tools/fixtures/sample/data.sql` and validates against `tools/fixtures/sample/manifest.json` on every push.

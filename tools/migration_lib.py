@@ -85,6 +85,14 @@ TRUNCATE_TABLES = (
     "transaction_accounts, spending_categories, spending_category_groups, accounts"
 )
 
+# SimpleFIN Bridge account names → accounts.id (verified 2026-07-11).
+SIMPLEFIN_TRANSACTION_ACCOUNTS: list[tuple[str, int]] = [
+    ("Adv Plus Banking- 8971 (8971)", 1),  # Bank of America Checking
+    ("Rapid Rewards Priority (2985)", 2),  # Chase Southwest Rewards Credit Card
+    ("Savings Account (8193)", 3),  # Ally Bank - General Savings
+    ("Money Market Savings Account (2395)", 4),  # Ally Bank - Tax Withholding
+]
+
 PAYEE_EXPR = "COALESCE(NULLIF(TRIM(description), ''), NULLIF(TRIM(bank_orig_description), ''))"
 
 
@@ -255,6 +263,19 @@ def load_tag_links(pg_cur, tag_links: list[tuple]) -> int:
         rows,
     )
     return len(rows)
+
+
+def upsert_simplefin_transaction_accounts(pg_cur) -> int:
+    for name, account_id in SIMPLEFIN_TRANSACTION_ACCOUNTS:
+        pg_cur.execute(
+            """
+            INSERT INTO transaction_accounts (name, account_id)
+            VALUES (%s, %s)
+            ON CONFLICT (name) DO UPDATE SET account_id = EXCLUDED.account_id
+            """,
+            (name, account_id),
+        )
+    return len(SIMPLEFIN_TRANSACTION_ACCOUNTS)
 
 
 def backfill_payees(pg_cur) -> tuple[int, int]:

@@ -1,7 +1,7 @@
 {
   "row_counts": {
     "accounts": 5,
-    "transaction_accounts": 16,
+    "transaction_accounts": 20,
     "spending_category_groups": 8,
     "spending_categories": 121,
     "bank_transactions": 1000,

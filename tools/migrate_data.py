@@ -50,6 +50,7 @@ from migration_lib import (
     reset_sequence,
     sample_transactions,
     seed_category_rules,
+    upsert_simplefin_transaction_accounts,
 )
 
 
@@ -105,6 +106,8 @@ def main() -> None:
             insert_rows(pcur, "accounts", ACCOUNT_COLUMNS, accounts)
             print(f"Loading {len(transaction_accounts)} transaction accounts ...")
             insert_rows(pcur, "transaction_accounts", TRANSACTION_ACCOUNT_COLUMNS, transaction_accounts)
+            print("Upserting SimpleFIN transaction account mappings ...")
+            upsert_simplefin_transaction_accounts(pcur)
             print(f"Loading {len(groups)} category groups ...")
             insert_rows(pcur, "spending_category_groups", GROUP_COLUMNS, groups)
             print(f"Loading {len(categories)} categories ...")

@@ -2139,6 +2139,10 @@ COPY public.transaction_accounts (id, name, account_id) FROM stdin;
 14	Online Savings Account - Ending in 8193	3
 15	Southwest Airlines - Ending in 2985	2
 16	Southwest_airlines - 2985	2
+17	Adv Plus Banking- 8971 (8971)	1
+18	Rapid Rewards Priority (2985)	2
+19	Savings Account (8193)	3
+20	Money Market Savings Account (2395)	4
 \.
 
 
