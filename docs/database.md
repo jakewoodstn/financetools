@@ -75,3 +75,15 @@ Legacy `transactionId` values land in `bank_transactions.external_id`. Split row
 Stored in `transaction_accounts.name` (upserted on each migration run).
 
 CI loads `tools/fixtures/sample/data.sql` and validates against `tools/fixtures/sample/manifest.json` on every push.
+
+### SimpleFIN ingest (Phase 3 — partial)
+
+Fetch and stage only (promotion to `bank_transactions` not yet implemented):
+
+```bash
+cd finance_app
+uv run python scripts/stage_simplefin.py          # Bridge default window
+uv run python scripts/stage_simplefin.py --days 30
+```
+
+Writes `import_batches` (`source=simplefin`, `status=staged`) and `raw_transactions` with dedupe on `(account_id, transaction_date, amount, bank_orig_description)`.

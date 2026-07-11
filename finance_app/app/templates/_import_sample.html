@@ -1,0 +1,23 @@
+<div id="sample-{{ account_id }}" class="sample-block"{% if oob %} hx-swap-oob="true"{% endif %}>
+  <h3 class="sample-heading">Staged sample <span class="hint">(latest 10)</span></h3>
+  {% if samples %}
+  <table class="sample-table">
+    <thead>
+      <tr>
+        <th>Date</th>
+        <th>Description</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for row in samples %}
+      <tr>
+        <td class="sample-date">{{ row.transaction_date or "" }}</td>
+        <td class="mono">{{ row.description }}</td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+  {% else %}
+  <p class="muted card-note">No staged rows yet.</p>
+  {% endif %}
+</div>

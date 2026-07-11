@@ -1,0 +1,43 @@
+{% if error %}
+<div class="result result-error">
+  <strong>Failed</strong> — {{ error }}
+</div>
+{% elif result %}
+<div class="result {% if result.simplefin_found %}result-ok{% else %}result-warn{% endif %}">
+  {% if not result.simplefin_found %}
+  <strong>SimpleFIN account not found</strong> — expected name in Bridge response.
+  {% else %}
+  <strong>Done</strong> — {{ result.account_name or ("Account " ~ result.account_id) }}
+  {% endif %}
+  <dl class="result-stats">
+    <dt>Window</dt>
+    <dd>{{ result.start_date }} → {{ result.end_date }}</dd>
+    <dt>Mode</dt>
+    <dd>{{ result.mode }}</dd>
+    <dt>Fetched</dt>
+    <dd>{{ result.stage.transactions_fetched }}</dd>
+    {% if result.mode == "replace" %}
+    <dt>Deleted</dt>
+    <dd>{{ result.stage.deleted }}</dd>
+    {% endif %}
+    <dt>Inserted</dt>
+    <dd>{{ result.stage.inserted }}</dd>
+    <dt>Skipped (dup)</dt>
+    <dd>{{ result.stage.skipped_duplicate }}</dd>
+    <dt>Batch</dt>
+    <dd>#{{ result.stage.import_batch_id }}</dd>
+  </dl>
+  {% if result.stage.api_errors %}
+  <p class="api-errors">
+    API notices:
+    {% for msg in result.stage.api_errors %}
+    <span class="mono">{{ msg }}</span>{% if not loop.last %}; {% endif %}
+    {% endfor %}
+  </p>
+  {% endif %}
+</div>
+{% endif %}
+
+{% include "_import_sample.html" %}
+
+<dd id="staged-count-{{ account_id }}" hx-swap-oob="true">{{ raw_staged_count }}</dd>

@@ -1,0 +1,312 @@
+:root {
+  font-family: system-ui, sans-serif;
+  color: #1a1a1a;
+  background: #f5f6f8;
+}
+
+body {
+  margin: 0;
+}
+
+.page-header {
+  background: #1f3b63;
+  color: #fff;
+  padding: 1rem 1.5rem;
+}
+
+.page-header h1 {
+  margin: 0;
+  font-size: 1.4rem;
+}
+
+.subtitle {
+  margin: 0.25rem 0 0;
+  opacity: 0.85;
+  font-size: 0.9rem;
+}
+
+.nav {
+  display: flex;
+  gap: 1rem;
+  margin-bottom: 0.75rem;
+  font-size: 0.9rem;
+}
+
+.nav a {
+  color: rgba(255, 255, 255, 0.75);
+  text-decoration: none;
+}
+
+.nav a:hover,
+.nav a.active {
+  color: #fff;
+}
+
+.layout {
+  max-width: 1100px;
+  margin: 0 auto;
+  padding: 1rem 1.5rem 2rem;
+}
+
+.intro {
+  font-size: 0.95rem;
+  line-height: 1.5;
+  margin: 0 0 1.25rem;
+}
+
+.banner {
+  padding: 0.75rem 1rem;
+  border-radius: 8px;
+  margin-bottom: 1rem;
+  font-size: 0.9rem;
+}
+
+.banner-warn {
+  background: #fef3c7;
+  border: 1px solid #f59e0b;
+  color: #92400e;
+}
+
+.account-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+  gap: 1rem;
+}
+
+.panel {
+  background: #fff;
+  border: 1px solid #d8dde6;
+  border-radius: 8px;
+  padding: 1rem;
+}
+
+.account-header {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 0.5rem;
+  margin-bottom: 0.75rem;
+}
+
+.account-header h2 {
+  margin: 0;
+  font-size: 1.05rem;
+}
+
+.badge {
+  font-size: 0.75rem;
+  background: #eef1f5;
+  color: #4b5563;
+  padding: 0.15rem 0.45rem;
+  border-radius: 4px;
+}
+
+.meta {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 0.25rem 0.75rem;
+  margin: 0 0 0.75rem;
+  font-size: 0.85rem;
+}
+
+.meta dt {
+  color: #6b7280;
+  margin: 0;
+}
+
+.meta dd {
+  margin: 0;
+}
+
+.mono {
+  font-family: ui-monospace, monospace;
+  font-size: 0.8rem;
+  word-break: break-word;
+}
+
+.aliases {
+  font-size: 0.8rem;
+  margin-bottom: 0.75rem;
+}
+
+.aliases ul {
+  margin: 0.35rem 0 0;
+  padding-left: 1.1rem;
+}
+
+.import-form {
+  border-top: 1px solid #eef1f5;
+  padding-top: 0.75rem;
+}
+
+.field-row {
+  display: flex;
+  gap: 0.75rem;
+  margin-bottom: 0.75rem;
+}
+
+.field-row label {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  font-size: 0.8rem;
+  color: #4b5563;
+}
+
+input[type="date"] {
+  padding: 0.4rem 0.5rem;
+  border: 1px solid #d8dde6;
+  border-radius: 6px;
+  font: inherit;
+}
+
+.mode-fieldset {
+  border: none;
+  margin: 0 0 0.75rem;
+  padding: 0;
+}
+
+.mode-fieldset legend {
+  font-size: 0.8rem;
+  color: #4b5563;
+  margin-bottom: 0.35rem;
+}
+
+.radio {
+  display: block;
+  font-size: 0.85rem;
+  margin-bottom: 0.35rem;
+  cursor: pointer;
+}
+
+.hint {
+  color: #6b7280;
+  font-size: 0.8rem;
+}
+
+.btn-primary {
+  background: #1f3b63;
+  color: #fff;
+  border: none;
+  border-radius: 6px;
+  padding: 0.5rem 1rem;
+  font: inherit;
+  cursor: pointer;
+}
+
+.btn-primary:hover {
+  background: #16304f;
+}
+
+.htmx-indicator {
+  display: none;
+  margin-left: 0.5rem;
+  font-size: 0.85rem;
+  color: #6b7280;
+}
+
+.htmx-request .htmx-indicator,
+.htmx-request.htmx-indicator {
+  display: inline;
+}
+
+.result-slot {
+  margin-top: 0.75rem;
+}
+
+.result {
+  font-size: 0.85rem;
+  padding: 0.65rem 0.75rem;
+  border-radius: 6px;
+  border: 1px solid #d8dde6;
+}
+
+.result-ok {
+  background: #ecfdf5;
+  border-color: #6ee7b7;
+}
+
+.result-warn {
+  background: #fffbeb;
+  border-color: #fcd34d;
+}
+
+.result-error {
+  background: #fef2f2;
+  border-color: #fca5a5;
+}
+
+.result-stats {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 0.15rem 0.75rem;
+  margin: 0.5rem 0 0;
+}
+
+.result-stats dt {
+  color: #6b7280;
+  margin: 0;
+}
+
+.result-stats dd {
+  margin: 0;
+}
+
+.api-errors {
+  margin: 0.5rem 0 0;
+  font-size: 0.8rem;
+  color: #92400e;
+}
+
+.muted {
+  color: #6b7280;
+  font-style: italic;
+}
+
+.card-note {
+  margin: 0.5rem 0 0;
+  font-size: 0.85rem;
+}
+
+.sample-block {
+  margin-bottom: 0.75rem;
+}
+
+.sample-heading {
+  margin: 0 0 0.35rem;
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: #4b5563;
+}
+
+.sample-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.8rem;
+}
+
+.sample-table th,
+.sample-table td {
+  padding: 0.25rem 0.35rem;
+  border-bottom: 1px solid #eef1f5;
+  text-align: left;
+}
+
+.sample-table th {
+  color: #6b7280;
+  font-weight: 500;
+}
+
+.sample-date {
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+}
+
+code {
+  font-family: ui-monospace, monospace;
+  font-size: 0.85em;
+  background: #eef1f5;
+  padding: 0.1rem 0.3rem;
+  border-radius: 3px;
+}

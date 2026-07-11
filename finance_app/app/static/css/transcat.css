@@ -25,6 +25,23 @@ body {
   font-size: 0.9rem;
 }
 
+.nav {
+  display: flex;
+  gap: 1rem;
+  margin-bottom: 0.75rem;
+  font-size: 0.9rem;
+}
+
+.nav a {
+  color: rgba(255, 255, 255, 0.75);
+  text-decoration: none;
+}
+
+.nav a:hover,
+.nav a.active {
+  color: #fff;
+}
+
 .layout {
   display: grid;
   grid-template-columns: 280px 1fr;

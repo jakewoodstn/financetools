@@ -1,0 +1,116 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Import Control</title>
+  <script src="https://cdn.jsdelivr.net/npm/htmx.org@2.0.4/dist/htmx.min.js"></script>
+  <link rel="stylesheet" href="/static/css/import.css">
+</head>
+<body>
+  <header class="page-header">
+    <nav class="nav">
+      <a href="/transcat">Transcat</a>
+      <a href="/import" class="active">Import</a>
+    </nav>
+    <h1>Import Control</h1>
+    <p class="subtitle">Per-account SimpleFIN staging — merge or replace</p>
+  </header>
+
+  <main class="layout">
+    {% if not simplefin_configured %}
+    <div class="banner banner-warn">
+      <strong>SIMPLEFIN_ACCESS_URL</strong> is not set. Add it to <code>.env</code> before importing.
+    </div>
+    {% endif %}
+
+    <p class="intro">
+      Fetches from SimpleFIN Bridge and writes to <code>raw_transactions</code> (not promoted to bank transactions yet).
+      <strong>Merge</strong> skips rows that already exist (dedupe hash).
+      <strong>Replace</strong> deletes unstaged raw rows in the date window, then re-imports.
+    </p>
+
+    <div class="account-grid">
+      {% for account in accounts %}
+      <section class="panel account-card" id="account-{{ account.id }}">
+        <header class="account-header">
+          <h2>{{ account.account_name or ("Account " ~ account.id) }}</h2>
+          <span class="badge">id {{ account.id }}</span>
+        </header>
+
+        <dl class="meta">
+          <dt>Staged raw</dt>
+          <dd id="staged-count-{{ account.id }}">{{ account.raw_staged_count }}</dd>
+          <dt>Import txns</dt>
+          <dd>{{ "yes" if account.import_transactions else "no" }}</dd>
+          {% if account.simplefin_source_name %}
+          <dt>SimpleFIN</dt>
+          <dd class="mono">{{ account.simplefin_source_name }}</dd>
+          {% else %}
+          <dt>SimpleFIN</dt>
+          <dd class="muted">no mapping</dd>
+          {% endif %}
+        </dl>
+
+        {% if alias_map.get(account.id) %}
+        <details class="aliases">
+          <summary>Legacy import names ({{ alias_map[account.id]|length }})</summary>
+          <ul>
+            {% for name in alias_map[account.id] %}
+            <li class="mono">{{ name }}</li>
+            {% endfor %}
+          </ul>
+        </details>
+        {% endif %}
+
+        {% set samples = sample_map.get(account.id, []) %}
+        {% set account_id = account.id %}
+        {% include "_import_sample.html" %}
+
+        {% if account.simplefin_source_name and simplefin_configured %}
+        <form
+          class="import-form"
+          hx-post="/import/{{ account.id }}"
+          hx-target="#result-{{ account.id }}"
+          hx-swap="innerHTML"
+          hx-indicator="#spinner-{{ account.id }}"
+        >
+          <div class="field-row">
+            <label>
+              Start
+              <input type="date" name="start_date" value="{{ start_default }}" required>
+            </label>
+            <label>
+              End
+              <input type="date" name="end_date" value="{{ end_default }}" required>
+            </label>
+          </div>
+
+          <fieldset class="mode-fieldset">
+            <legend>Mode</legend>
+            <label class="radio">
+              <input type="radio" name="mode" value="merge" checked>
+              Merge <span class="hint">keep existing, add new</span>
+            </label>
+            <label class="radio">
+              <input type="radio" name="mode" value="replace">
+              Replace <span class="hint">delete unstaged in range, re-fetch</span>
+            </label>
+          </fieldset>
+
+          <button type="submit" class="btn-primary">Import</button>
+          <span id="spinner-{{ account.id }}" class="htmx-indicator">Fetching…</span>
+        </form>
+        {% elif not account.simplefin_source_name %}
+        <p class="muted card-note">No SimpleFIN source mapped for this account.</p>
+        {% endif %}
+
+        <div id="result-{{ account.id }}" class="result-slot"></div>
+      </section>
+      {% else %}
+      <p class="muted">No accounts in database.</p>
+      {% endfor %}
+    </div>
+  </main>
+</body>
+</html>
