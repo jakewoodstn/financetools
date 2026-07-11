@@ -51,6 +51,7 @@ from migration_lib import (
     sample_transactions,
     seed_category_rules,
     upsert_simplefin_transaction_accounts,
+    apply_account_import_overrides,
 )
 
 
@@ -104,6 +105,7 @@ def main() -> None:
 
             print(f"Loading {len(accounts)} accounts ...")
             insert_rows(pcur, "accounts", ACCOUNT_COLUMNS, accounts)
+            apply_account_import_overrides(pcur)
             print(f"Loading {len(transaction_accounts)} transaction accounts ...")
             insert_rows(pcur, "transaction_accounts", TRANSACTION_ACCOUNT_COLUMNS, transaction_accounts)
             print("Upserting SimpleFIN transaction account mappings ...")

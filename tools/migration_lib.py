@@ -93,6 +93,11 @@ SIMPLEFIN_TRANSACTION_ACCOUNTS: list[tuple[str, int]] = [
     ("Money Market Savings Account (2395)", 4),  # Ally Bank - Tax Withholding
 ]
 
+# Legacy MSSQL has import_transactions=0 for account 4; enable on replatform.
+ACCOUNT_IMPORT_OVERRIDES: dict[int, int] = {
+    4: 1,
+}
+
 PAYEE_EXPR = "COALESCE(NULLIF(TRIM(description), ''), NULLIF(TRIM(bank_orig_description), ''))"
 
 
@@ -276,6 +281,15 @@ def upsert_simplefin_transaction_accounts(pg_cur) -> int:
             (name, account_id),
         )
     return len(SIMPLEFIN_TRANSACTION_ACCOUNTS)
+
+
+def apply_account_import_overrides(pg_cur) -> int:
+    for account_id, flag in ACCOUNT_IMPORT_OVERRIDES.items():
+        pg_cur.execute(
+            "UPDATE accounts SET import_transactions = %s WHERE id = %s",
+            (flag, account_id),
+        )
+    return len(ACCOUNT_IMPORT_OVERRIDES)
 
 
 def backfill_payees(pg_cur) -> tuple[int, int]:

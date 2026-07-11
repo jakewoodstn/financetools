@@ -27,7 +27,7 @@ COPY public.accounts (id, account_name, created_at, closed_on, import_transactio
 1	Bank of America Checking Account	2005-08-01	9999-12-31	1
 2	Chase Southwest Rewards Credit Card	2012-05-01	9999-12-31	1
 3	Ally Bank - General Savings	2012-06-15	2199-12-31	1
-4	Ally Bank - Tax Withholding	2014-11-05	2199-12-31	0
+4	Ally Bank - Tax Withholding	2014-11-05	2199-12-31	1
 \.
 
 

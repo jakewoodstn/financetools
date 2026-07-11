@@ -70,7 +70,7 @@ Legacy `transactionId` values land in `bank_transactions.external_id`. Split row
 | Adv Plus Banking- 8971 (8971) | 1 | Bank of America Checking |
 | Rapid Rewards Priority (2985) | 2 | Chase Southwest Rewards Credit Card |
 | Savings Account (8193) | 3 | Ally Bank - General Savings |
-| Money Market Savings Account (2395) | 4 | Ally Bank - Tax Withholding |
+| Money Market Savings Account (2395) | 4 | Ally Bank - Tax Withholding (`import_transactions=1`) |
 
 Stored in `transaction_accounts.name` (upserted on each migration run).
 
@@ -84,6 +84,7 @@ Fetch and stage only (promotion to `bank_transactions` not yet implemented):
 cd finance_app
 uv run python scripts/stage_simplefin.py          # Bridge default window
 uv run python scripts/stage_simplefin.py --days 30
+uv run python scripts/stage_simplefin.py --account 3 --account 4 --days 30
 ```
 
 Writes `import_batches` (`source=simplefin`, `status=staged`) and `raw_transactions` with dedupe on `(account_id, transaction_date, amount, bank_orig_description)`.
