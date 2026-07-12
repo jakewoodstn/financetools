@@ -1,0 +1,52 @@
+{% from "_import_stats_macros.html" import format_import_at, format_txn_date %}
+
+<section class="panel account-workspace account-workspace-wide" id="account-{{ account.id }}">
+  <header class="account-header">
+    <h2>{{ account.account_name or ("Account " ~ account.id) }}</h2>
+    <span class="badge">id {{ account.id }}</span>
+  </header>
+
+  <dl class="meta">
+    <dt>Staged raw</dt>
+    <dd id="staged-count-{{ account.id }}">{{ account.raw_staged_count }}</dd>
+    <dt>Last import</dt>
+    <dd id="latest-import-{{ account.id }}">{{ format_import_at(account.latest_import_at) }}</dd>
+    <dt>Latest txn date</dt>
+    <dd id="latest-txn-date-{{ account.id }}">{{ format_txn_date(account.latest_transaction_date) }}</dd>
+    <dt>Import txns</dt>
+    <dd>{{ "yes" if account.import_transactions else "no" }}</dd>
+    {% if account.simplefin_source_name %}
+    <dt>SimpleFIN</dt>
+    <dd class="mono">{{ account.simplefin_source_name }}</dd>
+    {% else %}
+    <dt>SimpleFIN</dt>
+    <dd class="muted">no mapping</dd>
+    {% endif %}
+  </dl>
+
+  {% if alias_map.get(account.id) %}
+  <details class="aliases">
+    <summary>Legacy import names ({{ alias_map[account.id]|length }})</summary>
+    <ul>
+      {% for name in alias_map[account.id] %}
+      <li class="mono">{{ name }}</li>
+      {% endfor %}
+    </ul>
+  </details>
+  {% endif %}
+
+  <div class="import-actions-split">
+    <div class="import-action-col">
+      {% include "_import_form_simplefin.html" %}
+    </div>
+    <div class="import-action-col">
+      {% include "_import_form_csv.html" %}
+    </div>
+  </div>
+
+  <div id="result-{{ account.id }}" class="result-slot"></div>
+
+  {% set samples = sample_map.get(account.id, []) %}
+  {% set account_id = account.id %}
+  {% include "_import_sample.html" %}
+</section>

@@ -1,0 +1,31 @@
+{% macro format_import_at(value) -%}
+{%- if value -%}
+{{ value.strftime("%Y-%m-%d %H:%M") }}
+{%- else -%}
+<span class="muted">never</span>
+{%- endif -%}
+{%- endmacro %}
+
+{% macro format_txn_date(value) -%}
+{%- if value -%}
+{{ value.isoformat() }}
+{%- else -%}
+<span class="muted">—</span>
+{%- endif -%}
+{%- endmacro %}
+
+{% macro format_import_at_short(value) -%}
+{%- if value -%}
+{{ value.strftime("%m/%d/%y") }}
+{%- else -%}
+—
+{%- endif -%}
+{%- endmacro %}
+
+{% macro format_txn_date_short(value) -%}
+{%- if value -%}
+{{ value.strftime("%m/%d/%y") }}
+{%- else -%}
+—
+{%- endif -%}
+{%- endmacro %}

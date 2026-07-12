@@ -1,0 +1,27 @@
+<aside class="account-sidebar">
+  <p class="sidebar-heading">Accounts</p>
+  {% if accounts %}
+  <nav class="account-nav">
+    {% from "_import_stats_macros.html" import format_import_at_short, format_txn_date_short %}
+    {% for account in accounts %}
+    <a
+      href="{{ page_base }}?account={{ account.id }}"
+      class="account-nav-item{% if account.id == selected_account_id %} active{% endif %}"
+    >
+      <span class="account-nav-name">{{ account.account_name or ("Account " ~ account.id) }}</span>
+      <span class="account-nav-meta">
+        <span id="nav-staged-{{ account.id }}">{{ account.raw_staged_count }}</span> staged
+        {% if account.simplefin_source_name %} · SF{% endif %}
+        {% if account.import_transactions %} · CSV{% endif %}
+      </span>
+      <span class="account-nav-dates">
+        import <span id="nav-import-{{ account.id }}">{{ format_import_at_short(account.latest_import_at) }}</span>
+        · txn <span id="nav-txn-{{ account.id }}">{{ format_txn_date_short(account.latest_transaction_date) }}</span>
+      </span>
+    </a>
+    {% endfor %}
+  </nav>
+  {% else %}
+  <p class="muted sidebar-empty">No accounts</p>
+  {% endif %}
+</aside>

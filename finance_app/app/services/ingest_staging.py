@@ -13,6 +13,7 @@ from sqlalchemy.dialects.postgresql import insert
 from sqlalchemy.orm import Session
 
 from app.models import ImportBatch, RawTransaction, TransactionAccount
+from app.services.csv_import import CsvRow
 from app.services.simplefin import SimpleFinAccount, SimpleFinTransaction
 
 ImportMode = Literal["merge", "replace"]
@@ -138,6 +139,64 @@ def stage_simplefin_accounts(
 
     db.commit()
     return result
+
+
+def stage_csv_rows(
+    db: Session,
+    rows: list[CsvRow],
+    *,
+    account_id: int,
+    filename: str,
+    mode: ImportMode = "merge",
+) -> StageResult:
+    """Stage parsed bank CSV rows into raw_transactions."""
+    batch = ImportBatch(source="csv", filename=filename, status="staged")
+    db.add(batch)
+    db.flush()
+
+    result = StageResult(import_batch_id=batch.id, accounts_seen=1, transactions_fetched=len(rows))
+
+    if mode == "replace" and rows:
+        dates = [row.transaction_date for row in rows]
+        result.deleted = _delete_raw_in_range(db, account_id, min(dates), max(dates))
+
+    for row in rows:
+        if _insert_csv_row(db, batch.id, account_id, row):
+            result.inserted += 1
+        else:
+            result.skipped_duplicate += 1
+
+    db.commit()
+    return result
+
+
+def _insert_csv_row(
+    db: Session,
+    import_batch_id: int,
+    account_id: int,
+    row: CsvRow,
+) -> bool:
+    digest = dedupe_hash(account_id, row.transaction_date, row.amount, row.bank_orig_description)
+    values = dict(
+        import_batch_id=import_batch_id,
+        account_id=account_id,
+        transaction_date=row.transaction_date,
+        amount=row.amount,
+        bank_orig_description=row.bank_orig_description or None,
+        import_category=row.import_category,
+        dedupe_hash=digest,
+        source_external_id=None,
+        bank_transaction_id=None,
+    )
+    stmt = (
+        insert(RawTransaction)
+        .values(**values)
+        .on_conflict_do_nothing(index_elements=[RawTransaction.dedupe_hash])
+        .returning(RawTransaction.id)
+    )
+    inserted_id = db.execute(stmt).scalar_one_or_none()
+    db.flush()
+    return inserted_id is not None
 
 
 def _insert_raw_transaction(

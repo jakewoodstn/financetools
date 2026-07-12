@@ -14,104 +14,40 @@
       <a href="/import" class="active">Import</a>
     </nav>
     <h1>Import Control</h1>
-    <p class="subtitle">Per-account SimpleFIN staging — merge or replace</p>
+    <p class="subtitle">SimpleFIN sync and bank CSV uploads — per account</p>
   </header>
 
-  <main class="layout">
-    {% if not simplefin_configured %}
-    <div class="banner banner-warn">
-      <strong>SIMPLEFIN_ACCESS_URL</strong> is not set. Add it to <code>.env</code> before importing.
-    </div>
-    {% endif %}
+  {% if not simplefin_configured %}
+  <div class="banner banner-warn">
+    <strong>SIMPLEFIN_ACCESS_URL</strong> is not set. SimpleFIN import is disabled; CSV upload still works.
+  </div>
+  {% endif %}
 
-    <p class="intro">
-      Fetches from SimpleFIN Bridge, writes to <code>raw_transactions</code>, then promotes unstaged rows to
-      <code>bank_transactions</code> for accounts with <code>import_transactions=1</code>.
-      <strong>Merge</strong> skips rows that already exist (dedupe hash or SimpleFIN id).
-      <strong>Replace</strong> deletes unstaged raw rows in the date window, then re-imports.
-    </p>
+  <div class="page-body">
+    {% set page_base = "/import" %}
+    {% include "_import_sidebar.html" %}
 
-    <div class="account-grid">
-      {% for account in accounts %}
-      <section class="panel account-card" id="account-{{ account.id }}">
-        <header class="account-header">
-          <h2>{{ account.account_name or ("Account " ~ account.id) }}</h2>
-          <span class="badge">id {{ account.id }}</span>
-        </header>
+    <main class="workspace">
+      <details class="workspace-help">
+        <summary>How import works</summary>
+        <p class="intro">
+          Imports write to <code>raw_transactions</code>, then promote to <code>bank_transactions</code> for accounts with
+          <code>import_transactions=1</code>.
+          <strong>SimpleFIN</strong> is the default for ongoing sync.
+          <strong>CSV</strong> is for direct bank downloads — headers are auto-mapped (date, amount, description).
+          <strong>Merge</strong> skips duplicates; <strong>Replace</strong> clears unstaged rows in the file date range first.
+        </p>
+      </details>
 
-        <dl class="meta">
-          <dt>Staged raw</dt>
-          <dd id="staged-count-{{ account.id }}">{{ account.raw_staged_count }}</dd>
-          <dt>Import txns</dt>
-          <dd>{{ "yes" if account.import_transactions else "no" }}</dd>
-          {% if account.simplefin_source_name %}
-          <dt>SimpleFIN</dt>
-          <dd class="mono">{{ account.simplefin_source_name }}</dd>
-          {% else %}
-          <dt>SimpleFIN</dt>
-          <dd class="muted">no mapping</dd>
-          {% endif %}
-        </dl>
-
-        {% if alias_map.get(account.id) %}
-        <details class="aliases">
-          <summary>Legacy import names ({{ alias_map[account.id]|length }})</summary>
-          <ul>
-            {% for name in alias_map[account.id] %}
-            <li class="mono">{{ name }}</li>
-            {% endfor %}
-          </ul>
-        </details>
-        {% endif %}
-
-        {% set samples = sample_map.get(account.id, []) %}
-        {% set account_id = account.id %}
-        {% include "_import_sample.html" %}
-
-        {% if account.simplefin_source_name and simplefin_configured %}
-        <form
-          class="import-form"
-          hx-post="/import/{{ account.id }}"
-          hx-target="#result-{{ account.id }}"
-          hx-swap="innerHTML"
-          hx-indicator="#spinner-{{ account.id }}"
-        >
-          <div class="field-row">
-            <label>
-              Start
-              <input type="date" name="start_date" value="{{ start_default }}" required>
-            </label>
-            <label>
-              End
-              <input type="date" name="end_date" value="{{ end_default }}" required>
-            </label>
-          </div>
-
-          <fieldset class="mode-fieldset">
-            <legend>Mode</legend>
-            <label class="radio">
-              <input type="radio" name="mode" value="merge" checked>
-              Merge <span class="hint">keep existing, add new</span>
-            </label>
-            <label class="radio">
-              <input type="radio" name="mode" value="replace">
-              Replace <span class="hint">delete unstaged in range, re-fetch</span>
-            </label>
-          </fieldset>
-
-          <button type="submit" class="btn-primary">Import</button>
-          <span id="spinner-{{ account.id }}" class="htmx-indicator">Fetching…</span>
-        </form>
-        {% elif not account.simplefin_source_name %}
-        <p class="muted card-note">No SimpleFIN source mapped for this account.</p>
-        {% endif %}
-
-        <div id="result-{{ account.id }}" class="result-slot"></div>
-      </section>
+      {% if selected_account %}
+      {% set account = selected_account %}
+      {% include "_import_account_panel.html" %}
+      {% elif accounts %}
+      <p class="muted">Select an account from the list.</p>
       {% else %}
       <p class="muted">No accounts in database.</p>
-      {% endfor %}
-    </div>
-  </main>
+      {% endif %}
+    </main>
+  </div>
 </body>
 </html>

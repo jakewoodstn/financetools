@@ -1,0 +1,48 @@
+{% if account.import_transactions %}
+<form
+  class="import-form csv-form"
+  hx-post="/import/{{ account.id }}/csv"
+  hx-target="#result-{{ account.id }}"
+  hx-swap="innerHTML"
+  hx-encoding="multipart/form-data"
+  hx-indicator="#csv-spinner-{{ account.id }}"
+>
+  <h3 class="form-heading">Bank CSV</h3>
+  <label class="file-label">
+    File
+    <input type="file" name="file" accept=".csv,text/csv" required>
+  </label>
+
+  <fieldset class="mode-fieldset">
+    <legend>Mode</legend>
+    <label class="radio">
+      <input type="radio" name="mode" value="merge" checked>
+      Merge
+    </label>
+    <label class="radio">
+      <input type="radio" name="mode" value="replace">
+      Replace
+    </label>
+  </fieldset>
+
+  <details class="column-overrides">
+    <summary>Column overrides <span class="hint">(only if auto-map fails)</span></summary>
+    <div class="field-row">
+      <label>Date <input type="text" name="col_date" placeholder="Date"></label>
+      <label>Amount <input type="text" name="col_amount" placeholder="Amount"></label>
+    </div>
+    <div class="field-row">
+      <label>Description <input type="text" name="col_description" placeholder="Description"></label>
+      <label>Category <input type="text" name="col_category" placeholder="Category"></label>
+    </div>
+  </details>
+
+  <button type="submit" class="btn-secondary">Upload CSV</button>
+  <span id="csv-spinner-{{ account.id }}" class="htmx-indicator">Uploading…</span>
+</form>
+{% else %}
+<div class="import-form csv-form import-form-empty">
+  <h3 class="form-heading">Bank CSV</h3>
+  <p class="muted card-note">Transaction import is not enabled for this account.</p>
+</div>
+{% endif %}

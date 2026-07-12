@@ -1,0 +1,46 @@
+{% if account.simplefin_source_name and simplefin_configured %}
+<form
+  class="import-form"
+  hx-post="/import/{{ account.id }}"
+  hx-target="#result-{{ account.id }}"
+  hx-swap="innerHTML"
+  hx-indicator="#spinner-{{ account.id }}"
+>
+  <h3 class="form-heading">SimpleFIN</h3>
+  <div class="field-row">
+    <label>
+      Start
+      <input type="date" name="start_date" value="{{ start_default }}" required>
+    </label>
+    <label>
+      End
+      <input type="date" name="end_date" value="{{ end_default }}" required>
+    </label>
+  </div>
+
+  <fieldset class="mode-fieldset">
+    <legend>Mode</legend>
+    <label class="radio">
+      <input type="radio" name="mode" value="merge" checked>
+      Merge <span class="hint">keep existing, add new</span>
+    </label>
+    <label class="radio">
+      <input type="radio" name="mode" value="replace">
+      Replace <span class="hint">delete unstaged in range, re-fetch</span>
+    </label>
+  </fieldset>
+
+  <button type="submit" class="btn-primary">Import from SimpleFIN</button>
+  <span id="spinner-{{ account.id }}" class="htmx-indicator">Fetching…</span>
+</form>
+{% elif not simplefin_configured %}
+<div class="import-form import-form-empty">
+  <h3 class="form-heading">SimpleFIN</h3>
+  <p class="muted card-note">SIMPLEFIN_ACCESS_URL is not configured.</p>
+</div>
+{% elif not account.simplefin_source_name %}
+<div class="import-form import-form-empty">
+  <h3 class="form-heading">SimpleFIN</h3>
+  <p class="muted card-note">No SimpleFIN mapping for this account.</p>
+</div>
+{% endif %}

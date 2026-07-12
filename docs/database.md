@@ -96,6 +96,15 @@ uv run python scripts/promote_staging.py --account 4
 
 The `/import` UI stages and promotes per account in one step.
 
+**CSV fallback** — bank direct downloads with header auto-mapping:
+
+```bash
+uv run python scripts/import_csv.py --account 1 ~/Downloads/transactions.csv
+uv run python scripts/import_csv.py --account 2 file.csv --replace --col-date "Transaction Date"
+```
+
+Bank exports often include title and footer lines; the importer scans for the real header row and stops before summary/footer text.
+
 #### Idempotency
 
 | Layer | Key | Behavior |

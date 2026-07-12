@@ -48,23 +48,146 @@ body {
   padding: 1rem 1.5rem 2rem;
 }
 
-.intro {
-  font-size: 0.95rem;
-  line-height: 1.5;
-  margin: 0 0 1.25rem;
+.page-body {
+  display: grid;
+  grid-template-columns: minmax(200px, 260px) minmax(0, 1fr);
+  min-height: calc(100vh - 8rem);
 }
 
-.banner {
-  padding: 0.75rem 1rem;
-  border-radius: 8px;
+.account-sidebar {
+  background: #fff;
+  border-right: 1px solid #d8dde6;
+  padding: 1rem 0;
+}
+
+.sidebar-heading {
+  margin: 0 0 0.5rem;
+  padding: 0 1rem;
+  font-size: 0.75rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: #6b7280;
+}
+
+.sidebar-empty {
+  margin: 0;
+  padding: 0 1rem;
+  font-size: 0.85rem;
+}
+
+.account-nav {
+  display: flex;
+  flex-direction: column;
+}
+
+.account-nav-item {
+  display: block;
+  padding: 0.65rem 1rem;
+  text-decoration: none;
+  color: #1a1a1a;
+  border-left: 3px solid transparent;
+}
+
+.account-nav-item:hover {
+  background: #f5f6f8;
+}
+
+.account-nav-item.active {
+  background: #eef1f5;
+  border-left-color: #1f3b63;
+}
+
+.account-nav-name {
+  display: block;
+  font-size: 0.9rem;
+  font-weight: 500;
+  line-height: 1.3;
+}
+
+.account-nav-item.active .account-nav-name {
+  font-weight: 600;
+}
+
+.account-nav-meta {
+  display: block;
+  margin-top: 0.15rem;
+  font-size: 0.75rem;
+  color: #6b7280;
+}
+
+.account-nav-dates {
+  display: block;
+  margin-top: 0.1rem;
+  font-size: 0.7rem;
+  color: #9ca3af;
+  font-variant-numeric: tabular-nums;
+}
+
+.workspace {
+  padding: 1.25rem 1.5rem 2rem;
+  overflow-x: auto;
+}
+
+.workspace-help {
   margin-bottom: 1rem;
   font-size: 0.9rem;
 }
 
+.workspace-help summary {
+  cursor: pointer;
+  color: #4b5563;
+  font-weight: 500;
+}
+
+.workspace-help .intro {
+  margin: 0.5rem 0 0;
+}
+
+.account-workspace-wide {
+  max-width: none;
+}
+
+.import-actions-split {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 1rem;
+  margin-bottom: 0.25rem;
+}
+
+.import-action-col {
+  min-width: 0;
+  border: 1px solid #eef1f5;
+  border-radius: 8px;
+  padding: 0.75rem;
+  background: #fafbfc;
+}
+
+.import-action-col .import-form {
+  border-top: none;
+  padding-top: 0;
+}
+
+.import-form-empty {
+  min-height: 8rem;
+}
+
+.banner {
+  padding: 0.75rem 1rem;
+  border-radius: 0;
+  margin-bottom: 0;
+  font-size: 0.9rem;
+  border-bottom: 1px solid #f59e0b;
+}
+
 .banner-warn {
   background: #fef3c7;
-  border: 1px solid #f59e0b;
   color: #92400e;
+}
+
+.intro {
+  font-size: 0.95rem;
+  line-height: 1.5;
 }
 
 .account-grid {
@@ -199,6 +322,55 @@ input[type="date"] {
   background: #16304f;
 }
 
+.btn-secondary {
+  background: #fff;
+  color: #1f3b63;
+  border: 1px solid #1f3b63;
+  border-radius: 6px;
+  padding: 0.5rem 1rem;
+  font: inherit;
+  cursor: pointer;
+}
+
+.btn-secondary:hover {
+  background: #eef1f5;
+}
+
+.form-heading {
+  margin: 0 0 0.5rem;
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: #4b5563;
+}
+
+.csv-form {
+  margin-top: 0;
+}
+
+.file-label {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  font-size: 0.8rem;
+  color: #4b5563;
+  margin-bottom: 0.75rem;
+}
+
+.file-label input[type="file"] {
+  font: inherit;
+}
+
+.column-overrides {
+  font-size: 0.8rem;
+  margin-bottom: 0.75rem;
+}
+
+.column-overrides summary {
+  cursor: pointer;
+  color: #4b5563;
+  margin-bottom: 0.35rem;
+}
+
 .htmx-indicator {
   display: none;
   margin-left: 0.5rem;
@@ -270,7 +442,10 @@ input[type="date"] {
 }
 
 .sample-block {
-  margin-bottom: 0.75rem;
+  margin-top: 1.25rem;
+  margin-bottom: 0;
+  padding-top: 1rem;
+  border-top: 1px solid #eef1f5;
 }
 
 .sample-heading {
@@ -309,4 +484,40 @@ code {
   background: #eef1f5;
   padding: 0.1rem 0.3rem;
   border-radius: 3px;
+}
+
+@media (max-width: 720px) {
+  .page-body {
+    grid-template-columns: 1fr;
+  }
+
+  .import-actions-split {
+    grid-template-columns: 1fr;
+  }
+
+  .account-sidebar {
+    border-right: none;
+    border-bottom: 1px solid #d8dde6;
+    padding-bottom: 0.5rem;
+  }
+
+  .account-nav {
+    flex-direction: row;
+    overflow-x: auto;
+    gap: 0.25rem;
+    padding: 0 0.5rem;
+  }
+
+  .account-nav-item {
+    flex: 0 0 auto;
+    border-left: none;
+    border-bottom: 3px solid transparent;
+    border-radius: 6px;
+    min-width: 140px;
+  }
+
+  .account-nav-item.active {
+    border-left-color: transparent;
+    border-bottom-color: #1f3b63;
+  }
 }

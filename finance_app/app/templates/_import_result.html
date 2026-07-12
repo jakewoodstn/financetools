@@ -4,17 +4,38 @@
 </div>
 {% elif result %}
 <div class="result {% if result.simplefin_found %}result-ok{% else %}result-warn{% endif %}">
-  {% if not result.simplefin_found %}
+  {% if result.source == "csv" %}
+  <strong>CSV imported</strong> — {{ result.account_name or ("Account " ~ result.account_id) }}
+  {% elif not result.simplefin_found %}
   <strong>SimpleFIN account not found</strong> — expected name in Bridge response.
   {% else %}
   <strong>Done</strong> — {{ result.account_name or ("Account " ~ result.account_id) }}
   {% endif %}
   <dl class="result-stats">
+    {% if result.source == "csv" and result.filename %}
+    <dt>File</dt>
+    <dd class="mono">{{ result.filename }}</dd>
+    {% endif %}
+    {% if result.start_date and result.end_date %}
     <dt>Window</dt>
     <dd>{{ result.start_date }} → {{ result.end_date }}</dd>
+    {% endif %}
     <dt>Mode</dt>
     <dd>{{ result.mode }}</dd>
-    <dt>Fetched</dt>
+    {% if result.source == "csv" and result.column_mapping %}
+    <dt>Columns</dt>
+    <dd class="mono">
+      date={{ result.column_mapping.transaction_date }},
+      amount={{ result.column_mapping.amount }},
+      desc={{ result.column_mapping.description }}
+      {% if result.column_mapping.category %}, category={{ result.column_mapping.category }}{% endif %}
+    </dd>
+    {% endif %}
+    {% if result.source == "csv" and result.csv_region %}
+    <dt>File layout</dt>
+    <dd>header line {{ result.csv_region.header_line }}, skipped {{ result.csv_region.skipped_top }} top / {{ result.csv_region.skipped_bottom }} bottom</dd>
+    {% endif %}
+    <dt>Rows</dt>
     <dd>{{ result.stage.transactions_fetched }}</dd>
     {% if result.mode == "replace" %}
     <dt>Deleted</dt>
@@ -46,4 +67,10 @@
 
 {% include "_import_sample.html" %}
 
+{% from "_import_stats_macros.html" import format_import_at, format_txn_date, format_import_at_short, format_txn_date_short %}
 <dd id="staged-count-{{ account_id }}" hx-swap-oob="true">{{ raw_staged_count }}</dd>
+<dd id="latest-import-{{ account_id }}" hx-swap-oob="true">{{ format_import_at(latest_import_at) }}</dd>
+<dd id="latest-txn-date-{{ account_id }}" hx-swap-oob="true">{{ format_txn_date(latest_transaction_date) }}</dd>
+<span id="nav-staged-{{ account_id }}" hx-swap-oob="true">{{ raw_staged_count }}</span>
+<span id="nav-import-{{ account_id }}" hx-swap-oob="true">{{ format_import_at_short(latest_import_at) }}</span>
+<span id="nav-txn-{{ account_id }}" hx-swap-oob="true">{{ format_txn_date_short(latest_transaction_date) }}</span>

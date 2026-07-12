@@ -3,15 +3,16 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from datetime import date, timedelta
+from datetime import date, datetime, timedelta
 from typing import Literal
 
 from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
 from app.config import settings
-from app.models import Account, RawTransaction, TransactionAccount
-from app.services.ingest_staging import StageResult, stage_simplefin_account
+from app.models import Account, ImportBatch, RawTransaction, TransactionAccount
+from app.services.csv_import import CsvImportError, CsvTableRegion, parse_csv_rows
+from app.services.ingest_staging import StageResult, stage_csv_rows, stage_simplefin_account
 from app.services.promote_staging import PromoteResult, promote_raw_transactions
 from app.services.simplefin import (
     SimpleFinError,
@@ -45,6 +46,8 @@ class ImportableAccount:
     import_transactions: int | None
     simplefin_source_name: str | None
     raw_staged_count: int
+    latest_import_at: datetime | None = None
+    latest_transaction_date: date | None = None
 
 
 @dataclass
@@ -52,17 +55,55 @@ class ImportRunResult:
     account_id: int
     account_name: str | None
     mode: ImportMode
-    start_date: date
-    end_date: date
     stage: StageResult
     promote: PromoteResult | None
-    simplefin_found: bool
+    source: Literal["simplefin", "csv"] = "simplefin"
+    start_date: date | None = None
+    end_date: date | None = None
+    simplefin_found: bool = True
+    filename: str | None = None
+    column_mapping: dict[str, str] | None = None
+    csv_region: "CsvTableRegion | None" = None
 
 
 def default_date_range() -> tuple[date, date]:
     end = date.today()
     start = end - timedelta(days=30)
     return start, end
+
+
+def lookup_account_import_stats(db: Session) -> dict[int, tuple[datetime | None, date | None]]:
+    latest_imports = dict(
+        db.execute(
+            select(RawTransaction.account_id, func.max(ImportBatch.imported_at))
+            .join(ImportBatch, RawTransaction.import_batch_id == ImportBatch.id)
+            .group_by(RawTransaction.account_id)
+        ).all()
+    )
+    latest_txn_dates = dict(
+        db.execute(
+            select(RawTransaction.account_id, func.max(RawTransaction.transaction_date)).group_by(
+                RawTransaction.account_id
+            )
+        ).all()
+    )
+    account_ids = set(latest_imports) | set(latest_txn_dates)
+    return {
+        account_id: (latest_imports.get(account_id), latest_txn_dates.get(account_id))
+        for account_id in account_ids
+    }
+
+
+def account_import_stats(db: Session, account_id: int) -> tuple[datetime | None, date | None]:
+    latest_import = db.scalar(
+        select(func.max(ImportBatch.imported_at))
+        .join(RawTransaction, RawTransaction.import_batch_id == ImportBatch.id)
+        .where(RawTransaction.account_id == account_id)
+    )
+    latest_txn = db.scalar(
+        select(func.max(RawTransaction.transaction_date)).where(RawTransaction.account_id == account_id)
+    )
+    return latest_import, latest_txn
 
 
 def list_importable_accounts(db: Session) -> list[ImportableAccount]:
@@ -74,8 +115,10 @@ def list_importable_accounts(db: Session) -> list[ImportableAccount]:
             .group_by(RawTransaction.account_id)
         ).all()
     )
+    import_stats = lookup_account_import_stats(db)
     results: list[ImportableAccount] = []
     for account in rows:
+        latest_import_at, latest_transaction_date = import_stats.get(account.id, (None, None))
         results.append(
             ImportableAccount(
                 id=account.id,
@@ -83,6 +126,8 @@ def list_importable_accounts(db: Session) -> list[ImportableAccount]:
                 import_transactions=account.import_transactions,
                 simplefin_source_name=SIMPLEFIN_SOURCE_BY_ACCOUNT_ID.get(account.id),
                 raw_staged_count=int(raw_counts.get(account.id, 0)),
+                latest_import_at=latest_import_at,
+                latest_transaction_date=latest_transaction_date,
             )
         )
     return results
@@ -121,6 +166,7 @@ def run_simplefin_import(
             account_id=account_id,
             account_name=account.account_name,
             mode=mode,
+            source="simplefin",
             start_date=start_date,
             end_date=end_date,
             stage=stage,
@@ -142,11 +188,48 @@ def run_simplefin_import(
         account_id=account_id,
         account_name=account.account_name,
         mode=mode,
+        source="simplefin",
         start_date=start_date,
         end_date=end_date,
         stage=stage,
         promote=promote,
         simplefin_found=True,
+    )
+
+
+def run_csv_import(
+    db: Session,
+    account_id: int,
+    *,
+    filename: str,
+    content: bytes,
+    mode: ImportMode,
+    column_overrides: dict[str, str | None] | None = None,
+) -> ImportRunResult:
+    account = db.get(Account, account_id)
+    if account is None:
+        raise ValueError(f"Unknown account id {account_id}")
+
+    if not account.import_transactions:
+        raise ValueError(f"Account {account_id} is not enabled for transaction import")
+
+    mapping, rows, region = parse_csv_rows(content, column_overrides=column_overrides)
+    stage = stage_csv_rows(db, rows, account_id=account_id, filename=filename, mode=mode)
+    promote = promote_raw_transactions(db, account_id=account_id)
+    dates = [row.transaction_date for row in rows]
+    return ImportRunResult(
+        account_id=account_id,
+        account_name=account.account_name,
+        mode=mode,
+        source="csv",
+        start_date=min(dates),
+        end_date=max(dates),
+        stage=stage,
+        promote=promote,
+        simplefin_found=True,
+        filename=filename,
+        column_mapping=mapping.as_dict(),
+        csv_region=region,
     )
 
 
