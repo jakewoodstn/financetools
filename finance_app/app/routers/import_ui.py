@@ -29,6 +29,7 @@ def _import_page_context(db: Session, account: int | None) -> dict:
         "selected_account": selected_account,
         "alias_map": import_service.lookup_simplefin_names(db),
         "sample_map": import_service.sample_raw_transactions(db),
+        "review_map": import_service.review_raw_transactions(db),
         "start_default": start_default.isoformat(),
         "end_default": end_default.isoformat(),
         "simplefin_configured": bool(settings.simplefin_access_url),
@@ -64,13 +65,16 @@ def _result_context(
     result: import_service.ImportRunResult | None,
 ) -> dict:
     sample_map = import_service.sample_raw_transactions(db)
+    review_map = import_service.review_raw_transactions(db)
     latest_import_at, latest_transaction_date = import_service.account_import_stats(db, account_id)
     return {
         "account_id": account_id,
         "error": error,
         "result": result,
         "samples": sample_map.get(account_id, []),
+        "review_rows": review_map.get(account_id, []),
         "raw_staged_count": import_service.staged_raw_count(db, account_id),
+        "needs_review_count": import_service.needs_review_count(db, account_id),
         "latest_import_at": latest_import_at,
         "latest_transaction_date": latest_transaction_date,
         "oob": True,
@@ -102,6 +106,7 @@ def run_import(
                 mode=import_mode,  # type: ignore[arg-type]
             )
         except (ValueError, SimpleFinError) as exc:
+            db.rollback()
             error = str(exc)
         except Exception as exc:
             db.rollback()
@@ -149,6 +154,7 @@ async def run_csv_import(
             column_overrides=column_overrides,
         )
     except (ValueError, CsvImportError) as exc:
+        db.rollback()
         error = str(exc)
     except Exception as exc:
         db.rollback()

@@ -13,7 +13,11 @@ from app.config import settings
 from app.models import Account, ImportBatch, RawTransaction, TransactionAccount
 from app.services.csv_import import CsvImportError, CsvTableRegion, parse_csv_rows
 from app.services.ingest_staging import StageResult, stage_csv_rows, stage_simplefin_account
-from app.services.promote_staging import PromoteResult, promote_raw_transactions
+from app.services.promote_staging import (
+    PROMOTION_STATUS_NEEDS_REVIEW,
+    PromoteResult,
+    promote_raw_transactions,
+)
 from app.services.simplefin import (
     SimpleFinError,
     api_errors,
@@ -40,12 +44,22 @@ class RawSampleRow:
 
 
 @dataclass
+class ReviewRawRow:
+    id: int
+    transaction_date: date | None
+    amount: Decimal | None
+    description: str
+    promotion_note: str
+
+
+@dataclass
 class ImportableAccount:
     id: int
     account_name: str | None
     import_transactions: int | None
     simplefin_source_name: str | None
     raw_staged_count: int
+    needs_review_count: int = 0
     latest_import_at: datetime | None = None
     latest_transaction_date: date | None = None
 
@@ -115,6 +129,16 @@ def list_importable_accounts(db: Session) -> list[ImportableAccount]:
             .group_by(RawTransaction.account_id)
         ).all()
     )
+    review_counts = dict(
+        db.execute(
+            select(RawTransaction.account_id, func.count())
+            .where(
+                RawTransaction.bank_transaction_id.is_(None),
+                RawTransaction.promotion_status == PROMOTION_STATUS_NEEDS_REVIEW,
+            )
+            .group_by(RawTransaction.account_id)
+        ).all()
+    )
     import_stats = lookup_account_import_stats(db)
     results: list[ImportableAccount] = []
     for account in rows:
@@ -126,6 +150,7 @@ def list_importable_accounts(db: Session) -> list[ImportableAccount]:
                 import_transactions=account.import_transactions,
                 simplefin_source_name=SIMPLEFIN_SOURCE_BY_ACCOUNT_ID.get(account.id),
                 raw_staged_count=int(raw_counts.get(account.id, 0)),
+                needs_review_count=int(review_counts.get(account.id, 0)),
                 latest_import_at=latest_import_at,
                 latest_transaction_date=latest_transaction_date,
             )
@@ -256,6 +281,47 @@ def staged_raw_count(db: Session, account_id: int) -> int:
         )
     )
     return int(count or 0)
+
+
+def needs_review_count(db: Session, account_id: int) -> int:
+    count = db.scalar(
+        select(func.count())
+        .select_from(RawTransaction)
+        .where(
+            RawTransaction.account_id == account_id,
+            RawTransaction.bank_transaction_id.is_(None),
+            RawTransaction.promotion_status == PROMOTION_STATUS_NEEDS_REVIEW,
+        )
+    )
+    return int(count or 0)
+
+
+def review_raw_transactions(db: Session, *, limit: int = 20) -> dict[int, list[ReviewRawRow]]:
+    """Raw rows held for promotion review (ambiguous ledger-key matches)."""
+    rows = db.execute(
+        select(RawTransaction)
+        .where(
+            RawTransaction.bank_transaction_id.is_(None),
+            RawTransaction.promotion_status == PROMOTION_STATUS_NEEDS_REVIEW,
+        )
+        .order_by(RawTransaction.account_id, RawTransaction.id.desc())
+    ).scalars().all()
+
+    review_map: dict[int, list[ReviewRawRow]] = {}
+    for raw in rows:
+        bucket = review_map.setdefault(raw.account_id, [])
+        if len(bucket) >= limit:
+            continue
+        bucket.append(
+            ReviewRawRow(
+                id=raw.id,
+                transaction_date=raw.transaction_date,
+                amount=raw.amount,
+                description=(raw.bank_orig_description or "")[:80],
+                promotion_note=raw.promotion_note or "",
+            )
+        )
+    return review_map
 
 
 def sample_raw_transactions(db: Session, *, limit: int = 10) -> dict[int, list[RawSampleRow]]:

@@ -112,7 +112,9 @@ Bank exports often include title and footer lines; the importer scans for the re
 | Staging | `dedupe_hash` (account, date, amount, description) | `ON CONFLICT DO NOTHING` |
 | Staging | `source_external_id` (SimpleFIN txn id) | unique partial index; `ON CONFLICT DO NOTHING` |
 | Promotion | `bank_transaction_id` on raw | skip already-linked rows |
-| Promotion | `source_external_id` or ledger 4-tuple | link to existing `bank_transactions` row |
+| Promotion | `source_external_id` or ledger 4-tuple | link to existing `bank_transactions` row; ambiguous matches → `needs_review` holding |
 | Promotion | `external_id` on insert | `ON CONFLICT DO NOTHING`; SimpleFIN ids map to `2_000_000_000_000+` range |
 
 Writes `import_batches` (`source=simplefin`, `status=staged|partial|promoted`) and links `raw_transactions.bank_transaction_id`.
+
+Rows that match multiple unlinked `bank_transactions` on the same ledger key are kept in `raw_transactions` with `promotion_status=needs_review` and a `promotion_note` explaining the conflict. Other rows in the same import still promote normally.

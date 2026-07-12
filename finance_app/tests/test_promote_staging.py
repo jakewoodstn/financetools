@@ -4,8 +4,11 @@ from decimal import Decimal
 from app.services.ingest_staging import dedupe_hash
 from app.services.promote_staging import (
     SIMPLEFIN_EXTERNAL_ID_BASE,
+    LedgerRowSnapshot,
     bank_transaction_values,
     external_id_from_source,
+    format_promote_conflict_message,
+    snapshot_from_raw,
 )
 
 
@@ -43,3 +46,55 @@ def test_dedupe_hash_matches_promotion_tuple():
     h = dedupe_hash(3, date(2026, 7, 1), Decimal("10.00"), "Interest Paid")
     h2 = dedupe_hash(3, date(2026, 7, 1), Decimal("10.00"), "Interest Paid")
     assert h == h2
+
+
+def test_promote_conflict_message_lists_incoming_and_existing_rows():
+    incoming = LedgerRowSnapshot(
+        source="raw_transactions",
+        row_id=99,
+        account_id=1,
+        transaction_date=date(2026, 1, 2),
+        amount=Decimal("-69.34"),
+        bank_orig_description="TST*BURGER UP",
+    )
+    existing = [
+        LedgerRowSnapshot(
+            source="bank_transactions",
+            row_id=10,
+            account_id=1,
+            transaction_date=date(2026, 1, 2),
+            amount=Decimal("-69.34"),
+            bank_orig_description="TST*BURGER UP",
+            external_id=100001,
+        ),
+        LedgerRowSnapshot(
+            source="bank_transactions",
+            row_id=11,
+            account_id=1,
+            transaction_date=date(2026, 1, 2),
+            amount=Decimal("-69.34"),
+            bank_orig_description="TST*BURGER UP",
+            external_id=100002,
+        ),
+    ]
+    message = format_promote_conflict_message(incoming, existing)
+    assert "Held for review" in message
+    assert "Incoming:" in message
+    assert "Existing:" in message
+    assert "raw_transactions #99" in message
+    assert "bank_transactions #10" in message
+    assert "bank_transactions #11" in message
+    assert "external_id=100001" in message
+
+
+def test_snapshot_from_raw():
+    class Raw:
+        id = 42
+        account_id = 4
+        transaction_date = date(2026, 7, 10)
+        amount = Decimal("1.00")
+        bank_orig_description = "Coffee"
+
+    snap = snapshot_from_raw(Raw())  # type: ignore[arg-type]
+    assert snap.source == "raw_transactions"
+    assert snap.row_id == 42

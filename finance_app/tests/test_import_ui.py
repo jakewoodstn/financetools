@@ -39,4 +39,4 @@ def test_csv_upload_endpoint():
         files={"file": ("bank_download.csv", csv_bytes, "text/csv")},
     )
     assert response.status_code == 200
-    assert "CSV imported" in response.text or "Failed" in response.text
+    assert "Held for review" in response.text or "Failed" in response.text

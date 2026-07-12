@@ -409,6 +409,15 @@ input[type="date"] {
   border-color: #fca5a5;
 }
 
+.error-detail {
+  margin: 0.5rem 0 0;
+  padding: 0;
+  font: inherit;
+  font-size: 0.8rem;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
 .result-stats {
   display: grid;
   grid-template-columns: auto 1fr;
@@ -446,6 +455,79 @@ input[type="date"] {
   margin-bottom: 0;
   padding-top: 1rem;
   border-top: 1px solid #eef1f5;
+}
+
+.review-block {
+  margin-top: 1.25rem;
+  padding-top: 1rem;
+  border-top: 1px solid #eef1f5;
+}
+
+.review-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.review-item {
+  font-size: 0.8rem;
+  border: 1px solid #fcd34d;
+  border-radius: 6px;
+  background: #fffbeb;
+  padding: 0.35rem 0.5rem;
+}
+
+.review-item summary {
+  cursor: pointer;
+  list-style: none;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem 0.75rem;
+  align-items: baseline;
+}
+
+.review-item summary::-webkit-details-marker {
+  display: none;
+}
+
+.review-date {
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.review-desc {
+  flex: 1 1 12rem;
+  min-width: 0;
+  word-break: break-word;
+}
+
+.review-amount {
+  font-variant-numeric: tabular-nums;
+}
+
+.review-badge {
+  background: #fef3c7;
+  color: #92400e;
+}
+
+.review-note {
+  margin: 0.5rem 0 0;
+  padding: 0;
+  font: inherit;
+  font-size: 0.75rem;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+.review-result-block {
+  margin-top: 0.75rem;
+  padding-top: 0.75rem;
+  border-top: 1px solid #fcd34d;
+}
+
+.review-result-heading {
+  margin: 0 0 0.5rem;
+  font-size: 0.85rem;
 }
 
 .sample-heading {

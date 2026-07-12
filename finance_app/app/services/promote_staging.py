@@ -4,9 +4,10 @@ from __future__ import annotations
 
 import hashlib
 from dataclasses import dataclass, field
-from datetime import datetime, timezone
+from datetime import date, datetime, timezone
+from decimal import Decimal
 
-from sqlalchemy import func, select, update
+from sqlalchemy import func, or_, select, update
 from sqlalchemy.dialects.postgresql import insert
 from sqlalchemy.orm import Session
 
@@ -16,6 +17,104 @@ from app.models import Account, BankTransaction, ImportBatch, RawTransaction
 SIMPLEFIN_EXTERNAL_ID_BASE = 2_000_000_000_000
 
 
+@dataclass(frozen=True)
+class LedgerRowSnapshot:
+    """Ledger 4-tuple row for promotion conflict reporting."""
+
+    source: str
+    row_id: int
+    account_id: int
+    transaction_date: date | None
+    amount: Decimal | None
+    bank_orig_description: str | None
+    external_id: int | None = None
+
+
+class PromoteConflictError(Exception):
+    """Formatted ledger-key ambiguity (used for review notes, not batch abort)."""
+
+    def __init__(self, incoming: LedgerRowSnapshot, existing: list[LedgerRowSnapshot]):
+        self.incoming = incoming
+        self.existing = existing
+        super().__init__(format_promote_conflict_message(incoming, existing))
+
+
+PROMOTION_STATUS_NEEDS_REVIEW = "needs_review"
+
+
+@dataclass(frozen=True)
+class PromoteReviewItem:
+    raw_id: int
+    transaction_date: date | None
+    amount: Decimal | None
+    description: str
+    note: str
+
+
+def snapshot_from_raw(raw: RawTransaction) -> LedgerRowSnapshot:
+    return LedgerRowSnapshot(
+        source="raw_transactions",
+        row_id=raw.id,
+        account_id=raw.account_id,
+        transaction_date=raw.transaction_date,
+        amount=raw.amount,
+        bank_orig_description=raw.bank_orig_description,
+    )
+
+
+def snapshot_from_bank(bank: BankTransaction) -> LedgerRowSnapshot:
+    return LedgerRowSnapshot(
+        source="bank_transactions",
+        row_id=bank.id,
+        account_id=bank.account_id,
+        transaction_date=bank.transaction_date,
+        amount=bank.amount,
+        bank_orig_description=bank.bank_orig_description,
+        external_id=bank.external_id,
+    )
+
+
+def format_ledger_row_line(row: LedgerRowSnapshot) -> str:
+    desc = (row.bank_orig_description or "").strip() or "—"
+    amount = f"{row.amount}" if row.amount is not None else "—"
+    txn_date = row.transaction_date.isoformat() if row.transaction_date else "—"
+    parts = [
+        f"{row.source} #{row.row_id}",
+        f"account={row.account_id}",
+        f"date={txn_date}",
+        f"amount={amount}",
+        f'description="{desc}"',
+    ]
+    if row.external_id is not None:
+        parts.insert(1, f"external_id={row.external_id}")
+    return "  " + "  ".join(parts)
+
+
+def format_promote_conflict_message(
+    incoming: LedgerRowSnapshot,
+    existing: list[LedgerRowSnapshot],
+) -> str:
+    lines = [
+        (
+            f"Held for review: {len(existing)} existing bank_transactions match the same "
+            f"ledger key (account, date, amount, bank_orig_description) as this raw row."
+        ),
+        "",
+        "Incoming:",
+        format_ledger_row_line(incoming),
+        "",
+        "Existing:",
+    ]
+    lines.extend(format_ledger_row_line(row) for row in existing)
+    lines.extend(
+        [
+            "",
+            "Link manually to one existing row, or clear review status after fixing bank duplicates.",
+        ]
+    )
+    return "\n".join(lines)
+
+
 @dataclass
 class PromoteResult:
     candidates: int = 0
@@ -23,6 +122,8 @@ class PromoteResult:
     linked_existing: int = 0
     skipped_already_linked: int = 0
     skipped_import_disabled: int = 0
+    needs_review: int = 0
+    review_items: list[PromoteReviewItem] = field(default_factory=list)
     import_batch_ids: list[int] = field(default_factory=list)
 
 
@@ -62,17 +163,42 @@ def bank_transaction_values(
     )
 
 
-def _find_bank_by_ledger_tuple(db: Session, raw: RawTransaction) -> BankTransaction | None:
+def _linked_bank_transaction_ids_subquery():
+    return select(RawTransaction.bank_transaction_id).where(
+        RawTransaction.bank_transaction_id.is_not(None)
+    )
+
+
+def _find_banks_by_ledger_tuple(db: Session, raw: RawTransaction) -> list[BankTransaction]:
     if raw.transaction_date is None or raw.amount is None:
-        return None
-    return db.execute(
-        select(BankTransaction).where(
-            BankTransaction.account_id == raw.account_id,
-            BankTransaction.transaction_date == raw.transaction_date,
-            BankTransaction.amount == raw.amount,
-            BankTransaction.bank_orig_description == raw.bank_orig_description,
-        )
-    ).scalar_one_or_none()
+        return []
+    return list(
+        db.scalars(
+            select(BankTransaction).where(
+                BankTransaction.account_id == raw.account_id,
+                BankTransaction.transaction_date == raw.transaction_date,
+                BankTransaction.amount == raw.amount,
+                BankTransaction.bank_orig_description == raw.bank_orig_description,
+            )
+        ).all()
+    )
+
+
+def _find_unlinked_banks_by_ledger_tuple(db: Session, raw: RawTransaction) -> list[BankTransaction]:
+    if raw.transaction_date is None or raw.amount is None:
+        return []
+    linked_ids = _linked_bank_transaction_ids_subquery()
+    return list(
+        db.scalars(
+            select(BankTransaction).where(
+                BankTransaction.account_id == raw.account_id,
+                BankTransaction.transaction_date == raw.transaction_date,
+                BankTransaction.amount == raw.amount,
+                BankTransaction.bank_orig_description == raw.bank_orig_description,
+                BankTransaction.id.not_in(linked_ids),
+            )
+        ).all()
+    )
 
 
 def _find_bank_by_source_external_id(db: Session, source_external_id: str) -> int | None:
@@ -103,7 +229,30 @@ def _link_raw_to_bank(db: Session, raw_id: int, bank_id: int) -> None:
     db.execute(
         update(RawTransaction)
         .where(RawTransaction.id == raw_id, RawTransaction.bank_transaction_id.is_(None))
-        .values(bank_transaction_id=bank_id)
+        .values(
+            bank_transaction_id=bank_id,
+            promotion_status=None,
+            promotion_note=None,
+        )
+    )
+
+
+def _mark_needs_review(db: Session, raw: RawTransaction, note: str) -> PromoteReviewItem:
+    db.execute(
+        update(RawTransaction)
+        .where(RawTransaction.id == raw.id)
+        .values(
+            promotion_status=PROMOTION_STATUS_NEEDS_REVIEW,
+            promotion_note=note,
+        )
+    )
+    description = (raw.bank_orig_description or "")[:80]
+    return PromoteReviewItem(
+        raw_id=raw.id,
+        transaction_date=raw.transaction_date,
+        amount=raw.amount,
+        description=description,
+        note=note,
     )
 
 
@@ -115,7 +264,13 @@ def _promotable_raw_query(
     stmt = (
         select(RawTransaction, Account.import_transactions)
         .join(Account, RawTransaction.account_id == Account.id)
-        .where(RawTransaction.bank_transaction_id.is_(None))
+        .where(
+            RawTransaction.bank_transaction_id.is_(None),
+            or_(
+                RawTransaction.promotion_status.is_(None),
+                RawTransaction.promotion_status != PROMOTION_STATUS_NEEDS_REVIEW,
+            ),
+        )
         .order_by(RawTransaction.id)
     )
     if account_id is not None:
@@ -159,10 +314,19 @@ def promote_raw_transactions(
                 linked_existing = True
 
         if bank_id is None:
-            existing = _find_bank_by_ledger_tuple(db, raw)
-            if existing is not None:
-                bank_id = existing.id
+            unlinked_rows = _find_unlinked_banks_by_ledger_tuple(db, raw)
+            if len(unlinked_rows) == 1:
+                bank_id = unlinked_rows[0].id
                 linked_existing = True
+            elif len(unlinked_rows) > 1:
+                note = format_promote_conflict_message(
+                    snapshot_from_raw(raw),
+                    [snapshot_from_bank(row) for row in unlinked_rows],
+                )
+                review_item = _mark_needs_review(db, raw, note)
+                result.needs_review += 1
+                result.review_items.append(review_item)
+                continue
 
         if bank_id is None:
             if raw.source_external_id:
@@ -200,7 +364,12 @@ def _refresh_import_batch_status(db: Session, import_batch_id: int) -> None:
             RawTransaction.bank_transaction_id.is_not(None),
         )
     )
-    if not total or not promoted:
+    if not total:
         return
-    status = "promoted" if promoted == total else "partial"
+    if not promoted:
+        status = "staged"
+    elif promoted == total:
+        status = "promoted"
+    else:
+        status = "partial"
     db.execute(update(ImportBatch).where(ImportBatch.id == import_batch_id).values(status=status))
