@@ -1,12 +1,10 @@
 #!/usr/bin/env python3
-"""Fetch SimpleFIN transactions and stage them in raw_transactions.
-
-Does not promote to bank_transactions (Phase 3 step 3 — later).
+"""Fetch SimpleFIN transactions, stage to raw_transactions, and optionally promote.
 
 Usage:
     cd finance_app
     uv run python scripts/stage_simplefin.py
-    uv run python scripts/stage_simplefin.py --days 30
+    uv run python scripts/stage_simplefin.py --days 30 --promote
     uv run python scripts/stage_simplefin.py --account 3 --account 4 --days 30
 """
 
@@ -20,6 +18,7 @@ from app.config import settings
 from app.database import SessionLocal
 from app.services import import_control
 from app.services.ingest_staging import stage_simplefin_accounts
+from app.services.promote_staging import promote_raw_transactions
 from app.services.simplefin import SimpleFinError, api_errors, fetch_account_set, parse_accounts, validate_access_url
 
 
@@ -38,6 +37,11 @@ def _print_stage_result(account_id: int, result: import_control.ImportRunResult)
         print("  api_errors:")
         for err in stage.api_errors:
             print(f"    - {err}")
+    if result.promote is not None:
+        promote = result.promote
+        print(f"  promote_candidates: {promote.candidates}")
+        print(f"  promote_inserted: {promote.promoted}")
+        print(f"  promote_linked_existing: {promote.linked_existing}")
 
 
 def main() -> None:
@@ -61,6 +65,11 @@ def main() -> None:
         choices=("merge", "replace"),
         default="merge",
         help="Merge skips dedupe hits; replace clears unstaged rows in the date window first",
+    )
+    parser.add_argument(
+        "--promote",
+        action="store_true",
+        help="After staging all mapped accounts, promote unstaged raw rows to bank_transactions",
     )
     args = parser.parse_args()
 
@@ -103,6 +112,11 @@ def main() -> None:
     db = SessionLocal()
     try:
         result = stage_simplefin_accounts(db, accounts, api_errors=api_errors(payload))
+        if args.promote:
+            promote = promote_raw_transactions(db)
+            print(f"promote_candidates: {promote.candidates}")
+            print(f"promote_inserted: {promote.promoted}")
+            print(f"promote_linked_existing: {promote.linked_existing}")
     finally:
         db.close()
 

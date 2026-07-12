@@ -12,6 +12,7 @@ from sqlalchemy.orm import Session
 from app.config import settings
 from app.models import Account, RawTransaction, TransactionAccount
 from app.services.ingest_staging import StageResult, stage_simplefin_account
+from app.services.promote_staging import PromoteResult, promote_raw_transactions
 from app.services.simplefin import (
     SimpleFinError,
     api_errors,
@@ -54,6 +55,7 @@ class ImportRunResult:
     start_date: date
     end_date: date
     stage: StageResult
+    promote: PromoteResult | None
     simplefin_found: bool
 
 
@@ -122,6 +124,7 @@ def run_simplefin_import(
             start_date=start_date,
             end_date=end_date,
             stage=stage,
+            promote=None,
             simplefin_found=False,
         )
 
@@ -134,6 +137,7 @@ def run_simplefin_import(
         mode=mode,
         api_errors=api_errors(payload),
     )
+    promote = promote_raw_transactions(db, account_id=account_id)
     return ImportRunResult(
         account_id=account_id,
         account_name=account.account_name,
@@ -141,6 +145,7 @@ def run_simplefin_import(
         start_date=start_date,
         end_date=end_date,
         stage=stage,
+        promote=promote,
         simplefin_found=True,
     )
 
@@ -171,14 +176,13 @@ def staged_raw_count(db: Session, account_id: int) -> int:
 
 
 def sample_raw_transactions(db: Session, *, limit: int = 10) -> dict[int, list[RawSampleRow]]:
-    """Latest unstaged raw rows per account (description truncated to 30 chars)."""
+    """Latest raw import rows per account (description truncated to 30 chars)."""
     rows = db.execute(
         select(
             RawTransaction.account_id,
             RawTransaction.transaction_date,
             RawTransaction.bank_orig_description,
         )
-        .where(RawTransaction.bank_transaction_id.is_(None))
         .order_by(
             RawTransaction.account_id,
             RawTransaction.transaction_date.desc().nullslast(),

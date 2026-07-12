@@ -24,6 +24,12 @@
     <dd>{{ result.stage.inserted }}</dd>
     <dt>Skipped (dup)</dt>
     <dd>{{ result.stage.skipped_duplicate }}</dd>
+    {% if result.promote %}
+    <dt>Promoted</dt>
+    <dd>{{ result.promote.promoted }}</dd>
+    <dt>Linked existing</dt>
+    <dd>{{ result.promote.linked_existing }}</dd>
+    {% endif %}
     <dt>Batch</dt>
     <dd>#{{ result.stage.import_batch_id }}</dd>
   </dl>

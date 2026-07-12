@@ -57,6 +57,9 @@ def run_import(
             )
         except (ValueError, SimpleFinError) as exc:
             error = str(exc)
+        except Exception as exc:
+            db.rollback()
+            error = f"{type(exc).__name__}: {exc}"
 
     sample_map = import_service.sample_raw_transactions(db)
     return templates.TemplateResponse(

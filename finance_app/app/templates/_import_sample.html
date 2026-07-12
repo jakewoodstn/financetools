@@ -1,5 +1,5 @@
 <div id="sample-{{ account_id }}" class="sample-block"{% if oob %} hx-swap-oob="true"{% endif %}>
-  <h3 class="sample-heading">Staged sample <span class="hint">(latest 10)</span></h3>
+  <h3 class="sample-heading">Recent imports <span class="hint">(latest 10)</span></h3>
   {% if samples %}
   <table class="sample-table">
     <thead>
@@ -18,6 +18,6 @@
     </tbody>
   </table>
   {% else %}
-  <p class="muted card-note">No staged rows yet.</p>
+  <p class="muted card-note">No import rows yet.</p>
   {% endif %}
 </div>

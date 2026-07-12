@@ -207,6 +207,7 @@ class RawTransaction(Base):
     bank_orig_description: Mapped[str | None] = mapped_column(String(1000))
     import_category: Mapped[str | None] = mapped_column(String(100))
     dedupe_hash: Mapped[str] = mapped_column(String(64), unique=True)
+    source_external_id: Mapped[str | None] = mapped_column(String(200))
     bank_transaction_id: Mapped[int | None] = mapped_column(ForeignKey("bank_transactions.id"))
 
     import_batch: Mapped[ImportBatch] = relationship(back_populates="raw_transactions")

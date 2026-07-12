@@ -76,15 +76,34 @@ Stored in `transaction_accounts.name` (upserted on each migration run).
 
 CI loads `tools/fixtures/sample/data.sql` and validates against `tools/fixtures/sample/manifest.json` on every push.
 
-### SimpleFIN ingest (Phase 3 — partial)
+### SimpleFIN ingest (Phase 3)
 
-Fetch and stage only (promotion to `bank_transactions` not yet implemented):
+**Stage** — fetch from Bridge into `raw_transactions`:
 
 ```bash
 cd finance_app
 uv run python scripts/stage_simplefin.py          # Bridge default window
-uv run python scripts/stage_simplefin.py --days 30
+uv run python scripts/stage_simplefin.py --days 30 --promote
 uv run python scripts/stage_simplefin.py --account 3 --account 4 --days 30
 ```
 
-Writes `import_batches` (`source=simplefin`, `status=staged`) and `raw_transactions` with dedupe on `(account_id, transaction_date, amount, bank_orig_description)`.
+**Promote** — copy unstaged raw rows into `bank_transactions` (accounts where `import_transactions=1`):
+
+```bash
+uv run python scripts/promote_staging.py
+uv run python scripts/promote_staging.py --account 4
+```
+
+The `/import` UI stages and promotes per account in one step.
+
+#### Idempotency
+
+| Layer | Key | Behavior |
+| --- | --- | --- |
+| Staging | `dedupe_hash` (account, date, amount, description) | `ON CONFLICT DO NOTHING` |
+| Staging | `source_external_id` (SimpleFIN txn id) | unique partial index; `ON CONFLICT DO NOTHING` |
+| Promotion | `bank_transaction_id` on raw | skip already-linked rows |
+| Promotion | `source_external_id` or ledger 4-tuple | link to existing `bank_transactions` row |
+| Promotion | `external_id` on insert | `ON CONFLICT DO NOTHING`; SimpleFIN ids map to `2_000_000_000_000+` range |
+
+Writes `import_batches` (`source=simplefin`, `status=staged|partial|promoted`) and links `raw_transactions.bank_transaction_id`.

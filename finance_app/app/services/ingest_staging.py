@@ -8,7 +8,7 @@ from datetime import date
 from decimal import Decimal
 from typing import Literal
 
-from sqlalchemy import delete, select
+from sqlalchemy import delete, select, update
 from sqlalchemy.dialects.postgresql import insert
 from sqlalchemy.orm import Session
 
@@ -149,6 +149,7 @@ def _insert_raw_transaction(
     mode: ImportMode = "merge",
 ) -> bool:
     digest = dedupe_hash(account_id, txn.transaction_date, txn.amount, txn.bank_orig_description)
+    source_external_id = txn.external_id.strip() if txn.external_id else None
     values = dict(
         import_batch_id=import_batch_id,
         account_id=account_id,
@@ -157,19 +158,9 @@ def _insert_raw_transaction(
         bank_orig_description=txn.bank_orig_description or None,
         import_category="pending" if txn.pending else None,
         dedupe_hash=digest,
+        source_external_id=source_external_id,
         bank_transaction_id=None,
     )
-    if mode == "merge":
-        stmt = (
-            insert(RawTransaction)
-            .values(**values)
-            .on_conflict_do_nothing(index_elements=[RawTransaction.dedupe_hash])
-            .returning(RawTransaction.id)
-        )
-        inserted_id = db.execute(stmt).scalar_one_or_none()
-        db.flush()
-        return inserted_id is not None
-
     stmt = (
         insert(RawTransaction)
         .values(**values)
@@ -177,5 +168,14 @@ def _insert_raw_transaction(
         .returning(RawTransaction.id)
     )
     inserted_id = db.execute(stmt).scalar_one_or_none()
+    if inserted_id is None and source_external_id:
+        db.execute(
+            update(RawTransaction)
+            .where(
+                RawTransaction.dedupe_hash == digest,
+                RawTransaction.source_external_id.is_(None),
+            )
+            .values(source_external_id=source_external_id)
+        )
     db.flush()
     return inserted_id is not None

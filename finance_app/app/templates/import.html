@@ -25,8 +25,9 @@
     {% endif %}
 
     <p class="intro">
-      Fetches from SimpleFIN Bridge and writes to <code>raw_transactions</code> (not promoted to bank transactions yet).
-      <strong>Merge</strong> skips rows that already exist (dedupe hash).
+      Fetches from SimpleFIN Bridge, writes to <code>raw_transactions</code>, then promotes unstaged rows to
+      <code>bank_transactions</code> for accounts with <code>import_transactions=1</code>.
+      <strong>Merge</strong> skips rows that already exist (dedupe hash or SimpleFIN id).
       <strong>Replace</strong> deletes unstaged raw rows in the date window, then re-imports.
     </p>
 

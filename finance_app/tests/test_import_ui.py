@@ -10,4 +10,4 @@ def test_import_page_loads():
     assert "Import Control" in response.text
     assert "Merge" in response.text
     assert "Replace" in response.text
-    assert "Staged sample" in response.text
+    assert "Recent imports" in response.text
