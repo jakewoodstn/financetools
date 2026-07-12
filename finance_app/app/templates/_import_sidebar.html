@@ -11,7 +11,9 @@
       <span class="account-nav-name">{{ account.account_name or ("Account " ~ account.id) }}</span>
           <span class="account-nav-meta">
             <span id="nav-staged-{{ account.id }}">{{ account.raw_staged_count }}</span> staged
-            {% if account.needs_review_count %} · <span id="nav-review-{{ account.id }}">{{ account.needs_review_count }}</span> review{% endif %}
+            {% if account.needs_review_count %}
+            · <a href="/import/review?account={{ account.id }}" class="account-nav-review" id="nav-review-{{ account.id }}">{{ account.needs_review_count }} review</a>
+            {% endif %}
         {% if account.simplefin_source_name %} · SF{% endif %}
         {% if account.import_transactions %} · CSV{% endif %}
       </span>

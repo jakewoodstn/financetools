@@ -30,6 +30,14 @@ def test_import_compare_redirects_to_import():
     assert response.headers["location"] == "/import?account=2"
 
 
+def test_import_review_page_loads():
+    client = TestClient(app)
+    response = client.get("/import/review")
+    assert response.status_code == 200
+    assert "Import Review" in response.text
+    assert "Promote as new" in response.text
+
+
 def test_csv_upload_endpoint():
     client = TestClient(app)
     csv_bytes = (FIXTURES / "bank_download.csv").read_bytes()
@@ -39,4 +47,4 @@ def test_csv_upload_endpoint():
         files={"file": ("bank_download.csv", csv_bytes, "text/csv")},
     )
     assert response.status_code == 200
-    assert "Held for review" in response.text or "Failed" in response.text
+    assert "CSV imported" in response.text or "Failed" in response.text

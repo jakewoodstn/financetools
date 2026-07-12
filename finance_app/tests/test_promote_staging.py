@@ -98,3 +98,25 @@ def test_snapshot_from_raw():
     snap = snapshot_from_raw(Raw())  # type: ignore[arg-type]
     assert snap.source == "raw_transactions"
     assert snap.row_id == 42
+
+
+def test_ledger_tuple_matches():
+    from app.services.promote_staging import _ledger_tuple_matches
+
+    class Raw:
+        account_id = 1
+        transaction_date = date(2026, 1, 2)
+        amount = Decimal("-10.00")
+        bank_orig_description = "STARBUCKS"
+
+    class Bank:
+        account_id = 1
+        transaction_date = date(2026, 1, 2)
+        amount = Decimal("-10.00")
+        bank_orig_description = "STARBUCKS"
+
+    class BankMismatch(Bank):
+        amount = Decimal("-11.00")
+
+    assert _ledger_tuple_matches(Raw(), Bank())  # type: ignore[arg-type]
+    assert not _ledger_tuple_matches(Raw(), BankMismatch())  # type: ignore[arg-type]

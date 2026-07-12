@@ -1,97 +1,174 @@
-{% if error %}
-<div class="result result-error">
-  <strong>Failed</strong>
-  <pre class="error-detail">{{ error }}</pre>
-</div>
-{% elif result %}
-<div class="result {% if result.promote and result.promote.needs_review %}result-warn{% elif result.simplefin_found %}result-ok{% else %}result-warn{% endif %}">
-  {% if result.source == "csv" %}
-  <strong>CSV imported</strong> — {{ result.account_name or ("Account " ~ result.account_id) }}
-  {% elif not result.simplefin_found %}
-  <strong>SimpleFIN account not found</strong> — expected name in Bridge response.
-  {% else %}
-  <strong>Done</strong> — {{ result.account_name or ("Account " ~ result.account_id) }}
-  {% endif %}
-  <dl class="result-stats">
-    {% if result.source == "csv" and result.filename %}
-    <dt>File</dt>
-    <dd class="mono">{{ result.filename }}</dd>
-    {% endif %}
-    {% if result.start_date and result.end_date %}
-    <dt>Window</dt>
-    <dd>{{ result.start_date }} → {{ result.end_date }}</dd>
-    {% endif %}
-    <dt>Mode</dt>
-    <dd>{{ result.mode }}</dd>
-    {% if result.source == "csv" and result.column_mapping %}
-    <dt>Columns</dt>
-    <dd class="mono">
-      date={{ result.column_mapping.transaction_date }},
-      amount={{ result.column_mapping.amount }},
-      desc={{ result.column_mapping.description }}
-      {% if result.column_mapping.category %}, category={{ result.column_mapping.category }}{% endif %}
-    </dd>
-    {% endif %}
-    {% if result.source == "csv" and result.csv_region %}
-    <dt>File layout</dt>
-    <dd>header line {{ result.csv_region.header_line }}, skipped {{ result.csv_region.skipped_top }} top / {{ result.csv_region.skipped_bottom }} bottom</dd>
-    {% endif %}
-    <dt>Rows</dt>
-    <dd>{{ result.stage.transactions_fetched }}</dd>
-    {% if result.mode == "replace" %}
-    <dt>Deleted</dt>
-    <dd>{{ result.stage.deleted }}</dd>
-    {% endif %}
-    <dt>Inserted</dt>
-    <dd>{{ result.stage.inserted }}</dd>
-    <dt>Skipped (dup)</dt>
-    <dd>{{ result.stage.skipped_duplicate }}</dd>
-    {% if result.promote %}
-    <dt>Promoted</dt>
-    <dd>{{ result.promote.promoted }}</dd>
-    <dt>Linked existing</dt>
-    <dd>{{ result.promote.linked_existing }}</dd>
-    <dt>Needs review</dt>
-    <dd>{{ result.promote.needs_review }}</dd>
-    {% endif %}
-    <dt>Batch</dt>
-    <dd>#{{ result.stage.import_batch_id }}</dd>
-  </dl>
-  {% if result.promote and result.promote.review_items %}
-  <div class="review-result-block">
-    <p class="review-result-heading"><strong>{{ result.promote.needs_review }}</strong> row(s) held for review this run:</p>
-    {% for item in result.promote.review_items %}
-    <details class="review-item">
-      <summary>
-        <span class="review-date">{{ item.transaction_date or "" }}</span>
-        <span class="mono review-desc">{{ item.description }}</span>
-        <span class="badge review-badge">raw #{{ item.raw_id }}</span>
-      </summary>
-      <pre class="review-note">{{ item.note }}</pre>
-    </details>
-    {% endfor %}
-  </div>
-  {% endif %}
-  {% if result.stage.api_errors %}
-  <p class="api-errors">
-    API notices:
-    {% for msg in result.stage.api_errors %}
-    <span class="mono">{{ msg }}</span>{% if not loop.last %}; {% endif %}
-    {% endfor %}
-  </p>
-  {% endif %}
-</div>
-{% endif %}
-
-{% include "_import_sample.html" %}
-{% include "_import_review.html" %}
-
-{% from "_import_stats_macros.html" import format_import_at, format_txn_date, format_import_at_short, format_txn_date_short %}
-<dd id="staged-count-{{ account_id }}" hx-swap-oob="true">{{ raw_staged_count }}</dd>
-<dd id="needs-review-count-{{ account_id }}" hx-swap-oob="true">{{ needs_review_count }}</dd>
-<dd id="latest-import-{{ account_id }}" hx-swap-oob="true">{{ format_import_at(latest_import_at) }}</dd>
-<dd id="latest-txn-date-{{ account_id }}" hx-swap-oob="true">{{ format_txn_date(latest_transaction_date) }}</dd>
-<span id="nav-staged-{{ account_id }}" hx-swap-oob="true">{{ raw_staged_count }}</span>
-<span id="nav-review-{{ account_id }}" hx-swap-oob="true">{{ needs_review_count }}</span>
-<span id="nav-import-{{ account_id }}" hx-swap-oob="true">{{ format_import_at_short(latest_import_at) }}</span>
-<span id="nav-txn-{{ account_id }}" hx-swap-oob="true">{{ format_txn_date_short(latest_transaction_date) }}</span>
+{% if error %}
+
+<div class="result result-error">
+
+  <strong>Failed</strong>
+
+  <pre class="error-detail">{{ error }}</pre>
+
+</div>
+
+{% elif result %}
+
+<div class="result {% if result.promote and result.promote.needs_review %}result-warn{% elif result.simplefin_found %}result-ok{% else %}result-warn{% endif %}">
+
+  {% if result.source == "csv" %}
+
+  <strong>CSV imported</strong> — {{ result.account_name or ("Account " ~ result.account_id) }}
+
+  {% elif not result.simplefin_found %}
+
+  <strong>SimpleFIN account not found</strong> — expected name in Bridge response.
+
+  {% else %}
+
+  <strong>Done</strong> — {{ result.account_name or ("Account " ~ result.account_id) }}
+
+  {% endif %}
+
+  <dl class="result-stats">
+
+    {% if result.source == "csv" and result.filename %}
+
+    <dt>File</dt>
+
+    <dd class="mono">{{ result.filename }}</dd>
+
+    {% endif %}
+
+    {% if result.start_date and result.end_date %}
+
+    <dt>Window</dt>
+
+    <dd>{{ result.start_date }} → {{ result.end_date }}</dd>
+
+    {% endif %}
+
+    <dt>Mode</dt>
+
+    <dd>{{ result.mode }}</dd>
+
+    {% if result.source == "csv" and result.column_mapping %}
+
+    <dt>Columns</dt>
+
+    <dd class="mono">
+
+      date={{ result.column_mapping.transaction_date }},
+
+      amount={{ result.column_mapping.amount }},
+
+      desc={{ result.column_mapping.description }}
+
+      {% if result.column_mapping.category %}, category={{ result.column_mapping.category }}{% endif %}
+
+    </dd>
+
+    {% endif %}
+
+    {% if result.source == "csv" and result.csv_region %}
+
+    <dt>File layout</dt>
+
+    <dd>header line {{ result.csv_region.header_line }}, skipped {{ result.csv_region.skipped_top }} top / {{ result.csv_region.skipped_bottom }} bottom</dd>
+
+    {% endif %}
+
+    <dt>Rows</dt>
+
+    <dd>{{ result.stage.transactions_fetched }}</dd>
+
+    {% if result.mode == "replace" %}
+
+    <dt>Deleted</dt>
+
+    <dd>{{ result.stage.deleted }}</dd>
+
+    {% endif %}
+
+    <dt>Inserted</dt>
+
+    <dd>{{ result.stage.inserted }}</dd>
+
+    <dt>Skipped (dup)</dt>
+
+    <dd>{{ result.stage.skipped_duplicate }}</dd>
+
+    {% if result.promote %}
+
+    <dt>Promoted</dt>
+
+    <dd>{{ result.promote.promoted }}</dd>
+
+    <dt>Linked existing</dt>
+
+    <dd>{{ result.promote.linked_existing }}</dd>
+
+    <dt>Needs review</dt>
+
+    <dd>{{ result.promote.needs_review }}</dd>
+
+    {% endif %}
+
+    <dt>Batch</dt>
+
+    <dd>#{{ result.stage.import_batch_id }}</dd>
+
+  </dl>
+
+  {% if result.promote and result.promote.needs_review %}
+
+  <p class="review-link-banner">
+
+    <a href="/import/review?account={{ account_id }}" class="btn-secondary">
+
+      Clear {{ result.promote.needs_review }} row(s) held for review →
+
+    </a>
+
+  </p>
+
+  {% endif %}
+
+  {% if result.stage.api_errors %}
+
+  <p class="api-errors">
+
+    API notices:
+
+    {% for msg in result.stage.api_errors %}
+
+    <span class="mono">{{ msg }}</span>{% if not loop.last %}; {% endif %}
+
+    {% endfor %}
+
+  </p>
+
+  {% endif %}
+
+</div>
+
+{% endif %}
+
+
+
+{% include "_import_sample.html" %}
+
+
+
+{% from "_import_stats_macros.html" import format_import_at, format_txn_date, format_import_at_short, format_txn_date_short %}
+
+<dd id="staged-count-{{ account_id }}" hx-swap-oob="true">{{ raw_staged_count }}</dd>
+
+<dd id="latest-import-{{ account_id }}" hx-swap-oob="true">{{ format_import_at(latest_import_at) }}</dd>
+
+<dd id="latest-txn-date-{{ account_id }}" hx-swap-oob="true">{{ format_txn_date(latest_transaction_date) }}</dd>
+
+<span id="nav-staged-{{ account_id }}" hx-swap-oob="true">{{ raw_staged_count }}</span>
+
+<span id="nav-review-{{ account_id }}" hx-swap-oob="true">{{ needs_review_count }}</span>
+
+<span id="nav-import-{{ account_id }}" hx-swap-oob="true">{{ format_import_at_short(latest_import_at) }}</span>
+
+<span id="nav-txn-{{ account_id }}" hx-swap-oob="true">{{ format_txn_date_short(latest_transaction_date) }}</span>
+

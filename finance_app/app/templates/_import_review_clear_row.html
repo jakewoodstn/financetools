@@ -1,0 +1,78 @@
+<article class="review-clear-card" id="review-row-{{ row.raw_id }}">
+  <header class="review-clear-header">
+    <h3 class="review-clear-title">
+      <span class="review-date">{{ row.transaction_date or "" }}</span>
+      <span class="review-amount">{{ row.amount if row.amount is not none else "" }}</span>
+      <span class="badge review-badge">raw #{{ row.raw_id }}</span>
+    </h3>
+    <p class="mono review-clear-desc">{{ row.description }}</p>
+  </header>
+
+  {% if error %}
+  <div class="result result-error review-clear-error">
+    <pre class="error-detail">{{ error }}</pre>
+  </div>
+  {% elif cleared %}
+  <div class="result result-ok review-clear-success">
+  {% if cleared == "linked" %}
+    <strong>Linked</strong> to bank transaction #{{ bank_id }}.
+  {% else %}
+    <strong>Promoted</strong> as new bank transaction #{{ bank_id }}.
+  {% endif %}
+  </div>
+  {% else %}
+  <details class="review-note-details">
+    <summary>Why this row is held</summary>
+    <pre class="review-note">{{ row.promotion_note }}</pre>
+  </details>
+
+  {% if row.candidates %}
+  {% set unlinked_candidates = row.candidates | rejectattr('already_linked') | list %}
+  {% if unlinked_candidates %}
+  <form
+    class="review-link-form"
+    hx-post="/import/review/{{ row.raw_id }}/link"
+    hx-target="#review-row-{{ row.raw_id }}"
+    hx-swap="outerHTML"
+  >
+    <p class="form-heading">Link to existing bank transaction</p>
+    <fieldset class="candidate-fieldset">
+      {% for candidate in row.candidates %}
+      <label class="candidate-option{% if candidate.already_linked %} candidate-linked{% endif %}">
+        <input
+          type="radio"
+          name="bank_transaction_id"
+          value="{{ candidate.bank_id }}"
+          {% if not candidate.already_linked and candidate.bank_id == unlinked_candidates[0].bank_id %}checked{% endif %}
+          {% if candidate.already_linked %}disabled{% endif %}
+          required
+        >
+        <span class="mono">
+          bank #{{ candidate.bank_id }}
+          · external_id={{ candidate.external_id }}
+          {% if candidate.already_linked %} · linked to raw #{{ candidate.linked_raw_id }}{% endif %}
+        </span>
+      </label>
+      {% endfor %}
+    </fieldset>
+    <button type="submit" class="btn-primary">Link selected</button>
+  </form>
+  {% else %}
+  <p class="muted card-note">All matching bank transactions are already linked to other raw rows.</p>
+  {% endif %}
+  {% else %}
+  <p class="muted card-note">No matching bank transactions found.</p>
+  {% endif %}
+
+  <form
+    class="review-promote-form"
+    hx-post="/import/review/{{ row.raw_id }}/promote-new"
+    hx-target="#review-row-{{ row.raw_id }}"
+    hx-swap="outerHTML"
+    hx-confirm="Insert a new bank_transactions row for this import (treat as a separate occurrence)?"
+  >
+    <p class="form-heading">Or promote as new</p>
+    <button type="submit" class="btn-secondary">Promote as new transaction</button>
+  </form>
+  {% endif %}
+</article>

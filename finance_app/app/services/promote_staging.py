@@ -51,6 +51,25 @@ class PromoteReviewItem:
     note: str
 
 
+@dataclass(frozen=True)
+class ReviewBankCandidate:
+    bank_id: int
+    external_id: int
+    already_linked: bool
+    linked_raw_id: int | None = None
+
+
+@dataclass(frozen=True)
+class ReviewRowDetail:
+    raw_id: int
+    account_id: int
+    transaction_date: date | None
+    amount: Decimal | None
+    description: str
+    promotion_note: str
+    candidates: list[ReviewBankCandidate]
+
+
 def snapshot_from_raw(raw: RawTransaction) -> LedgerRowSnapshot:
     return LedgerRowSnapshot(
         source="raw_transactions",
@@ -373,3 +392,110 @@ def _refresh_import_batch_status(db: Session, import_batch_id: int) -> None:
     else:
         status = "partial"
     db.execute(update(ImportBatch).where(ImportBatch.id == import_batch_id).values(status=status))
+
+
+def _ledger_tuple_matches(raw: RawTransaction, bank: BankTransaction) -> bool:
+    return (
+        raw.account_id == bank.account_id
+        and raw.transaction_date == bank.transaction_date
+        and raw.amount == bank.amount
+        and raw.bank_orig_description == bank.bank_orig_description
+    )
+
+
+def _linked_raw_id_for_bank(db: Session, bank_id: int) -> int | None:
+    return db.scalar(
+        select(RawTransaction.id).where(RawTransaction.bank_transaction_id == bank_id).limit(1)
+    )
+
+
+def review_row_detail(db: Session, raw_id: int) -> ReviewRowDetail | None:
+    raw = db.get(RawTransaction, raw_id)
+    if raw is None or raw.promotion_status != PROMOTION_STATUS_NEEDS_REVIEW:
+        return None
+    candidates: list[ReviewBankCandidate] = []
+    for bank in _find_banks_by_ledger_tuple(db, raw):
+        linked_raw_id = _linked_raw_id_for_bank(db, bank.id)
+        candidates.append(
+            ReviewBankCandidate(
+                bank_id=bank.id,
+                external_id=bank.external_id,
+                already_linked=linked_raw_id is not None,
+                linked_raw_id=linked_raw_id,
+            )
+        )
+    return ReviewRowDetail(
+        raw_id=raw.id,
+        account_id=raw.account_id,
+        transaction_date=raw.transaction_date,
+        amount=raw.amount,
+        description=(raw.bank_orig_description or "")[:120],
+        promotion_note=raw.promotion_note or "",
+        candidates=candidates,
+    )
+
+
+def list_review_row_details(db: Session, account_id: int) -> list[ReviewRowDetail]:
+    raw_ids = db.scalars(
+        select(RawTransaction.id)
+        .where(
+            RawTransaction.account_id == account_id,
+            RawTransaction.bank_transaction_id.is_(None),
+            RawTransaction.promotion_status == PROMOTION_STATUS_NEEDS_REVIEW,
+        )
+        .order_by(RawTransaction.id)
+    ).all()
+    details: list[ReviewRowDetail] = []
+    for raw_id in raw_ids:
+        detail = review_row_detail(db, raw_id)
+        if detail is not None:
+            details.append(detail)
+    return details
+
+
+def link_review_raw_to_bank(db: Session, raw_id: int, bank_transaction_id: int) -> None:
+    raw = db.get(RawTransaction, raw_id)
+    if raw is None:
+        raise ValueError(f"Unknown raw transaction id {raw_id}")
+    if raw.promotion_status != PROMOTION_STATUS_NEEDS_REVIEW:
+        raise ValueError(f"Raw transaction {raw_id} is not held for review")
+    if raw.bank_transaction_id is not None:
+        raise ValueError(f"Raw transaction {raw_id} is already linked")
+
+    bank = db.get(BankTransaction, bank_transaction_id)
+    if bank is None:
+        raise ValueError(f"Unknown bank transaction id {bank_transaction_id}")
+    if not _ledger_tuple_matches(raw, bank):
+        raise ValueError("Selected bank transaction does not match the raw row ledger key")
+
+    linked_raw_id = _linked_raw_id_for_bank(db, bank_transaction_id)
+    if linked_raw_id is not None and linked_raw_id != raw_id:
+        raise ValueError(
+            f"Bank transaction {bank_transaction_id} is already linked to raw #{linked_raw_id}"
+        )
+
+    _link_raw_to_bank(db, raw_id, bank_transaction_id)
+    db.commit()
+
+
+def promote_review_raw_as_new(db: Session, raw_id: int) -> int:
+    raw = db.get(RawTransaction, raw_id)
+    if raw is None:
+        raise ValueError(f"Unknown raw transaction id {raw_id}")
+    if raw.promotion_status != PROMOTION_STATUS_NEEDS_REVIEW:
+        raise ValueError(f"Raw transaction {raw_id} is not held for review")
+    if raw.bank_transaction_id is not None:
+        raise ValueError(f"Raw transaction {raw_id} is already linked")
+
+    loaded_at = datetime.now(timezone.utc).replace(tzinfo=None)
+    if raw.source_external_id:
+        external_id = external_id_from_source(raw.source_external_id)
+    else:
+        external_id = next_legacy_external_id(db)
+    values = bank_transaction_values(raw, external_id=external_id, loaded_at=loaded_at)
+    bank_id = _insert_bank_transaction(db, values)
+    if bank_id is None:
+        raise ValueError("Failed to insert bank transaction")
+    _link_raw_to_bank(db, raw_id, bank_id)
+    db.commit()
+    return bank_id

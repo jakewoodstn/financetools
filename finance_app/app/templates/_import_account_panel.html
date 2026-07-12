@@ -9,8 +9,6 @@
   <dl class="meta">
     <dt>Staged raw</dt>
     <dd id="staged-count-{{ account.id }}">{{ account.raw_staged_count }}</dd>
-    <dt>Needs review</dt>
-    <dd id="needs-review-count-{{ account.id }}">{{ account.needs_review_count }}</dd>
     <dt>Last import</dt>
     <dd id="latest-import-{{ account.id }}">{{ format_import_at(account.latest_import_at) }}</dd>
     <dt>Latest txn date</dt>
@@ -50,7 +48,5 @@
 
   {% set samples = sample_map.get(account.id, []) %}
   {% set account_id = account.id %}
-  {% set review_rows = review_map.get(account.id, []) %}
   {% include "_import_sample.html" %}
-  {% include "_import_review.html" %}
 </section>

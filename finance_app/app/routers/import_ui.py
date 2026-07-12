@@ -10,6 +10,12 @@ from app.config import settings
 from app.database import get_db
 from app.services import import_control as import_service
 from app.services.csv_import import CsvImportError
+from app.services.promote_staging import (
+    link_review_raw_to_bank,
+    list_review_row_details,
+    promote_review_raw_as_new,
+    review_row_detail,
+)
 from app.services.simplefin import SimpleFinError
 
 router = APIRouter(tags=["ui"])
@@ -29,7 +35,6 @@ def _import_page_context(db: Session, account: int | None) -> dict:
         "selected_account": selected_account,
         "alias_map": import_service.lookup_simplefin_names(db),
         "sample_map": import_service.sample_raw_transactions(db),
-        "review_map": import_service.review_raw_transactions(db),
         "start_default": start_default.isoformat(),
         "end_default": end_default.isoformat(),
         "simplefin_configured": bool(settings.simplefin_access_url),
@@ -57,6 +62,88 @@ def import_compare_redirect(account: int | None = None):
     return RedirectResponse(url, status_code=301)
 
 
+def _review_page_context(db: Session, account: int | None) -> dict:
+    ctx = _import_page_context(db, account)
+    selected_id = ctx["selected_account_id"]
+    review_rows: list = []
+    if selected_id is not None:
+        review_rows = list_review_row_details(db, selected_id)
+    ctx["review_rows"] = review_rows
+    return ctx
+
+
+@router.get("/import/review")
+def import_review_page(
+    request: Request,
+    account: int | None = None,
+    db: Session = Depends(get_db),
+):
+    return templates.TemplateResponse(
+        request=request,
+        name="import_review.html",
+        context=_review_page_context(db, account),
+    )
+
+
+@router.post("/import/review/{raw_id}/link")
+def link_review_row(
+    request: Request,
+    raw_id: int,
+    bank_transaction_id: int = Form(...),
+    db: Session = Depends(get_db),
+):
+    row = review_row_detail(db, raw_id)
+    if row is None:
+        return templates.TemplateResponse(
+            request=request,
+            name="_import_review_clear_row.html",
+            context={"row": None, "error": f"Raw transaction {raw_id} is not held for review"},
+            status_code=404,
+        )
+    try:
+        link_review_raw_to_bank(db, raw_id, bank_transaction_id)
+    except ValueError as exc:
+        return templates.TemplateResponse(
+            request=request,
+            name="_import_review_clear_row.html",
+            context={"row": row, "error": str(exc)},
+        )
+    return templates.TemplateResponse(
+        request=request,
+        name="_import_review_clear_row.html",
+        context={"row": row, "cleared": "linked", "bank_id": bank_transaction_id},
+    )
+
+
+@router.post("/import/review/{raw_id}/promote-new")
+def promote_review_row(
+    request: Request,
+    raw_id: int,
+    db: Session = Depends(get_db),
+):
+    row = review_row_detail(db, raw_id)
+    if row is None:
+        return templates.TemplateResponse(
+            request=request,
+            name="_import_review_clear_row.html",
+            context={"row": None, "error": f"Raw transaction {raw_id} is not held for review"},
+            status_code=404,
+        )
+    try:
+        bank_id = promote_review_raw_as_new(db, raw_id)
+    except ValueError as exc:
+        return templates.TemplateResponse(
+            request=request,
+            name="_import_review_clear_row.html",
+            context={"row": row, "error": str(exc)},
+        )
+    return templates.TemplateResponse(
+        request=request,
+        name="_import_review_clear_row.html",
+        context={"row": row, "cleared": "promoted", "bank_id": bank_id},
+    )
+
+
 def _result_context(
     db: Session,
     account_id: int,
@@ -65,14 +152,12 @@ def _result_context(
     result: import_service.ImportRunResult | None,
 ) -> dict:
     sample_map = import_service.sample_raw_transactions(db)
-    review_map = import_service.review_raw_transactions(db)
     latest_import_at, latest_transaction_date = import_service.account_import_stats(db, account_id)
     return {
         "account_id": account_id,
         "error": error,
         "result": result,
         "samples": sample_map.get(account_id, []),
-        "review_rows": review_map.get(account_id, []),
         "raw_staged_count": import_service.staged_raw_count(db, account_id),
         "needs_review_count": import_service.needs_review_count(db, account_id),
         "latest_import_at": latest_import_at,

@@ -1,0 +1,52 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Import Review</title>
+  <script src="https://cdn.jsdelivr.net/npm/htmx.org@2.0.4/dist/htmx.min.js"></script>
+  <link rel="stylesheet" href="/static/css/import.css">
+</head>
+<body>
+  <header class="page-header">
+    <nav class="nav">
+      <a href="/transcat">Transcat</a>
+      <a href="/import">Import</a>
+      <a href="/import/review" class="active">Import Review</a>
+    </nav>
+    <h1>Import Review</h1>
+    <p class="subtitle">Resolve ambiguous promotion matches — link to an existing ledger row or promote as new</p>
+  </header>
+
+  <div class="page-body">
+    {% set page_base = "/import/review" %}
+    {% include "_import_sidebar.html" %}
+
+    <main class="workspace">
+      {% if selected_account %}
+      <section class="panel account-workspace account-workspace-wide">
+        <header class="account-header">
+          <h2>{{ selected_account.account_name or ("Account " ~ selected_account.id) }}</h2>
+          <span class="badge">{{ review_rows|length }} to clear</span>
+        </header>
+
+        {% if review_rows %}
+        <div class="review-clear-list">
+          {% for row in review_rows %}
+          {% include "_import_review_clear_row.html" %}
+          {% endfor %}
+        </div>
+        {% else %}
+        <p class="muted">No rows waiting for review on this account.</p>
+        <p><a href="/import?account={{ selected_account.id }}">← Back to import</a></p>
+        {% endif %}
+      </section>
+      {% elif accounts %}
+      <p class="muted">Select an account with review items from the list.</p>
+      {% else %}
+      <p class="muted">No accounts in database.</p>
+      {% endif %}
+    </main>
+  </div>
+</body>
+</html>
