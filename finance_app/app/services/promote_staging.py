@@ -7,7 +7,7 @@ from dataclasses import dataclass, field
 from datetime import date, datetime, timezone
 from decimal import Decimal
 
-from sqlalchemy import func, or_, select, update
+from sqlalchemy import delete, func, or_, select, update
 from sqlalchemy.dialects.postgresql import insert
 from sqlalchemy.orm import Session
 
@@ -179,6 +179,7 @@ def bank_transaction_values(
         account_id=raw.account_id,
         accounting_date=raw.transaction_date,
         payee_id=None,
+        source_external_id=raw.source_external_id,
     )
 
 
@@ -222,11 +223,8 @@ def _find_unlinked_banks_by_ledger_tuple(db: Session, raw: RawTransaction) -> li
 
 def _find_bank_by_source_external_id(db: Session, source_external_id: str) -> int | None:
     return db.scalar(
-        select(RawTransaction.bank_transaction_id)
-        .where(
-            RawTransaction.source_external_id == source_external_id,
-            RawTransaction.bank_transaction_id.is_not(None),
-        )
+        select(BankTransaction.id)
+        .where(BankTransaction.source_external_id == source_external_id)
         .limit(1)
     )
 
@@ -254,6 +252,24 @@ def _link_raw_to_bank(db: Session, raw_id: int, bank_id: int) -> None:
             promotion_note=None,
         )
     )
+
+
+def _attach_source_identity(db: Session, raw: RawTransaction, bank_id: int) -> None:
+    if not raw.source_external_id:
+        return
+    existing_source_id = db.scalar(
+        select(BankTransaction.source_external_id).where(BankTransaction.id == bank_id)
+    )
+    if existing_source_id and existing_source_id != raw.source_external_id:
+        raise ValueError(
+            f"Bank transaction {bank_id} already has a different source external id"
+        )
+    if existing_source_id is None:
+        db.execute(
+            update(BankTransaction)
+            .where(BankTransaction.id == bank_id)
+            .values(source_external_id=raw.source_external_id)
+        )
 
 
 def _mark_needs_review(db: Session, raw: RawTransaction, note: str) -> PromoteReviewItem:
@@ -310,6 +326,8 @@ def promote_raw_transactions(
     loaded_at = datetime.now(timezone.utc).replace(tzinfo=None)
     rows = db.execute(_promotable_raw_query(account_id=account_id, import_batch_id=import_batch_id)).all()
     batch_ids: set[int] = set()
+    completed_raw_ids: list[int] = []
+    discarded_raw_ids: list[int] = []
     next_legacy_id = int(db.scalar(select(func.max(BankTransaction.external_id))) or 0) + 1
 
     for raw, import_transactions in rows:
@@ -322,6 +340,7 @@ def promote_raw_transactions(
 
         if not import_transactions:
             result.skipped_import_disabled += 1
+            discarded_raw_ids.append(raw.id)
             continue
 
         bank_id: int | None = None
@@ -361,9 +380,17 @@ def promote_raw_transactions(
         elif linked_existing:
             result.linked_existing += 1
 
+        _attach_source_identity(db, raw, bank_id)
         _link_raw_to_bank(db, raw.id, bank_id)
+        completed_raw_ids.append(raw.id)
 
     db.flush()
+    if completed_raw_ids or discarded_raw_ids:
+        db.execute(
+            delete(RawTransaction).where(
+                RawTransaction.id.in_(completed_raw_ids + discarded_raw_ids)
+            )
+        )
     result.import_batch_ids = sorted(batch_ids)
     for batch_id in result.import_batch_ids:
         _refresh_import_batch_status(db, batch_id)
@@ -372,25 +399,10 @@ def promote_raw_transactions(
 
 
 def _refresh_import_batch_status(db: Session, import_batch_id: int) -> None:
-    total = db.scalar(
+    remaining = db.scalar(
         select(func.count()).select_from(RawTransaction).where(RawTransaction.import_batch_id == import_batch_id)
     )
-    promoted = db.scalar(
-        select(func.count())
-        .select_from(RawTransaction)
-        .where(
-            RawTransaction.import_batch_id == import_batch_id,
-            RawTransaction.bank_transaction_id.is_not(None),
-        )
-    )
-    if not total:
-        return
-    if not promoted:
-        status = "staged"
-    elif promoted == total:
-        status = "promoted"
-    else:
-        status = "partial"
+    status = "partial" if remaining else "promoted"
     db.execute(update(ImportBatch).where(ImportBatch.id == import_batch_id).values(status=status))
 
 
@@ -474,7 +486,12 @@ def link_review_raw_to_bank(db: Session, raw_id: int, bank_transaction_id: int) 
             f"Bank transaction {bank_transaction_id} is already linked to raw #{linked_raw_id}"
         )
 
+    import_batch_id = raw.import_batch_id
+    _attach_source_identity(db, raw, bank_transaction_id)
     _link_raw_to_bank(db, raw_id, bank_transaction_id)
+    db.flush()
+    db.execute(delete(RawTransaction).where(RawTransaction.id == raw_id))
+    _refresh_import_batch_status(db, import_batch_id)
     db.commit()
 
 
@@ -487,6 +504,7 @@ def promote_review_raw_as_new(db: Session, raw_id: int) -> int:
     if raw.bank_transaction_id is not None:
         raise ValueError(f"Raw transaction {raw_id} is already linked")
 
+    import_batch_id = raw.import_batch_id
     loaded_at = datetime.now(timezone.utc).replace(tzinfo=None)
     if raw.source_external_id:
         external_id = external_id_from_source(raw.source_external_id)
@@ -497,5 +515,8 @@ def promote_review_raw_as_new(db: Session, raw_id: int) -> int:
     if bank_id is None:
         raise ValueError("Failed to insert bank transaction")
     _link_raw_to_bank(db, raw_id, bank_id)
+    db.flush()
+    db.execute(delete(RawTransaction).where(RawTransaction.id == raw_id))
+    _refresh_import_batch_status(db, import_batch_id)
     db.commit()
     return bank_id

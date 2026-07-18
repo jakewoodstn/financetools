@@ -10,7 +10,7 @@
     >
       <span class="account-nav-name">{{ account.account_name or ("Account " ~ account.id) }}</span>
           <span class="account-nav-meta">
-            <span id="nav-staged-{{ account.id }}">{{ account.raw_staged_count }}</span> staged
+            <span id="nav-staged-{{ account.id }}">{{ account.raw_staged_count }}</span> pending
             {% if account.needs_review_count %}
             · <a href="/import/review?account={{ account.id }}" class="account-nav-review" id="nav-review-{{ account.id }}">{{ account.needs_review_count }} review</a>
             {% endif %}

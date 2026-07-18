@@ -121,6 +121,7 @@ class BankTransaction(Base):
     account_id: Mapped[int] = mapped_column(ForeignKey("accounts.id"))
     accounting_date: Mapped[date | None] = mapped_column(Date)
     payee_id: Mapped[int | None] = mapped_column(ForeignKey("payees.id"))
+    source_external_id: Mapped[str | None] = mapped_column(String(200))
 
     account: Mapped[Account] = relationship(back_populates="bank_transactions")
     spending_category: Mapped[SpendingCategory | None] = relationship(back_populates="transactions")
@@ -192,6 +193,7 @@ class ImportBatch(Base):
     filename: Mapped[str | None] = mapped_column(String(500))
     imported_at: Mapped[datetime] = mapped_column(DateTime, server_default="now()")
     status: Mapped[str] = mapped_column(String(50))
+    account_id: Mapped[int | None] = mapped_column(ForeignKey("accounts.id"))
 
     raw_transactions: Mapped[list["RawTransaction"]] = relationship(back_populates="import_batch")
 

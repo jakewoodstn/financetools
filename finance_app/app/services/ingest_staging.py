@@ -8,7 +8,7 @@ from datetime import date
 from decimal import Decimal
 from typing import Literal
 
-from sqlalchemy import delete, select, update
+from sqlalchemy import delete, select
 from sqlalchemy.dialects.postgresql import insert
 from sqlalchemy.orm import Session
 
@@ -85,7 +85,12 @@ def stage_simplefin_account(
     api_errors: list[str] | None = None,
 ) -> StageResult:
     """Stage one SimpleFIN account into raw_transactions for a date window."""
-    batch = ImportBatch(source="simplefin", filename=None, status="staged")
+    batch = ImportBatch(
+        source="simplefin",
+        filename=None,
+        status="staged",
+        account_id=account_id,
+    )
     db.add(batch)
     db.flush()
 
@@ -150,7 +155,12 @@ def stage_csv_rows(
     mode: ImportMode = "merge",
 ) -> StageResult:
     """Stage parsed bank CSV rows into raw_transactions."""
-    batch = ImportBatch(source="csv", filename=filename, status="staged")
+    batch = ImportBatch(
+        source="csv",
+        filename=filename,
+        status="staged",
+        account_id=account_id,
+    )
     db.add(batch)
     db.flush()
 
@@ -188,12 +198,7 @@ def _insert_csv_row(
         source_external_id=None,
         bank_transaction_id=None,
     )
-    stmt = (
-        insert(RawTransaction)
-        .values(**values)
-        .on_conflict_do_nothing(index_elements=[RawTransaction.dedupe_hash])
-        .returning(RawTransaction.id)
-    )
+    stmt = insert(RawTransaction).values(**values).returning(RawTransaction.id)
     inserted_id = db.execute(stmt).scalar_one_or_none()
     db.flush()
     return inserted_id is not None
@@ -220,21 +225,13 @@ def _insert_raw_transaction(
         source_external_id=source_external_id,
         bank_transaction_id=None,
     )
-    stmt = (
-        insert(RawTransaction)
-        .values(**values)
-        .on_conflict_do_nothing(index_elements=[RawTransaction.dedupe_hash])
-        .returning(RawTransaction.id)
-    )
-    inserted_id = db.execute(stmt).scalar_one_or_none()
-    if inserted_id is None and source_external_id:
-        db.execute(
-            update(RawTransaction)
-            .where(
-                RawTransaction.dedupe_hash == digest,
-                RawTransaction.source_external_id.is_(None),
-            )
-            .values(source_external_id=source_external_id)
+    stmt = insert(RawTransaction).values(**values)
+    if source_external_id:
+        stmt = stmt.on_conflict_do_nothing(
+            index_elements=[RawTransaction.source_external_id],
+            index_where=RawTransaction.source_external_id.is_not(None),
         )
+    stmt = stmt.returning(RawTransaction.id)
+    inserted_id = db.execute(stmt).scalar_one_or_none()
     db.flush()
     return inserted_id is not None

@@ -10,7 +10,7 @@ from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
 from app.config import settings
-from app.models import Account, ImportBatch, RawTransaction, TransactionAccount
+from app.models import Account, BankTransaction, ImportBatch, RawTransaction, TransactionAccount
 from app.services.csv_import import CsvImportError, CsvTableRegion, parse_csv_rows
 from app.services.ingest_staging import StageResult, stage_csv_rows, stage_simplefin_account
 from app.services.promote_staging import (
@@ -41,15 +41,6 @@ ImportMode = Literal["merge", "replace"]
 class RawSampleRow:
     transaction_date: date | None
     description: str
-
-
-@dataclass
-class ReviewRawRow:
-    id: int
-    transaction_date: date | None
-    amount: Decimal | None
-    description: str
-    promotion_note: str
 
 
 @dataclass
@@ -89,15 +80,15 @@ def default_date_range() -> tuple[date, date]:
 def lookup_account_import_stats(db: Session) -> dict[int, tuple[datetime | None, date | None]]:
     latest_imports = dict(
         db.execute(
-            select(RawTransaction.account_id, func.max(ImportBatch.imported_at))
-            .join(ImportBatch, RawTransaction.import_batch_id == ImportBatch.id)
-            .group_by(RawTransaction.account_id)
+            select(ImportBatch.account_id, func.max(ImportBatch.imported_at))
+            .where(ImportBatch.account_id.is_not(None))
+            .group_by(ImportBatch.account_id)
         ).all()
     )
     latest_txn_dates = dict(
         db.execute(
-            select(RawTransaction.account_id, func.max(RawTransaction.transaction_date)).group_by(
-                RawTransaction.account_id
+            select(BankTransaction.account_id, func.max(BankTransaction.transaction_date)).group_by(
+                BankTransaction.account_id
             )
         ).all()
     )
@@ -111,11 +102,12 @@ def lookup_account_import_stats(db: Session) -> dict[int, tuple[datetime | None,
 def account_import_stats(db: Session, account_id: int) -> tuple[datetime | None, date | None]:
     latest_import = db.scalar(
         select(func.max(ImportBatch.imported_at))
-        .join(RawTransaction, RawTransaction.import_batch_id == ImportBatch.id)
-        .where(RawTransaction.account_id == account_id)
+        .where(ImportBatch.account_id == account_id)
     )
     latest_txn = db.scalar(
-        select(func.max(RawTransaction.transaction_date)).where(RawTransaction.account_id == account_id)
+        select(func.max(BankTransaction.transaction_date)).where(
+            BankTransaction.account_id == account_id
+        )
     )
     return latest_import, latest_txn
 
@@ -296,36 +288,8 @@ def needs_review_count(db: Session, account_id: int) -> int:
     return int(count or 0)
 
 
-def review_raw_transactions(db: Session, *, limit: int = 20) -> dict[int, list[ReviewRawRow]]:
-    """Raw rows held for promotion review (ambiguous ledger-key matches)."""
-    rows = db.execute(
-        select(RawTransaction)
-        .where(
-            RawTransaction.bank_transaction_id.is_(None),
-            RawTransaction.promotion_status == PROMOTION_STATUS_NEEDS_REVIEW,
-        )
-        .order_by(RawTransaction.account_id, RawTransaction.id.desc())
-    ).scalars().all()
-
-    review_map: dict[int, list[ReviewRawRow]] = {}
-    for raw in rows:
-        bucket = review_map.setdefault(raw.account_id, [])
-        if len(bucket) >= limit:
-            continue
-        bucket.append(
-            ReviewRawRow(
-                id=raw.id,
-                transaction_date=raw.transaction_date,
-                amount=raw.amount,
-                description=(raw.bank_orig_description or "")[:80],
-                promotion_note=raw.promotion_note or "",
-            )
-        )
-    return review_map
-
-
 def sample_raw_transactions(db: Session, *, limit: int = 10) -> dict[int, list[RawSampleRow]]:
-    """Latest raw import rows per account (description truncated to 30 chars)."""
+    """Latest pending raw rows per account (description truncated to 30 chars)."""
     rows = db.execute(
         select(
             RawTransaction.account_id,

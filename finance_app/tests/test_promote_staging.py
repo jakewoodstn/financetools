@@ -29,6 +29,7 @@ def test_bank_transaction_values_from_raw_fields():
         bank_orig_description = "Coffee shop"
         import_category = None
         account_id = 1
+        source_external_id = "sf-1"
 
     loaded_at = datetime(2026, 7, 11, 12, 0, tzinfo=timezone.utc).replace(tzinfo=None)
     values = bank_transaction_values(
@@ -40,6 +41,7 @@ def test_bank_transaction_values_from_raw_fields():
     assert values["accounting_date"] == date(2026, 7, 10)
     assert values["category_status"] == 0
     assert values["spending_category_id"] is None
+    assert values["source_external_id"] == "sf-1"
 
 
 def test_dedupe_hash_matches_promotion_tuple():

@@ -14,7 +14,7 @@ def test_import_page_loads():
     assert "Import Control" in response.text
     assert "Merge" in response.text
     assert "Replace" in response.text
-    assert "Recent imports" in response.text
+    assert "Pending import rows" in response.text
     assert "Bank CSV" in response.text
     assert "account-sidebar" in response.text
     assert "account-workspace" in response.text
@@ -35,7 +35,6 @@ def test_import_review_page_loads():
     response = client.get("/import/review")
     assert response.status_code == 200
     assert "Import Review" in response.text
-    assert "Promote as new" in response.text
 
 
 def test_csv_upload_endpoint():

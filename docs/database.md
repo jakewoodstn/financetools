@@ -23,6 +23,10 @@ Operational GL tables live in the Postgres `public` schema. Alembic migrations a
 | `004_payees_and_rules` | Payee model, category rules/suggestions, `payee_id` on transactions |
 | `005_ingest_staging` | `import_batches`, `raw_transactions` |
 | `006_transfers_and_cleanup` | `transfer_links`, query indexes |
+| `007_enable_account_4_import` | Enable transaction import for account 4 |
+| `008_raw_source_external_id` | Provider identity on pending raw rows |
+| `009_raw_promotion_review` | Hold ambiguous promotion rows for review |
+| `010_transient_raw_staging` | Persist provider identity on ledger rows and clear successful staging rows |
 
 ## Core tables
 
@@ -109,12 +113,15 @@ Bank exports often include title and footer lines; the importer scans for the re
 
 | Layer | Key | Behavior |
 | --- | --- | --- |
-| Staging | `dedupe_hash` (account, date, amount, description) | `ON CONFLICT DO NOTHING` |
-| Staging | `source_external_id` (SimpleFIN txn id) | unique partial index; `ON CONFLICT DO NOTHING` |
-| Promotion | `bank_transaction_id` on raw | skip already-linked rows |
+| Staging | `dedupe_hash` (account, date, amount, description) | indexed comparison key; not unique because identical same-day transactions are valid |
+| Staging | `source_external_id` (SimpleFIN txn id) | unique partial index prevents duplicate provider rows while pending |
+| Ledger | `bank_transactions.source_external_id` | permanent SimpleFIN identity and idempotency key |
 | Promotion | `source_external_id` or ledger 4-tuple | link to existing `bank_transactions` row; ambiguous matches → `needs_review` holding |
 | Promotion | `external_id` on insert | `ON CONFLICT DO NOTHING`; SimpleFIN ids map to `2_000_000_000_000+` range |
 
-Writes `import_batches` (`source=simplefin`, `status=staged|partial|promoted`) and links `raw_transactions.bank_transaction_id`.
-
-Rows that match multiple unlinked `bank_transactions` on the same ledger key are kept in `raw_transactions` with `promotion_status=needs_review` and a `promotion_note` explaining the conflict. Other rows in the same import still promote normally.
+`raw_transactions` is a transient working table, matching the legacy
+`bankTransactionLoad` behavior. Successfully inserted or linked rows are removed
+after promotion. Rows that match multiple `bank_transactions` on the same ledger
+key remain in `raw_transactions` with `promotion_status=needs_review` and a
+`promotion_note` explaining the conflict. `import_batches` permanently records
+the source, account, import time, filename, and final batch status.
