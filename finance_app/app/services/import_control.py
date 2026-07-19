@@ -238,14 +238,15 @@ def run_simplefin_import(
 
     reconciliation: BalanceReconciliation | None = None
     capture_today = end_date == date.today()
+    observation_date = sf_account.balance_date
+    if observation_date is not None and observation_date > date.today():
+        # An observation cannot be in the future; provider clock skew only.
+        observation_date = date.today()
     if (
         capture_today
         and sf_account.balance is not None
-        and sf_account.balance_date is not None
+        and observation_date is not None
     ):
-        # SimpleFIN balance-date is a UTC timestamp; late in the local day it
-        # rolls to tomorrow. Clamp so the observation lands on the local date.
-        observation_date = min(sf_account.balance_date, date.today())
         record_balance_observation(
             db,
             account_id,

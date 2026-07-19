@@ -29,8 +29,15 @@ class SimpleFinAccount:
     external_id: str
     name: str
     balance: Decimal | None
-    balance_date: date | None
+    balance_at: datetime | None
     transactions: list[SimpleFinTransaction]
+
+    @property
+    def balance_date(self) -> date | None:
+        """Local calendar day the balance was captured (balance-at is a UTC instant)."""
+        if self.balance_at is None:
+            return None
+        return self.balance_at.astimezone().date()
 
 
 def validate_access_url(value: str) -> str:
@@ -52,6 +59,12 @@ def _unix_to_date(value: int | float | None) -> date | None:
     if not value:
         return None
     return datetime.fromtimestamp(value, tz=timezone.utc).date()
+
+
+def _unix_to_datetime(value: int | float | None) -> datetime | None:
+    if not value:
+        return None
+    return datetime.fromtimestamp(value, tz=timezone.utc)
 
 
 def _to_decimal(value: str | int | float | Decimal | None) -> Decimal | None:
@@ -131,7 +144,7 @@ def parse_accounts(payload: dict) -> list[SimpleFinAccount]:
                 external_id=str(raw.get("id") or ""),
                 name=str(raw.get("name") or ""),
                 balance=_to_decimal(raw.get("balance")),
-                balance_date=_unix_to_date(raw.get("balance-date")),
+                balance_at=_unix_to_datetime(raw.get("balance-date")),
                 transactions=txns,
             )
         )
