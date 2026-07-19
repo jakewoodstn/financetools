@@ -1,0 +1,21 @@
+<div id="pending-sample-{{ account_id }}" class="sample-block pending-sample-block"{% if oob %} hx-swap-oob="true"{% endif %}>
+  {% if samples %}
+  <h3 class="sample-heading">Pending rows <span class="hint">(latest 10)</span></h3>
+  <table class="sample-table">
+    <thead>
+      <tr>
+        <th>Date</th>
+        <th>Description</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for row in samples %}
+      <tr>
+        <td class="sample-date">{{ row.transaction_date or "" }}</td>
+        <td class="mono">{{ row.description }}</td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+  {% endif %}
+</div>

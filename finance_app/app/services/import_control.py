@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from datetime import date, datetime, timedelta
+from decimal import Decimal
 from typing import Literal
 
 from sqlalchemy import func, select
@@ -11,6 +12,14 @@ from sqlalchemy.orm import Session
 
 from app.config import settings
 from app.models import Account, BankTransaction, ImportBatch, RawTransaction, TransactionAccount
+from app.services.balance_series import (
+    BalanceReconciliation,
+    SOURCE_SIMPLEFIN,
+    latest_observations,
+    recompute_daily_balances,
+    reconcile_observation,
+    record_balance_observation,
+)
 from app.services.csv_import import CsvImportError, CsvTableRegion, parse_csv_rows
 from app.services.ingest_staging import StageResult, stage_csv_rows, stage_simplefin_account
 from app.services.promote_staging import (
@@ -44,6 +53,24 @@ class RawSampleRow:
 
 
 @dataclass
+class LatestImportSampleRow:
+    transaction_date: date | None
+    amount: Decimal | None
+    description: str
+
+
+@dataclass
+class LatestImportPreview:
+    account_id: int
+    batch_id: int
+    source: str
+    imported_at: datetime
+    status: str
+    total_rows: int
+    rows: list[LatestImportSampleRow]
+
+
+@dataclass
 class ImportableAccount:
     id: int
     account_name: str | None
@@ -53,6 +80,8 @@ class ImportableAccount:
     needs_review_count: int = 0
     latest_import_at: datetime | None = None
     latest_transaction_date: date | None = None
+    latest_balance_date: date | None = None
+    latest_balance_amount: Decimal | None = None
 
 
 @dataclass
@@ -69,6 +98,7 @@ class ImportRunResult:
     filename: str | None = None
     column_mapping: dict[str, str] | None = None
     csv_region: "CsvTableRegion | None" = None
+    balance_reconciliation: BalanceReconciliation | None = None
 
 
 def default_date_range() -> tuple[date, date]:
@@ -132,9 +162,11 @@ def list_importable_accounts(db: Session) -> list[ImportableAccount]:
         ).all()
     )
     import_stats = lookup_account_import_stats(db)
+    observations = latest_observations(db)
     results: list[ImportableAccount] = []
     for account in rows:
         latest_import_at, latest_transaction_date = import_stats.get(account.id, (None, None))
+        balance_date, balance_amount = observations.get(account.id, (None, None))
         results.append(
             ImportableAccount(
                 id=account.id,
@@ -145,6 +177,8 @@ def list_importable_accounts(db: Session) -> list[ImportableAccount]:
                 needs_review_count=int(review_counts.get(account.id, 0)),
                 latest_import_at=latest_import_at,
                 latest_transaction_date=latest_transaction_date,
+                latest_balance_date=balance_date,
+                latest_balance_amount=balance_amount,
             )
         )
     return results
@@ -201,6 +235,32 @@ def run_simplefin_import(
         api_errors=api_errors(payload),
     )
     promote = promote_raw_transactions(db, account_id=account_id)
+
+    reconciliation: BalanceReconciliation | None = None
+    capture_today = end_date == date.today()
+    if (
+        capture_today
+        and sf_account.balance is not None
+        and sf_account.balance_date is not None
+    ):
+        record_balance_observation(
+            db,
+            account_id,
+            sf_account.balance_date,
+            sf_account.balance,
+            SOURCE_SIMPLEFIN,
+            commit=True,
+        )
+        recompute_daily_balances(db, account_id=account_id, commit=True)
+        reconciliation = reconcile_observation(
+            db,
+            account_id,
+            sf_account.balance_date,
+            sf_account.balance,
+        )
+    else:
+        recompute_daily_balances(db, account_id=account_id, commit=True)
+
     return ImportRunResult(
         account_id=account_id,
         account_name=account.account_name,
@@ -211,6 +271,7 @@ def run_simplefin_import(
         stage=stage,
         promote=promote,
         simplefin_found=True,
+        balance_reconciliation=reconciliation,
     )
 
 
@@ -233,6 +294,7 @@ def run_csv_import(
     mapping, rows, region = parse_csv_rows(content, column_overrides=column_overrides)
     stage = stage_csv_rows(db, rows, account_id=account_id, filename=filename, mode=mode)
     promote = promote_raw_transactions(db, account_id=account_id)
+    recompute_daily_balances(db, account_id=account_id, commit=True)
     dates = [row.transaction_date for row in rows]
     return ImportRunResult(
         account_id=account_id,
@@ -289,13 +351,14 @@ def needs_review_count(db: Session, account_id: int) -> int:
 
 
 def sample_raw_transactions(db: Session, *, limit: int = 10) -> dict[int, list[RawSampleRow]]:
-    """Latest pending raw rows per account (description truncated to 30 chars)."""
+    """Latest pending/held raw rows per account (description truncated to 30 chars)."""
     rows = db.execute(
         select(
             RawTransaction.account_id,
             RawTransaction.transaction_date,
             RawTransaction.bank_orig_description,
         )
+        .where(RawTransaction.bank_transaction_id.is_(None))
         .order_by(
             RawTransaction.account_id,
             RawTransaction.transaction_date.desc().nullslast(),
@@ -311,3 +374,69 @@ def sample_raw_transactions(db: Session, *, limit: int = 10) -> dict[int, list[R
         text = (description or "")[:30]
         bucket.append(RawSampleRow(transaction_date=transaction_date, description=text))
     return samples
+
+
+def latest_import_preview(db: Session, *, limit: int = 10) -> dict[int, LatestImportPreview]:
+    """Latest import batch and sample ledger rows per account."""
+    ranked = (
+        select(
+            ImportBatch.id.label("batch_id"),
+            func.row_number()
+            .over(
+                partition_by=ImportBatch.account_id,
+                order_by=(ImportBatch.imported_at.desc(), ImportBatch.id.desc()),
+            )
+            .label("rn"),
+        )
+        .where(ImportBatch.account_id.is_not(None))
+        .subquery()
+    )
+    batches = db.scalars(
+        select(ImportBatch)
+        .join(ranked, ranked.c.batch_id == ImportBatch.id)
+        .where(ranked.c.rn == 1)
+        .order_by(ImportBatch.account_id)
+    ).all()
+
+    previews: dict[int, LatestImportPreview] = {}
+    for batch in batches:
+        if batch.account_id is None:
+            continue
+        total_rows = int(
+            db.scalar(
+                select(func.count())
+                .select_from(BankTransaction)
+                .where(BankTransaction.last_import_batch_id == batch.id)
+            )
+            or 0
+        )
+        bank_rows = db.execute(
+            select(
+                BankTransaction.transaction_date,
+                BankTransaction.amount,
+                BankTransaction.bank_orig_description,
+            )
+            .where(BankTransaction.last_import_batch_id == batch.id)
+            .order_by(
+                BankTransaction.transaction_date.desc().nullslast(),
+                BankTransaction.id.desc(),
+            )
+            .limit(limit)
+        ).all()
+        previews[batch.account_id] = LatestImportPreview(
+            account_id=batch.account_id,
+            batch_id=batch.id,
+            source=batch.source,
+            imported_at=batch.imported_at,
+            status=batch.status,
+            total_rows=total_rows,
+            rows=[
+                LatestImportSampleRow(
+                    transaction_date=transaction_date,
+                    amount=amount,
+                    description=(description or "")[:30],
+                )
+                for transaction_date, amount, description in bank_rows
+            ],
+        )
+    return previews

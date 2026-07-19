@@ -1,0 +1,203 @@
+:root {
+  --ink: #1a1f2e;
+  --muted: #6b7280;
+  --line: #d8dde6;
+  --panel: #f7f8fa;
+  --accent: #1d4ed8;
+}
+
+* { box-sizing: border-box; }
+
+body {
+  margin: 0;
+  font-family: "IBM Plex Sans", "Segoe UI", sans-serif;
+  color: var(--ink);
+  background: #fff;
+}
+
+.page-header {
+  padding: 1rem 1.5rem 0.75rem;
+  border-bottom: 1px solid var(--line);
+}
+
+.nav {
+  display: flex;
+  gap: 1rem;
+  margin-bottom: 0.75rem;
+  font-size: 0.9rem;
+}
+
+.nav a {
+  color: var(--muted);
+  text-decoration: none;
+}
+
+.nav a.active,
+.nav a:hover {
+  color: var(--ink);
+  font-weight: 600;
+}
+
+h1 {
+  margin: 0 0 0.25rem;
+  font-size: 1.5rem;
+}
+
+.subtitle {
+  margin: 0;
+  color: var(--muted);
+  font-size: 0.9rem;
+}
+
+.balances-layout {
+  display: grid;
+  grid-template-columns: 220px 1fr;
+  grid-template-rows: auto auto;
+  gap: 1rem;
+  padding: 1rem 1.5rem 2rem;
+}
+
+.panel {
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  padding: 1rem;
+}
+
+.controls {
+  grid-row: span 2;
+}
+
+.chart-panel {
+  min-height: 360px;
+}
+
+.chart-panel h2 {
+  margin: 0 0 0.5rem;
+  font-size: 0.85rem;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--muted);
+}
+
+.drift-chart-heading {
+  margin-top: 1.5rem !important;
+  padding-top: 1rem;
+  border-top: 1px solid var(--line);
+}
+
+.control-hint {
+  margin: 0.5rem 0 0.85rem;
+  font-size: 0.72rem;
+  color: var(--muted);
+  line-height: 1.35;
+}
+
+.legend-hint {
+  text-transform: none;
+  letter-spacing: normal;
+  font-weight: 400;
+  font-size: 0.75rem;
+  color: var(--muted);
+}
+
+.drift-panel {
+  grid-column: 2;
+}
+
+.controls h2 {
+  margin: 0 0 0.5rem;
+  font-size: 0.85rem;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--muted);
+}
+
+.controls h2:not(:first-child) {
+  margin-top: 1.25rem;
+}
+
+.check-row {
+  display: flex;
+  gap: 0.4rem;
+  align-items: center;
+  font-size: 0.85rem;
+  margin-bottom: 0.35rem;
+}
+
+.account-checks {
+  max-height: 280px;
+  overflow: auto;
+}
+
+.range-row {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  font-size: 0.85rem;
+}
+
+.range-row input {
+  display: block;
+  margin-top: 0.2rem;
+  width: 100%;
+}
+
+.preset-row {
+  display: flex;
+  gap: 0.35rem;
+  margin: 0.75rem 0;
+}
+
+.btn-primary,
+.btn-secondary {
+  border: 1px solid var(--line);
+  background: #fff;
+  border-radius: 4px;
+  padding: 0.35rem 0.65rem;
+  font-size: 0.85rem;
+  cursor: pointer;
+}
+
+.btn-primary {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: #fff;
+  width: 100%;
+}
+
+.muted { color: var(--muted); }
+.card-note { font-size: 0.85rem; }
+.hidden { display: none; }
+.mono { font-family: ui-monospace, monospace; }
+.num { font-variant-numeric: tabular-nums; text-align: right; }
+
+.drift-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.85rem;
+}
+
+.drift-table th,
+.drift-table td {
+  padding: 0.35rem 0.45rem;
+  border-bottom: 1px solid #eef1f5;
+  text-align: left;
+}
+
+.drift-table th {
+  color: var(--muted);
+  font-weight: 500;
+}
+
+@media (max-width: 800px) {
+  .balances-layout {
+    grid-template-columns: 1fr;
+  }
+
+  .controls,
+  .drift-panel {
+    grid-column: 1;
+    grid-row: auto;
+  }
+}

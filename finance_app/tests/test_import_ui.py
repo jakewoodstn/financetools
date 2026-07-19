@@ -14,13 +14,31 @@ def test_import_page_loads():
     assert "Import Control" in response.text
     assert "Merge" in response.text
     assert "Replace" in response.text
-    assert "Pending import rows" in response.text
+    assert "Latest import" in response.text
     assert "Bank CSV" in response.text
     assert "account-sidebar" in response.text
     assert "account-workspace" in response.text
     assert "import-actions-split" in response.text
     assert "Last import" in response.text
     assert "Latest txn date" in response.text
+    assert "nav-bal-date-" in response.text
+    assert "Balances" in response.text
+
+
+def test_balances_page_loads():
+    client = TestClient(app)
+    response = client.get("/balances")
+    assert response.status_code == 200
+    assert "Balances" in response.text
+    assert "balance-chart" in response.text
+
+
+def test_balances_api_returns_datasets():
+    client = TestClient(app)
+    response = client.get("/api/balances")
+    assert response.status_code == 200
+    payload = response.json()
+    assert "datasets" in payload
 
 
 def test_import_compare_redirects_to_import():

@@ -1,23 +1,40 @@
+{% from "_import_stats_macros.html" import format_import_at %}
+
 <div id="sample-{{ account_id }}" class="sample-block"{% if oob %} hx-swap-oob="true"{% endif %}>
-  <h3 class="sample-heading">Pending import rows <span class="hint">(latest 10)</span></h3>
-  {% if samples %}
+  <h3 class="sample-heading">Latest import</h3>
+  {% if preview %}
+  <p class="sample-meta muted">
+    <span class="mono">{{ preview.source }}</span>
+    · {{ format_import_at(preview.imported_at) }}
+    · batch #{{ preview.batch_id }}
+    {% if preview.status %} · {{ preview.status }}{% endif %}
+  </p>
+  {% if preview.rows %}
   <table class="sample-table">
     <thead>
       <tr>
         <th>Date</th>
+        <th>Amount</th>
         <th>Description</th>
       </tr>
     </thead>
     <tbody>
-      {% for row in samples %}
+      {% for row in preview.rows %}
       <tr>
         <td class="sample-date">{{ row.transaction_date or "" }}</td>
+        <td class="sample-amount">{{ "%.2f"|format(row.amount) if row.amount is not none else "" }}</td>
         <td class="mono">{{ row.description }}</td>
       </tr>
       {% endfor %}
     </tbody>
   </table>
+  <p class="sample-footer muted">
+    Showing {{ preview.rows|length }} of {{ preview.total_rows }}
+  </p>
   {% else %}
-  <p class="muted card-note">No rows pending promotion.</p>
+  <p class="muted card-note">No ledger rows stamped for this import yet.</p>
+  {% endif %}
+  {% else %}
+  <p class="muted card-note">No imports yet.</p>
   {% endif %}
 </div>

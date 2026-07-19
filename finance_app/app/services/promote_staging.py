@@ -180,6 +180,7 @@ def bank_transaction_values(
         accounting_date=raw.transaction_date,
         payee_id=None,
         source_external_id=raw.source_external_id,
+        last_import_batch_id=raw.import_batch_id,
     )
 
 
@@ -255,21 +256,18 @@ def _link_raw_to_bank(db: Session, raw_id: int, bank_id: int) -> None:
 
 
 def _attach_source_identity(db: Session, raw: RawTransaction, bank_id: int) -> None:
-    if not raw.source_external_id:
-        return
-    existing_source_id = db.scalar(
-        select(BankTransaction.source_external_id).where(BankTransaction.id == bank_id)
-    )
-    if existing_source_id and existing_source_id != raw.source_external_id:
-        raise ValueError(
-            f"Bank transaction {bank_id} already has a different source external id"
+    values: dict = {"last_import_batch_id": raw.import_batch_id}
+    if raw.source_external_id:
+        existing_source_id = db.scalar(
+            select(BankTransaction.source_external_id).where(BankTransaction.id == bank_id)
         )
-    if existing_source_id is None:
-        db.execute(
-            update(BankTransaction)
-            .where(BankTransaction.id == bank_id)
-            .values(source_external_id=raw.source_external_id)
-        )
+        if existing_source_id and existing_source_id != raw.source_external_id:
+            raise ValueError(
+                f"Bank transaction {bank_id} already has a different source external id"
+            )
+        if existing_source_id is None:
+            values["source_external_id"] = raw.source_external_id
+    db.execute(update(BankTransaction).where(BankTransaction.id == bank_id).values(**values))
 
 
 def _mark_needs_review(db: Session, raw: RawTransaction, note: str) -> PromoteReviewItem:

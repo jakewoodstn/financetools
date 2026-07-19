@@ -9,6 +9,7 @@ from sqlalchemy.orm import Session
 from app.config import settings
 from app.database import get_db
 from app.services import import_control as import_service
+from app.services.balance_series import latest_observations, recompute_daily_balances
 from app.services.csv_import import CsvImportError
 from app.services.promote_staging import (
     link_review_raw_to_bank,
@@ -35,6 +36,7 @@ def _import_page_context(db: Session, account: int | None) -> dict:
         "selected_account": selected_account,
         "alias_map": import_service.lookup_simplefin_names(db),
         "sample_map": import_service.sample_raw_transactions(db),
+        "preview_map": import_service.latest_import_preview(db),
         "start_default": start_default.isoformat(),
         "end_default": end_default.isoformat(),
         "simplefin_configured": bool(settings.simplefin_access_url),
@@ -102,6 +104,7 @@ def link_review_row(
         )
     try:
         link_review_raw_to_bank(db, raw_id, bank_transaction_id)
+        recompute_daily_balances(db, account_id=row.account_id, commit=True)
     except ValueError as exc:
         return templates.TemplateResponse(
             request=request,
@@ -131,6 +134,7 @@ def promote_review_row(
         )
     try:
         bank_id = promote_review_raw_as_new(db, raw_id)
+        recompute_daily_balances(db, account_id=row.account_id, commit=True)
     except ValueError as exc:
         return templates.TemplateResponse(
             request=request,
@@ -152,16 +156,21 @@ def _result_context(
     result: import_service.ImportRunResult | None,
 ) -> dict:
     sample_map = import_service.sample_raw_transactions(db)
+    preview_map = import_service.latest_import_preview(db)
     latest_import_at, latest_transaction_date = import_service.account_import_stats(db, account_id)
+    balance_date, balance_amount = latest_observations(db).get(account_id, (None, None))
     return {
         "account_id": account_id,
         "error": error,
         "result": result,
         "samples": sample_map.get(account_id, []),
+        "preview": preview_map.get(account_id),
         "raw_staged_count": import_service.staged_raw_count(db, account_id),
         "needs_review_count": import_service.needs_review_count(db, account_id),
         "latest_import_at": latest_import_at,
         "latest_transaction_date": latest_transaction_date,
+        "latest_balance_date": balance_date,
+        "latest_balance_amount": balance_amount,
         "oob": True,
     }
 

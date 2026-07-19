@@ -27,6 +27,8 @@ Operational GL tables live in the Postgres `public` schema. Alembic migrations a
 | `008_raw_source_external_id` | Provider identity on pending raw rows |
 | `009_raw_promotion_review` | Hold ambiguous promotion rows for review |
 | `010_transient_raw_staging` | Persist provider identity on ledger rows and clear successful staging rows |
+| `011_last_import_batch_id` | Stamp ledger rows with the import batch that last touched them |
+| `012_balance_tracking` | Balance observations, anchors, and regenerable daily_balances |
 
 ## Core tables
 
@@ -43,6 +45,9 @@ Operational GL tables live in the Postgres `public` schema. Alembic migrations a
 - **category_rules** / **category_suggestions** — payee→category memory and AI suggestions
 - **import_batches** / **raw_transactions** — ingest staging before promotion to `bank_transactions`
 - **transfer_links** — pairs outbound/inbound transfer transactions
+- **balance_observations** — external balance facts (SimpleFIN, legacy DailyBalance, manual)
+- **balance_anchors** — certified end-of-day seeds used to compute running balances
+- **daily_balances** — disposable/derived daily series (`anchor + cumulative txn sums`); safe to truncate and rebuild
 
 ## Local commands
 
@@ -50,7 +55,7 @@ Operational GL tables live in the Postgres `public` schema. Alembic migrations a
 cd finance_app
 docker compose up -d
 uv run alembic upgrade head
-uv run alembic current   # should show 006_transfers_and_cleanup
+uv run alembic current   # should show 012_balance_tracking
 ```
 
 ## Sample data
@@ -116,6 +121,7 @@ Bank exports often include title and footer lines; the importer scans for the re
 | Staging | `dedupe_hash` (account, date, amount, description) | indexed comparison key; not unique because identical same-day transactions are valid |
 | Staging | `source_external_id` (SimpleFIN txn id) | unique partial index prevents duplicate provider rows while pending |
 | Ledger | `bank_transactions.source_external_id` | permanent SimpleFIN identity and idempotency key |
+| Ledger | `bank_transactions.last_import_batch_id` | batch that last inserted or linked the row (powers “Latest import” preview) |
 | Promotion | `source_external_id` or ledger 4-tuple | link to existing `bank_transactions` row; ambiguous matches → `needs_review` holding |
 | Promotion | `external_id` on insert | `ON CONFLICT DO NOTHING`; SimpleFIN ids map to `2_000_000_000_000+` range |
 
@@ -124,4 +130,31 @@ Bank exports often include title and footer lines; the importer scans for the re
 after promotion. Rows that match multiple `bank_transactions` on the same ledger
 key remain in `raw_transactions` with `promotion_status=needs_review` and a
 `promotion_note` explaining the conflict. `import_batches` permanently records
-the source, account, import time, filename, and final batch status.
+the source, account, import time, filename, and final batch status. The import
+UI previews the latest batch via `bank_transactions.last_import_batch_id`.
+
+### Balance tracking
+
+Running balances are recomputed set-based from the earliest `balance_anchors` row
+per account plus cumulative `bank_transactions` amounts after that date:
+
+```text
+balance(d) = anchor.amount + SUM(txns where date > anchor.date and date <= d)
+```
+
+Rebuild after imports:
+
+```bash
+cd finance_app
+uv run python scripts/recompute_balances.py
+uv run python scripts/recompute_balances.py --account 1 --drift
+```
+
+SimpleFIN imports record a `balance_observations` row **only when the import
+`end_date` is today**, then compare observed vs computed on that `balance-date`
+and show hold/drift on the import result panel. The import sidebar shows each
+account’s latest observed balance date and amount. Charts live at `/balances`.
+
+Full remigration seeds anchors from the earliest legacy `DailyBalance` row per
+account and copies the full series into `balance_observations` (`source=legacy`)
+for acceptance drift checks.

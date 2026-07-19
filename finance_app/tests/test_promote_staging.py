@@ -30,6 +30,7 @@ def test_bank_transaction_values_from_raw_fields():
         import_category = None
         account_id = 1
         source_external_id = "sf-1"
+        import_batch_id = 42
 
     loaded_at = datetime(2026, 7, 11, 12, 0, tzinfo=timezone.utc).replace(tzinfo=None)
     values = bank_transaction_values(
@@ -42,6 +43,7 @@ def test_bank_transaction_values_from_raw_fields():
     assert values["category_status"] == 0
     assert values["spending_category_id"] is None
     assert values["source_external_id"] == "sf-1"
+    assert values["last_import_batch_id"] == 42
 
 
 def test_dedupe_hash_matches_promotion_tuple():
@@ -122,3 +124,21 @@ def test_ledger_tuple_matches():
 
     assert _ledger_tuple_matches(Raw(), Bank())  # type: ignore[arg-type]
     assert not _ledger_tuple_matches(Raw(), BankMismatch())  # type: ignore[arg-type]
+
+
+def test_attach_source_identity_stamps_last_import_batch_id():
+    from unittest.mock import MagicMock
+
+    from app.services.promote_staging import _attach_source_identity
+
+    class Raw:
+        import_batch_id = 7
+        source_external_id = None
+
+    db = MagicMock()
+    _attach_source_identity(db, Raw(), bank_id=99)  # type: ignore[arg-type]
+    assert db.execute.called
+    statement = db.execute.call_args.args[0]
+    compiled = str(statement.compile(compile_kwargs={"literal_binds": True}))
+    assert "last_import_batch_id" in compiled
+    assert "7" in compiled

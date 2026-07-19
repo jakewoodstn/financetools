@@ -46,7 +46,10 @@
 
   <div id="result-{{ account.id }}" class="result-slot"></div>
 
-  {% set samples = sample_map.get(account.id, []) %}
   {% set account_id = account.id %}
+  {% set samples = sample_map.get(account.id, []) %}
+  {% set oob = false %}
+  {% include "_import_pending_sample.html" %}
+  {% set preview = preview_map.get(account.id) %}
   {% include "_import_sample.html" %}
 </section>

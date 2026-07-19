@@ -116,12 +116,28 @@ body {
   color: #6b7280;
 }
 
-.account-nav-dates {
+.account-nav-dates,
+.account-nav-balance {
   display: block;
   margin-top: 0.1rem;
   font-size: 0.7rem;
   color: #9ca3af;
   font-variant-numeric: tabular-nums;
+}
+
+.account-nav-balance .bal-amount {
+  font-weight: 600;
+  color: #4b5563;
+}
+
+.recon-ok {
+  color: #166534;
+  font-weight: 600;
+}
+
+.recon-drift {
+  color: #b45309;
+  font-weight: 600;
 }
 
 .workspace {
@@ -638,9 +654,31 @@ input[type="date"] {
   font-weight: 500;
 }
 
-.sample-date {
+.sample-date,
+.sample-amount {
   white-space: nowrap;
   font-variant-numeric: tabular-nums;
+}
+
+.sample-amount {
+  text-align: right;
+}
+
+.sample-meta,
+.sample-footer {
+  margin: 0 0 0.5rem;
+  font-size: 0.75rem;
+}
+
+.sample-footer {
+  margin-top: 0.4rem;
+  margin-bottom: 0;
+}
+
+.pending-sample-block:empty {
+  display: none;
+  margin: 0;
+  padding: 0;
 }
 
 code {

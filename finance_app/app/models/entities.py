@@ -1,7 +1,7 @@
 from datetime import date, datetime
 from decimal import Decimal
 
-from sqlalchemy import BigInteger, Date, DateTime, ForeignKey, Integer, Numeric, SmallInteger, String, Text
+from sqlalchemy import BigInteger, Date, DateTime, ForeignKey, Integer, Numeric, SmallInteger, String, Text, UniqueConstraint
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.models.base import Base
@@ -19,6 +19,9 @@ class Account(Base):
     bank_transactions: Mapped[list["BankTransaction"]] = relationship(back_populates="account")
     transaction_accounts: Mapped[list["TransactionAccount"]] = relationship(back_populates="account")
     raw_transactions: Mapped[list["RawTransaction"]] = relationship(back_populates="account")
+    balance_observations: Mapped[list["BalanceObservation"]] = relationship(back_populates="account")
+    balance_anchors: Mapped[list["BalanceAnchor"]] = relationship(back_populates="account")
+    daily_balances: Mapped[list["DailyBalance"]] = relationship(back_populates="account")
 
 
 class TransactionAccount(Base):
@@ -122,6 +125,7 @@ class BankTransaction(Base):
     accounting_date: Mapped[date | None] = mapped_column(Date)
     payee_id: Mapped[int | None] = mapped_column(ForeignKey("payees.id"))
     source_external_id: Mapped[str | None] = mapped_column(String(200))
+    last_import_batch_id: Mapped[int | None] = mapped_column(ForeignKey("import_batches.id"))
 
     account: Mapped[Account] = relationship(back_populates="bank_transactions")
     spending_category: Mapped[SpendingCategory | None] = relationship(back_populates="transactions")
@@ -235,3 +239,49 @@ class TransferLink(Base):
         back_populates="inbound_transfer",
         foreign_keys=[inbound_bank_transaction_id],
     )
+
+
+class BalanceObservation(Base):
+    __tablename__ = "balance_observations"
+    __table_args__ = (
+        UniqueConstraint(
+            "account_id",
+            "as_of_date",
+            "source",
+            name="uq_balance_observations_account_date_source",
+        ),
+    )
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    account_id: Mapped[int] = mapped_column(ForeignKey("accounts.id"))
+    as_of_date: Mapped[date] = mapped_column(Date)
+    amount: Mapped[Decimal] = mapped_column(Numeric(19, 4))
+    source: Mapped[str] = mapped_column(String(50))
+    observed_at: Mapped[datetime] = mapped_column(DateTime, server_default="now()")
+
+    account: Mapped[Account] = relationship(back_populates="balance_observations")
+
+
+class BalanceAnchor(Base):
+    __tablename__ = "balance_anchors"
+    __table_args__ = (
+        UniqueConstraint("account_id", "as_of_date", name="uq_balance_anchors_account_date"),
+    )
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    account_id: Mapped[int] = mapped_column(ForeignKey("accounts.id"))
+    as_of_date: Mapped[date] = mapped_column(Date)
+    amount: Mapped[Decimal] = mapped_column(Numeric(19, 4))
+    note: Mapped[str | None] = mapped_column(String(500))
+
+    account: Mapped[Account] = relationship(back_populates="balance_anchors")
+
+
+class DailyBalance(Base):
+    __tablename__ = "daily_balances"
+
+    account_id: Mapped[int] = mapped_column(ForeignKey("accounts.id"), primary_key=True)
+    measurement_date: Mapped[date] = mapped_column(Date, primary_key=True)
+    amount: Mapped[Decimal] = mapped_column(Numeric(19, 4))
+
+    account: Mapped[Account] = relationship(back_populates="daily_balances")

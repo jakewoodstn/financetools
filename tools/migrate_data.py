@@ -29,6 +29,7 @@ from collections import Counter
 from migration_lib import (
     ACCOUNT_COLUMNS,
     CATEGORY_COLUMNS,
+    DAILY_BALANCE_COLUMNS,
     DEFAULT_PG_DSN,
     GROUP_COLUMNS,
     SPLIT_COLUMNS,
@@ -45,10 +46,13 @@ from migration_lib import (
     fetch_all,
     fetch_all_transactions,
     insert_rows,
+    legacy_balance_drift_summary,
     load_splits,
     load_tag_links,
+    recompute_daily_balances_sql,
     reset_sequence,
     sample_transactions,
+    seed_balance_history,
     seed_category_rules,
     upsert_simplefin_transaction_accounts,
     apply_account_import_overrides,
@@ -78,6 +82,8 @@ def main() -> None:
         groups = fetch_all(mcur, GROUP_COLUMNS, "spendingCategoryGroup")
         categories = fetch_all(mcur, CATEGORY_COLUMNS, "spendingCategories")
         tagged_events = fetch_all(mcur, TAGGED_EVENT_COLUMNS, "taggedEvent")
+        print("Reading DailyBalance history ...")
+        daily_balances = fetch_all(mcur, DAILY_BALANCE_COLUMNS, "DailyBalance")
 
         if args.full:
             print("Reading all transactions ...")
@@ -128,6 +134,13 @@ def main() -> None:
             print("Seeding category rules ...")
             rule_count = seed_category_rules(pcur)
             print(f"  {rule_count} rules")
+            print(f"Seeding balance anchors/observations from {len(daily_balances)} DailyBalance rows ...")
+            anchor_count, observation_count = seed_balance_history(pcur, daily_balances)
+            print(f"  anchors: {anchor_count}, legacy observations: {observation_count}")
+            print("Recomputing daily_balances ...")
+            daily_balance_rows = recompute_daily_balances_sql(pcur)
+            print(f"  daily_balances rows: {daily_balance_rows}")
+            drift_rows = legacy_balance_drift_summary(pcur)
 
             print("Resetting sequences ...")
             for table in (
@@ -141,6 +154,8 @@ def main() -> None:
                 "payees",
                 "payee_aliases",
                 "category_rules",
+                "balance_anchors",
+                "balance_observations",
             ):
                 reset_sequence(pcur, table)
 
@@ -152,6 +167,16 @@ def main() -> None:
         print(f"  tag links loaded: {tag_link_count}")
         print(f"  payees: {payee_count}")
         print(f"  category rules: {rule_count}")
+        print(f"  balance anchors: {anchor_count}")
+        print(f"  legacy balance observations: {observation_count}")
+        print(f"  daily_balances rows: {daily_balance_rows}")
+        if drift_rows:
+            print("\nLegacy balance drift (max abs / mismatches):")
+            for account_id, max_drift, avg_drift, mismatches in drift_rows:
+                print(
+                    f"  account {account_id}: max_abs={max_drift} avg_abs={avg_drift} "
+                    f"mismatches={mismatches}"
+                )
         print("\nTransactions by year:")
         for year in sorted(by_year):
             print(f"  {year}: {by_year[year]}")

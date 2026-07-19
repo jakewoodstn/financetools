@@ -114,6 +114,28 @@
 
     <dd>#{{ result.stage.import_batch_id }}</dd>
 
+    {% if result.balance_reconciliation %}
+
+    <dt>Balance check</dt>
+
+    <dd>
+      {% if result.balance_reconciliation.holds %}
+      <span class="recon-ok">holds</span>
+      {% else %}
+      <span class="recon-drift">drift</span>
+      {% endif %}
+      — observed {{ "%.2f"|format(result.balance_reconciliation.observed) }}
+      as of {{ result.balance_reconciliation.as_of_date }}
+      {% if result.balance_reconciliation.computed is not none %}
+      · computed {{ "%.2f"|format(result.balance_reconciliation.computed) }}
+      · drift {{ "%.2f"|format(result.balance_reconciliation.drift) }}
+      {% else %}
+      · no computed balance for that date
+      {% endif %}
+    </dd>
+
+    {% endif %}
+
   </dl>
 
   {% if result.promote and result.promote.needs_review %}
@@ -152,11 +174,12 @@
 
 
 
+{% include "_import_pending_sample.html" %}
 {% include "_import_sample.html" %}
 
 
 
-{% from "_import_stats_macros.html" import format_import_at, format_txn_date, format_import_at_short, format_txn_date_short %}
+{% from "_import_stats_macros.html" import format_import_at, format_txn_date, format_import_at_short, format_txn_date_short, format_currency %}
 
 <dd id="staged-count-{{ account_id }}" hx-swap-oob="true">{{ raw_staged_count }}</dd>
 
@@ -171,4 +194,8 @@
 <span id="nav-import-{{ account_id }}" hx-swap-oob="true">{{ format_import_at_short(latest_import_at) }}</span>
 
 <span id="nav-txn-{{ account_id }}" hx-swap-oob="true">{{ format_txn_date_short(latest_transaction_date) }}</span>
+
+<span id="nav-bal-date-{{ account_id }}" hx-swap-oob="true">{{ format_txn_date_short(latest_balance_date) }}</span>
+
+<span id="nav-bal-amt-{{ account_id }}" class="bal-amount" hx-swap-oob="true">{{ format_currency(latest_balance_amount) }}</span>
 

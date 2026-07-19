@@ -66,6 +66,11 @@ TAG_LINK_COLUMNS = [
     ("taggedAt", "tagged_at"),
     ("splitTransactionId", "split_external_id"),
 ]
+DAILY_BALANCE_COLUMNS = [
+    ("accountId", "account_id"),
+    ("MeasurementDate", "as_of_date"),
+    ("Amount", "amount"),
+]
 
 LEGACY_TABLE_COUNTS = {
     "accounts": ("account", None),
@@ -81,7 +86,9 @@ LEGACY_TABLE_COUNTS = {
 TRUNCATE_TABLES = (
     "transfer_links, transaction_tagged_events, tagged_events, "
     "category_suggestions, category_rules, payee_aliases, payees, "
-    "raw_transactions, import_batches, category_split_details, bank_transactions, "
+    "raw_transactions, import_batches, "
+    "daily_balances, balance_observations, balance_anchors, "
+    "category_split_details, bank_transactions, "
     "transaction_accounts, spending_categories, spending_category_groups, accounts"
 )
 
@@ -183,6 +190,161 @@ def reset_sequence(pg_cur, table: str, pk: str = "id") -> None:
         f"WHERE EXISTS (SELECT 1 FROM {table})",
         (table, pk),
     )
+
+
+def seed_balance_history(pg_cur, daily_balance_rows: list[tuple]) -> tuple[int, int]:
+    """Seed balance_anchors (earliest per account) and legacy balance_observations.
+
+    Skips synthetic account_id 0. Returns (anchor_count, observation_count).
+    """
+    account_idx = date_index(DAILY_BALANCE_COLUMNS, "account_id")
+    date_idx = date_index(DAILY_BALANCE_COLUMNS, "as_of_date")
+    amount_idx = date_index(DAILY_BALANCE_COLUMNS, "amount")
+
+    real_rows = [
+        row
+        for row in daily_balance_rows
+        if row[account_idx] is not None
+        and int(row[account_idx]) > 0
+        and row[date_idx] is not None
+        and row[amount_idx] is not None
+    ]
+    if not real_rows:
+        return 0, 0
+
+    earliest: dict[int, tuple] = {}
+    for row in real_rows:
+        account_id = int(row[account_idx])
+        current = earliest.get(account_id)
+        if current is None or row[date_idx] < current[date_idx]:
+            earliest[account_id] = row
+
+    anchor_rows = [
+        (int(row[account_idx]), row[date_idx], row[amount_idx], "seeded from legacy DailyBalance")
+        for row in earliest.values()
+    ]
+    pg_cur.executemany(
+        """
+        INSERT INTO balance_anchors (account_id, as_of_date, amount, note)
+        VALUES (%s, %s, %s, %s)
+        ON CONFLICT (account_id, as_of_date) DO UPDATE
+        SET amount = EXCLUDED.amount, note = EXCLUDED.note
+        """,
+        anchor_rows,
+    )
+
+    observation_rows = [
+        (int(row[account_idx]), row[date_idx], row[amount_idx], "legacy") for row in real_rows
+    ]
+    pg_cur.executemany(
+        """
+        INSERT INTO balance_observations (account_id, as_of_date, amount, source)
+        VALUES (%s, %s, %s, %s)
+        ON CONFLICT (account_id, as_of_date, source) DO UPDATE
+        SET amount = EXCLUDED.amount, observed_at = now()
+        """,
+        observation_rows,
+    )
+    return len(anchor_rows), len(observation_rows)
+
+
+def recompute_daily_balances_sql(pg_cur, account_id: int | None = None) -> int:
+    """Set-based rebuild of daily_balances (mirrors finance_app balance_series)."""
+    if account_id is None:
+        pg_cur.execute("SELECT DISTINCT account_id FROM balance_anchors ORDER BY account_id")
+        account_ids = [row[0] for row in pg_cur.fetchall()]
+    else:
+        account_ids = [account_id]
+
+    total = 0
+    for acct_id in account_ids:
+        pg_cur.execute(
+            """
+            SELECT as_of_date, amount
+            FROM balance_anchors
+            WHERE account_id = %s
+            ORDER BY as_of_date
+            LIMIT 1
+            """,
+            (acct_id,),
+        )
+        anchor = pg_cur.fetchone()
+        if anchor is None:
+            pg_cur.execute("DELETE FROM daily_balances WHERE account_id = %s", (acct_id,))
+            continue
+        anchor_date, anchor_amount = anchor
+        pg_cur.execute(
+            """
+            SELECT GREATEST(
+                %s::date,
+                COALESCE((SELECT MAX(transaction_date) FROM bank_transactions WHERE account_id = %s), %s::date),
+                CURRENT_DATE
+            )
+            """,
+            (anchor_date, acct_id, anchor_date),
+        )
+        end_date = pg_cur.fetchone()[0]
+        pg_cur.execute("DELETE FROM daily_balances WHERE account_id = %s", (acct_id,))
+        pg_cur.execute(
+            """
+            INSERT INTO daily_balances (account_id, measurement_date, amount)
+            SELECT
+                %s AS account_id,
+                days.d AS measurement_date,
+                CAST(%s AS numeric)
+                  + COALESCE(
+                      SUM(COALESCE(daily.day_total, 0)) OVER (
+                          ORDER BY days.d
+                          ROWS BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW
+                      ),
+                      0
+                  ) AS amount
+            FROM generate_series(%s::date, %s::date, interval '1 day') AS days(d)
+            LEFT JOIN (
+                SELECT transaction_date, COALESCE(SUM(amount), 0) AS day_total
+                FROM bank_transactions
+                WHERE account_id = %s
+                  AND transaction_date > %s::date
+                  AND transaction_date <= %s::date
+                GROUP BY transaction_date
+            ) AS daily ON daily.transaction_date = days.d
+            """,
+            (acct_id, anchor_amount, anchor_date, end_date, acct_id, anchor_date, end_date),
+        )
+        total += pg_cur.rowcount or 0
+    return total
+
+
+def legacy_balance_drift_summary(pg_cur) -> list[tuple[int, Decimal | None, Decimal | None, int]]:
+    """Per-account max abs drift of legacy observations vs recomputed daily_balances.
+
+    Computed balance carries forward: latest daily_balances row on or before the
+    observation date.
+    """
+    pg_cur.execute(
+        """
+        SELECT
+            o.account_id,
+            MAX(ABS(o.amount - d.amount)) FILTER (WHERE d.amount IS NOT NULL) AS max_abs_drift,
+            AVG(ABS(o.amount - d.amount)) FILTER (WHERE d.amount IS NOT NULL) AS avg_abs_drift,
+            COUNT(*) FILTER (
+                WHERE d.amount IS NULL OR ABS(o.amount - d.amount) > 0.01
+            ) AS mismatch_count
+        FROM balance_observations o
+        LEFT JOIN LATERAL (
+            SELECT amount
+            FROM daily_balances db
+            WHERE db.account_id = o.account_id
+              AND db.measurement_date <= o.as_of_date
+            ORDER BY db.measurement_date DESC
+            LIMIT 1
+        ) d ON true
+        WHERE o.source = 'legacy'
+        GROUP BY o.account_id
+        ORDER BY o.account_id
+        """
+    )
+    return pg_cur.fetchall()
 
 
 def date_index(columns: list[tuple[str, str]], target: str) -> int:

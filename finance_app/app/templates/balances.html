@@ -1,0 +1,396 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Balances</title>
+  <script src="https://cdn.jsdelivr.net/npm/htmx.org@2.0.4/dist/htmx.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.7/dist/chart.umd.min.js"></script>
+  <link rel="stylesheet" href="/static/css/balances.css">
+</head>
+<body>
+  <header class="page-header">
+    <nav class="nav">
+      <a href="/transcat">Transcat</a>
+      <a href="/import">Import</a>
+      <a href="/balances" class="active">Balances</a>
+    </nav>
+    <h1>Balances</h1>
+    <p class="subtitle">Computed daily series from anchors + transactions, with observed true-up points</p>
+  </header>
+
+  <main class="balances-layout">
+    <section class="panel controls">
+      <h2>Accounts</h2>
+      <label class="check-row">
+        <input type="checkbox" id="include-total" checked>
+        Total (sum of selected)
+      </label>
+      <div class="account-checks">
+        {% for account in accounts %}
+        <label class="check-row">
+          <input type="checkbox" class="account-check" value="{{ account.id }}" checked>
+          {{ account.account_name or ("Account " ~ account.id) }}
+        </label>
+        {% endfor %}
+      </div>
+
+      <h2>Range</h2>
+      <div class="range-row">
+        <label>Start <input type="date" id="start-date" value="{{ start_default }}"></label>
+        <label>End <input type="date" id="end-date" value="{{ end_default }}"></label>
+      </div>
+      <div class="preset-row">
+        <button type="button" class="btn-secondary preset" data-days="90">90d</button>
+        <button type="button" class="btn-secondary preset" data-days="365">1y</button>
+        <button type="button" class="btn-secondary preset" data-days="1825">5y</button>
+      </div>
+
+      <h2>Display</h2>
+      <label class="check-row">
+        <input type="checkbox" id="show-legacy-confirmed">
+        Show legacy confirmed points
+      </label>
+      <label class="check-row">
+        <input type="checkbox" id="show-zero-drift">
+        Show zero-drift dates
+      </label>
+      <p class="control-hint">By default: solid lines are computed from transactions; filled markers are SimpleFIN/manual confirmed balances; drift chart shows only mismatches.</p>
+      <button type="button" class="btn-primary" id="refresh-chart">Update chart</button>
+    </section>
+
+    <section class="panel chart-panel">
+      <h2>Balance history <span class="legend-hint">solid line = computed from transactions · filled markers = confirmed (SimpleFIN/manual) · hollow = legacy (optional)</span></h2>
+      <canvas id="balance-chart" height="120"></canvas>
+      <p id="chart-empty" class="muted card-note hidden">No daily balances for the selected range. Seed anchors and recompute after import.</p>
+      <h2 class="drift-chart-heading">Drift by date <span class="legend-hint">confirmed − computed; detection view defaults to mismatches only</span></h2>
+      <canvas id="drift-chart" height="80"></canvas>
+      <p id="drift-empty" class="muted card-note hidden">No drift mismatches in the selected range.</p>
+    </section>
+
+    <section class="panel drift-panel">
+      <h2>Drift mismatches <span class="legend-hint">for selected accounts and range</span></h2>
+      <table class="drift-table" id="drift-table">
+        <thead>
+          <tr>
+            <th>Account</th>
+            <th>Date</th>
+            <th>Source</th>
+            <th>Observed</th>
+            <th>Computed</th>
+            <th>Drift</th>
+          </tr>
+        </thead>
+        <tbody id="drift-table-body">
+          <tr><td colspan="6" class="muted">Loading…</td></tr>
+        </tbody>
+      </table>
+    </section>
+  </main>
+
+  <script>
+    const DRIFT_TOLERANCE = {{ drift_tolerance }};
+    const chartCanvas = document.getElementById("balance-chart");
+    const emptyNote = document.getElementById("chart-empty");
+    const driftCanvas = document.getElementById("drift-chart");
+    const driftEmpty = document.getElementById("drift-empty");
+    const driftTableBody = document.getElementById("drift-table-body");
+    let chart;
+    let driftChart;
+
+    function selectedAccounts() {
+      return Array.from(document.querySelectorAll(".account-check:checked")).map((el) => el.value);
+    }
+
+    function isoDaysAgo(days) {
+      const end = new Date();
+      const start = new Date();
+      start.setDate(end.getDate() - days);
+      return start.toISOString().slice(0, 10);
+    }
+
+    function money(value) {
+      if (value === null || value === undefined) return "—";
+      return Number(value).toLocaleString(undefined, {
+        style: "currency",
+        currency: "USD",
+      });
+    }
+
+    async function loadChart() {
+      const accounts = selectedAccounts();
+      const start = document.getElementById("start-date").value;
+      const end = document.getElementById("end-date").value;
+      const includeTotal = document.getElementById("include-total").checked;
+      const showLegacy = document.getElementById("show-legacy-confirmed").checked;
+      const showZeroDrift = document.getElementById("show-zero-drift").checked;
+      const params = new URLSearchParams();
+      accounts.forEach((id) => params.append("account", id));
+      if (start) params.set("start", start);
+      if (end) params.set("end", end);
+      params.set("include_total", includeTotal ? "true" : "false");
+
+      const response = await fetch("/api/balances?" + params.toString());
+      const payload = await response.json();
+      const allDatasets = payload.datasets || [];
+      const balanceSets = allDatasets.filter((ds) => ds.kind !== "drift");
+      const driftSets = allDatasets.filter((ds) => ds.kind === "drift");
+
+      renderBalanceChart(balanceSets, showLegacy);
+      renderDriftChart(driftSets, showZeroDrift);
+      renderDriftTable(driftSets, showZeroDrift);
+    }
+
+    function collectLabels(sets) {
+      const labelSet = new Set();
+      sets.forEach((ds) => (ds.points || []).forEach((p) => labelSet.add(p.date)));
+      return Array.from(labelSet).sort();
+    }
+
+    function sparseTicks(labels) {
+      return {
+        maxTicksLimit: 12,
+        callback: function (value, index) {
+          const label = this.getLabelForValue(value);
+          if (labels.length > 24 && index % Math.ceil(labels.length / 12) !== 0) {
+            return "";
+          }
+          return label;
+        },
+      };
+    }
+
+    const currencyTicks = {
+      callback: (value) => Number(value).toLocaleString(undefined, {
+        style: "currency",
+        currency: "USD",
+        maximumFractionDigits: 0,
+      }),
+    };
+
+    function splitObservations(ds, showLegacy) {
+      const points = ds.points || [];
+      const live = points.filter((p) => p.source !== "legacy");
+      const legacy = points.filter((p) => p.source === "legacy");
+      const out = [];
+      if (live.length) {
+        out.push({
+          ...ds,
+          label: ds.label.replace("confirmed balance", "confirmed (SimpleFIN/manual)"),
+          kind: "observation-live",
+          points: live,
+        });
+      }
+      if (showLegacy && legacy.length) {
+        out.push({
+          ...ds,
+          label: ds.label.replace("confirmed balance", "confirmed (legacy)"),
+          kind: "observation-legacy",
+          points: legacy,
+        });
+      }
+      return out;
+    }
+
+    function renderBalanceChart(sets, showLegacy) {
+      const expanded = [];
+      sets.forEach((ds) => {
+        if (ds.kind === "observation") {
+          expanded.push(...splitObservations(ds, showLegacy));
+        } else {
+          expanded.push(ds);
+        }
+      });
+
+      const labels = collectLabels(expanded);
+      const datasets = expanded.map((ds) => {
+        const byDate = Object.fromEntries((ds.points || []).map((p) => [p.date, p.amount]));
+        const data = labels.map((d) => (d in byDate ? byDate[d] : null));
+        if (ds.kind === "observation-live") {
+          return {
+            label: ds.label,
+            data,
+            borderColor: ds.color,
+            backgroundColor: ds.color,
+            showLine: false,
+            pointRadius: 5,
+            pointHoverRadius: 7,
+            pointBorderWidth: 1.5,
+            pointStyle: "rectRot",
+            spanGaps: false,
+          };
+        }
+        if (ds.kind === "observation-legacy") {
+          return {
+            label: ds.label,
+            data,
+            borderColor: ds.color,
+            backgroundColor: "#ffffff",
+            showLine: false,
+            pointRadius: 2.5,
+            pointBorderWidth: 1.25,
+            pointStyle: "circle",
+            spanGaps: false,
+          };
+        }
+        return {
+          label: ds.label,
+          data,
+          borderColor: ds.color,
+          backgroundColor: "transparent",
+          borderWidth: ds.account_id === 0 ? 2.5 : 1.8,
+          borderDash: ds.account_id === 0 ? [6, 4] : [],
+          pointRadius: 0,
+          tension: 0.15,
+          spanGaps: true,
+        };
+      });
+
+      const hasPoints = labels.length > 0;
+      emptyNote.classList.toggle("hidden", hasPoints);
+      chartCanvas.classList.toggle("hidden", !hasPoints);
+      if (chart) chart.destroy();
+      if (!hasPoints) return;
+
+      chart = new Chart(chartCanvas, {
+        type: "line",
+        data: { labels, datasets },
+        options: {
+          responsive: true,
+          maintainAspectRatio: true,
+          interaction: { mode: "nearest", intersect: false },
+          scales: {
+            x: { ticks: sparseTicks(labels) },
+            y: { ticks: currencyTicks },
+          },
+          plugins: {
+            legend: { position: "bottom", labels: { usePointStyle: true } },
+          },
+        },
+      });
+    }
+
+    function filterDriftPoints(points, showZeroDrift) {
+      return (points || []).filter((p) => {
+        if (p.amount === null || p.amount === undefined) return true;
+        if (showZeroDrift) return true;
+        return Math.abs(p.amount) > DRIFT_TOLERANCE;
+      });
+    }
+
+    function renderDriftChart(sets, showZeroDrift) {
+      const filtered = sets
+        .map((ds) => ({ ...ds, points: filterDriftPoints(ds.points, showZeroDrift) }))
+        .filter((ds) => (ds.points || []).length > 0);
+      const labels = collectLabels(filtered);
+      const datasets = filtered.map((ds) => {
+        const byDate = {};
+        (ds.points || []).forEach((p) => { byDate[p.date] = p; });
+        return {
+          label: ds.label,
+          data: labels.map((d) => (d in byDate ? byDate[d].amount : null)),
+          backgroundColor: ds.color,
+          borderColor: ds.color,
+          barPercentage: 0.85,
+          categoryPercentage: 0.7,
+          _points: byDate,
+        };
+      });
+
+      const hasPoints = labels.length > 0;
+      driftEmpty.classList.toggle("hidden", hasPoints);
+      driftCanvas.classList.toggle("hidden", !hasPoints);
+      if (driftChart) driftChart.destroy();
+      if (!hasPoints) return;
+
+      driftChart = new Chart(driftCanvas, {
+        type: "bar",
+        data: { labels, datasets },
+        options: {
+          responsive: true,
+          maintainAspectRatio: true,
+          interaction: { mode: "index", intersect: false },
+          scales: {
+            x: { stacked: false, ticks: sparseTicks(labels) },
+            y: {
+              ticks: currencyTicks,
+              grid: {
+                color: (ctx) => (ctx.tick.value === 0 ? "#9ca3af" : "#eef1f5"),
+                lineWidth: (ctx) => (ctx.tick.value === 0 ? 1.5 : 1),
+              },
+            },
+          },
+          plugins: {
+            legend: { position: "bottom" },
+            tooltip: {
+              callbacks: {
+                label: (ctx) => {
+                  const point = ctx.dataset._points[ctx.label];
+                  if (!point) return ctx.dataset.label;
+                  return `${ctx.dataset.label}: ${money(point.amount)} (observed ${money(point.observed)}, ${point.source})`;
+                },
+              },
+            },
+          },
+        },
+      });
+    }
+
+    function renderDriftTable(sets, showZeroDrift) {
+      const rows = [];
+      sets.forEach((ds) => {
+        filterDriftPoints(ds.points, showZeroDrift).forEach((p) => {
+          const computed = Object.prototype.hasOwnProperty.call(p, "computed")
+            ? p.computed
+            : (p.amount === null || p.amount === undefined ? null : (p.observed - p.amount));
+          rows.push({
+            account: ds.label.replace(" — drift", ""),
+            date: p.date,
+            source: p.source,
+            observed: p.observed,
+            computed,
+            drift: p.amount,
+          });
+        });
+      });
+      rows.sort((a, b) => {
+        const da = Math.abs(a.drift ?? Number.POSITIVE_INFINITY);
+        const db = Math.abs(b.drift ?? Number.POSITIVE_INFINITY);
+        return db - da || b.date.localeCompare(a.date);
+      });
+
+      if (!rows.length) {
+        driftTableBody.innerHTML = `<tr><td colspan="6" class="muted">No drift mismatches in the selected range.</td></tr>`;
+        return;
+      }
+
+      driftTableBody.innerHTML = rows.slice(0, 100).map((row) => {
+        const computed = row.computed === null ? "—" : money(row.computed);
+        const drift = row.drift === null || row.drift === undefined ? "—" : money(row.drift);
+        return `<tr>
+          <td>${row.account}</td>
+          <td>${row.date}</td>
+          <td class="mono">${row.source}</td>
+          <td class="num">${money(row.observed)}</td>
+          <td class="num">${computed}</td>
+          <td class="num">${drift}</td>
+        </tr>`;
+      }).join("");
+    }
+
+    document.getElementById("refresh-chart").addEventListener("click", loadChart);
+    document.getElementById("show-legacy-confirmed").addEventListener("change", loadChart);
+    document.getElementById("show-zero-drift").addEventListener("change", loadChart);
+    document.querySelectorAll(".preset").forEach((btn) => {
+      btn.addEventListener("click", () => {
+        const days = Number(btn.dataset.days);
+        document.getElementById("start-date").value = isoDaysAgo(days);
+        document.getElementById("end-date").value = new Date().toISOString().slice(0, 10);
+        loadChart();
+      });
+    });
+
+    loadChart();
+  </script>
+</body>
+</html>

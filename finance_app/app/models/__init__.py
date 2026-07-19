@@ -1,10 +1,13 @@
 from app.models.base import Base
 from app.models.entities import (
     Account,
+    BalanceAnchor,
+    BalanceObservation,
     BankTransaction,
     CategoryRule,
     CategorySplitDetail,
     CategorySuggestion,
+    DailyBalance,
     ImportBatch,
     Payee,
     PayeeAlias,
@@ -20,10 +23,13 @@ from app.models.entities import (
 __all__ = [
     "Base",
     "Account",
+    "BalanceAnchor",
+    "BalanceObservation",
     "BankTransaction",
     "CategoryRule",
     "CategorySplitDetail",
     "CategorySuggestion",
+    "DailyBalance",
     "ImportBatch",
     "Payee",
     "PayeeAlias",
