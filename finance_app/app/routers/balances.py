@@ -3,10 +3,10 @@
 from __future__ import annotations
 
 from datetime import date, timedelta
-from decimal import Decimal
+from decimal import Decimal, InvalidOperation
 from pathlib import Path
 
-from fastapi import APIRouter, Depends, Query, Request
+from fastapi import APIRouter, Depends, Form, HTTPException, Query, Request
 from fastapi.templating import Jinja2Templates
 from sqlalchemy import select
 from sqlalchemy.orm import Session
@@ -15,10 +15,12 @@ from app.database import get_db
 from app.models import Account
 from app.services.balance_series import (
     DRIFT_TOLERANCE,
+    SOURCE_MANUAL,
     balance_series,
     drift_report,
     drift_series,
     observations_in_range,
+    record_balance_observation,
 )
 
 router = APIRouter(tags=["balances"])
@@ -74,6 +76,7 @@ def balances_api(
     start: date | None = Query(default=None),
     end: date | None = Query(default=None),
     include_total: bool = Query(default=True),
+    total_only: bool = Query(default=False),
 ) -> dict:
     account_ids = _parse_account_ids(account)
     if account_ids is None:
@@ -81,12 +84,35 @@ def balances_api(
             db.scalars(select(Account.id).where(Account.id > 0).order_by(Account.id)).all()
         )
 
+    series = balance_series(db, account_ids=account_ids, start=start, end=end)
+
+    if total_only:
+        totals: dict[date, Decimal] = {}
+        for acct_id in account_ids:
+            for measurement_date, amount in series.get(acct_id, []):
+                totals[measurement_date] = totals.get(measurement_date, Decimal("0")) + amount
+        return {
+            "start": start.isoformat() if start else None,
+            "end": end.isoformat() if end else None,
+            "datasets": [
+                {
+                    "account_id": 0,
+                    "label": "Total",
+                    "color": "#111827",
+                    "kind": "series",
+                    "points": [
+                        {"date": day.isoformat(), "amount": float(totals[day])}
+                        for day in sorted(totals)
+                    ],
+                }
+            ],
+        }
+
     names = dict(
         db.execute(
             select(Account.id, Account.account_name).where(Account.id.in_(account_ids))
         ).all()
     )
-    series = balance_series(db, account_ids=account_ids, start=start, end=end)
     observations = observations_in_range(db, account_ids=account_ids, start=start, end=end)
     drift = drift_series(db, account_ids=account_ids, start=start, end=end)
 
@@ -168,4 +194,38 @@ def balances_api(
         "start": start.isoformat() if start else None,
         "end": end.isoformat() if end else None,
         "datasets": datasets,
+    }
+
+
+@router.post("/api/balances/observations")
+def create_balance_observation(
+    db: Session = Depends(get_db),
+    account_id: int = Form(...),
+    as_of_date: date = Form(...),
+    amount: str = Form(...),
+) -> dict:
+    account = db.get(Account, account_id)
+    if account is None or account.id <= 0:
+        raise HTTPException(status_code=404, detail="Account not found")
+    try:
+        parsed_amount = Decimal(amount.strip().replace(",", ""))
+    except (InvalidOperation, AttributeError) as exc:
+        raise HTTPException(status_code=400, detail="Invalid amount") from exc
+    if as_of_date > date.today():
+        raise HTTPException(status_code=400, detail="Balance date cannot be in the future")
+
+    observation = record_balance_observation(
+        db,
+        account_id,
+        as_of_date,
+        parsed_amount,
+        SOURCE_MANUAL,
+        commit=True,
+    )
+    return {
+        "id": observation.id,
+        "account_id": observation.account_id,
+        "as_of_date": observation.as_of_date.isoformat(),
+        "amount": float(observation.amount),
+        "source": observation.source,
     }

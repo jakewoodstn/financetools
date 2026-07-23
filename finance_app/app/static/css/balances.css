@@ -66,6 +66,8 @@ h1 {
 
 .controls {
   grid-row: span 2;
+  min-width: 0;
+  overflow: hidden;
 }
 
 .chart-panel {
@@ -123,11 +125,71 @@ h1 {
   align-items: center;
   font-size: 0.85rem;
   margin-bottom: 0.35rem;
+  min-width: 0;
 }
 
 .account-checks {
   max-height: 280px;
   overflow: auto;
+}
+
+.account-label {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.confirm-form {
+  display: flex;
+  flex-direction: column;
+  gap: 0.55rem;
+  font-size: 0.85rem;
+}
+
+.confirm-form label {
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+  min-width: 0;
+}
+
+.confirm-form select,
+.confirm-form input {
+  width: 100%;
+  max-width: 100%;
+  min-width: 0;
+  border: 1px solid var(--line);
+  border-radius: 4px;
+  padding: 0.3rem 0.4rem;
+  font: inherit;
+  background: #fff;
+}
+
+.confirm-form select {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.confirm-form option {
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.confirm-status {
+  margin: 0;
+  min-height: 1.1em;
+  font-size: 0.75rem;
+  color: var(--muted);
+}
+
+.confirm-status.ok {
+  color: #166534;
+}
+
+.confirm-status.err {
+  color: #b45309;
 }
 
 .range-row {

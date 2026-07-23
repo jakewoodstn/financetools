@@ -31,6 +31,8 @@ def test_balances_page_loads():
     assert response.status_code == 200
     assert "Balances" in response.text
     assert "balance-chart" in response.text
+    assert "confirm-balance-form" in response.text
+    assert "Confirm balance" in response.text
 
 
 def test_balances_api_returns_datasets():
@@ -39,6 +41,36 @@ def test_balances_api_returns_datasets():
     assert response.status_code == 200
     payload = response.json()
     assert "datasets" in payload
+
+
+def test_balances_api_total_only_returns_single_total_dataset():
+    client = TestClient(app)
+    response = client.get("/api/balances?total_only=true")
+    assert response.status_code == 200
+    datasets = response.json()["datasets"]
+    assert len(datasets) == 1
+    assert datasets[0]["label"] == "Total"
+    assert datasets[0]["account_id"] == 0
+
+
+def test_create_manual_balance_observation_rejects_bad_amount():
+    client = TestClient(app)
+    response = client.post(
+        "/api/balances/observations",
+        data={"account_id": 1, "as_of_date": "2026-07-18", "amount": "not-a-number"},
+    )
+    assert response.status_code == 400
+    assert "Invalid amount" in response.json()["detail"]
+
+
+def test_create_manual_balance_observation_rejects_future_date():
+    client = TestClient(app)
+    response = client.post(
+        "/api/balances/observations",
+        data={"account_id": 1, "as_of_date": "2099-01-01", "amount": "100.00"},
+    )
+    assert response.status_code == 400
+    assert "future" in response.json()["detail"].lower()
 
 
 def test_import_compare_redirects_to_import():

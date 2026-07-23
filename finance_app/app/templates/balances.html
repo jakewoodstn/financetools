@@ -30,7 +30,7 @@
         {% for account in accounts %}
         <label class="check-row">
           <input type="checkbox" class="account-check" value="{{ account.id }}" checked>
-          {{ account.account_name or ("Account " ~ account.id) }}
+          <span class="account-label" title="{{ account.account_name or ("Account " ~ account.id) }}">{{ account.account_name or ("Account " ~ account.id) }}</span>
         </label>
         {% endfor %}
       </div>
@@ -57,6 +57,29 @@
       </label>
       <p class="control-hint">By default: solid lines are computed from transactions; filled markers are SimpleFIN/manual confirmed balances; drift chart shows only mismatches.</p>
       <button type="button" class="btn-primary" id="refresh-chart">Update chart</button>
+
+      <h2>Confirm balance</h2>
+      <form id="confirm-balance-form" class="confirm-form">
+        <label>
+          Account
+          <select id="confirm-account" name="account_id" required>
+            {% for account in accounts %}
+            {% set full_name = account.account_name or ("Account " ~ account.id) %}
+            <option value="{{ account.id }}" title="{{ full_name }}">{% if full_name|length > 18 %}{{ full_name[:17] }}…{% else %}{{ full_name }}{% endif %}</option>
+            {% endfor %}
+          </select>
+        </label>
+        <label>
+          Date
+          <input type="date" id="confirm-date" name="as_of_date" value="{{ end_default }}" required>
+        </label>
+        <label>
+          Amount
+          <input type="text" id="confirm-amount" name="amount" inputmode="decimal" placeholder="0.00" required>
+        </label>
+        <button type="submit" class="btn-primary" id="confirm-balance-submit">Save confirmed</button>
+        <p id="confirm-balance-status" class="confirm-status" aria-live="polite"></p>
+      </form>
     </section>
 
     <section class="panel chart-panel">
@@ -124,11 +147,21 @@
       const includeTotal = document.getElementById("include-total").checked;
       const showLegacy = document.getElementById("show-legacy-confirmed").checked;
       const showZeroDrift = document.getElementById("show-zero-drift").checked;
+
+      if (!accounts.length && !includeTotal) {
+        renderBalanceChart([], showLegacy);
+        renderDriftChart([], showZeroDrift);
+        renderDriftTable([], showZeroDrift);
+        return;
+      }
+
       const params = new URLSearchParams();
       accounts.forEach((id) => params.append("account", id));
       if (start) params.set("start", start);
       if (end) params.set("end", end);
       params.set("include_total", includeTotal ? "true" : "false");
+      // No accounts checked but Total is: chart only the total across all accounts.
+      params.set("total_only", accounts.length ? "false" : "true");
 
       const response = await fetch("/api/balances?" + params.toString());
       const payload = await response.json();
@@ -388,6 +421,40 @@
         document.getElementById("end-date").value = new Date().toISOString().slice(0, 10);
         loadChart();
       });
+    });
+
+    document.getElementById("confirm-balance-form").addEventListener("submit", async (event) => {
+      event.preventDefault();
+      const status = document.getElementById("confirm-balance-status");
+      const submit = document.getElementById("confirm-balance-submit");
+      const form = event.currentTarget;
+      const body = new FormData(form);
+      status.textContent = "";
+      status.classList.remove("ok", "err");
+      submit.disabled = true;
+      try {
+        const response = await fetch("/api/balances/observations", {
+          method: "POST",
+          body,
+        });
+        const payload = await response.json().catch(() => ({}));
+        if (!response.ok) {
+          const detail = payload.detail;
+          const message = Array.isArray(detail)
+            ? detail.map((item) => item.msg || JSON.stringify(item)).join("; ")
+            : (detail || "Could not save confirmed balance");
+          throw new Error(message);
+        }
+        status.textContent = `Saved ${money(payload.amount)} on ${payload.as_of_date}`;
+        status.classList.add("ok");
+        document.getElementById("confirm-amount").value = "";
+        await loadChart();
+      } catch (err) {
+        status.textContent = err.message || "Could not save confirmed balance";
+        status.classList.add("err");
+      } finally {
+        submit.disabled = false;
+      }
     });
 
     loadChart();
