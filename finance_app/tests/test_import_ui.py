@@ -63,6 +63,20 @@ def test_create_manual_balance_observation_rejects_bad_amount():
     assert "Invalid amount" in response.json()["detail"]
 
 
+def test_create_manual_balance_observation_rejects_datetime_string():
+    client = TestClient(app)
+    response = client.post(
+        "/api/balances/observations",
+        data={
+            "account_id": 1,
+            "as_of_date": "2025-01-23T00:00:00Z",
+            "amount": "100.00",
+        },
+    )
+    assert response.status_code == 400
+    assert "calendar date" in response.json()["detail"].lower()
+
+
 def test_create_manual_balance_observation_rejects_future_date():
     client = TestClient(app)
     response = client.post(

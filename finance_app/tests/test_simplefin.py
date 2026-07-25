@@ -1,12 +1,11 @@
-from datetime import datetime, timezone
+from datetime import date, datetime, timezone
 from decimal import Decimal
 
 from app.services.simplefin import parse_accounts
 
 
 def test_parse_accounts_keeps_balance_instant_and_local_day():
-    # 2026-07-19 02:36 UTC == 2026-07-18 21:36 US Central: the UTC calendar
-    # date must not leak into the observation day.
+    # 2026-07-19 02:36 UTC == 2026-07-18 21:36 America/Chicago
     payload = {
         "accounts": [
             {
@@ -22,7 +21,7 @@ def test_parse_accounts_keeps_balance_instant_and_local_day():
     assert account.balance == Decimal("32902.92")
     assert account.balance_at == datetime.fromtimestamp(1784428560, tz=timezone.utc)
     assert account.balance_at.tzinfo is not None
-    assert account.balance_date == account.balance_at.astimezone().date()
+    assert account.balance_date == date(2026, 7, 18)
 
 
 def test_parse_accounts_handles_missing_balance_date():

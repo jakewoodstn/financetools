@@ -21,6 +21,7 @@ from app.services.balance_series import (
     record_balance_observation,
 )
 from app.services.csv_import import CsvImportError, CsvTableRegion, parse_csv_rows
+from app.services.calendar_dates import local_today
 from app.services.ingest_staging import StageResult, stage_csv_rows, stage_simplefin_account
 from app.services.promote_staging import (
     PROMOTION_STATUS_NEEDS_REVIEW,
@@ -102,7 +103,7 @@ class ImportRunResult:
 
 
 def default_date_range() -> tuple[date, date]:
-    end = date.today()
+    end = local_today()
     start = end - timedelta(days=30)
     return start, end
 
@@ -237,11 +238,11 @@ def run_simplefin_import(
     promote = promote_raw_transactions(db, account_id=account_id)
 
     reconciliation: BalanceReconciliation | None = None
-    capture_today = end_date == date.today()
+    capture_today = end_date == local_today()
     observation_date = sf_account.balance_date
-    if observation_date is not None and observation_date > date.today():
+    if observation_date is not None and observation_date > local_today():
         # An observation cannot be in the future; provider clock skew only.
-        observation_date = date.today()
+        observation_date = local_today()
     if (
         capture_today
         and sf_account.balance is not None

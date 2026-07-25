@@ -7,6 +7,7 @@ class Settings(BaseSettings):
 
     database_url: str = "postgresql+psycopg://finance:finance@localhost:5432/finances"
     app_debug: bool = False
+    app_timezone: str = "America/Chicago"
     simplefin_access_url: str | None = None
 
     @field_validator("app_debug", mode="before")

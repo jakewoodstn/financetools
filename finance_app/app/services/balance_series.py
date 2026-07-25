@@ -11,6 +11,7 @@ from sqlalchemy.dialects.postgresql import insert
 from sqlalchemy.orm import Session
 
 from app.models import BalanceAnchor, BalanceObservation, BankTransaction, DailyBalance
+from app.services.calendar_dates import local_today
 
 DRIFT_TOLERANCE = Decimal("0.01")
 SOURCE_SIMPLEFIN = "simplefin"
@@ -102,7 +103,7 @@ def recompute_daily_balances(
         )
 
     total_rows = 0
-    today = date.today()
+    today = local_today()
     for acct_id in account_ids:
         anchor = _earliest_anchor(db, acct_id)
         if anchor is None:

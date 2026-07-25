@@ -125,11 +125,18 @@
       return Array.from(document.querySelectorAll(".account-check:checked")).map((el) => el.value);
     }
 
+    // Calendar dates only — never use Date#toISOString (UTC) for business dates.
+    function formatLocalDate(d) {
+      const y = d.getFullYear();
+      const m = String(d.getMonth() + 1).padStart(2, "0");
+      const day = String(d.getDate()).padStart(2, "0");
+      return `${y}-${m}-${day}`;
+    }
+
     function isoDaysAgo(days) {
       const end = new Date();
-      const start = new Date();
-      start.setDate(end.getDate() - days);
-      return start.toISOString().slice(0, 10);
+      const start = new Date(end.getFullYear(), end.getMonth(), end.getDate() - days);
+      return formatLocalDate(start);
     }
 
     function money(value) {
@@ -418,7 +425,7 @@
       btn.addEventListener("click", () => {
         const days = Number(btn.dataset.days);
         document.getElementById("start-date").value = isoDaysAgo(days);
-        document.getElementById("end-date").value = new Date().toISOString().slice(0, 10);
+        document.getElementById("end-date").value = formatLocalDate(new Date());
         loadChart();
       });
     });
@@ -427,12 +434,15 @@
       event.preventDefault();
       const status = document.getElementById("confirm-balance-status");
       const submit = document.getElementById("confirm-balance-submit");
-      const form = event.currentTarget;
-      const body = new FormData(form);
       status.textContent = "";
       status.classList.remove("ok", "err");
       submit.disabled = true;
       try {
+        const body = new FormData();
+        body.set("account_id", document.getElementById("confirm-account").value);
+        // Read the date input's value as a plain YYYY-MM-DD calendar date.
+        body.set("as_of_date", document.getElementById("confirm-date").value);
+        body.set("amount", document.getElementById("confirm-amount").value);
         const response = await fetch("/api/balances/observations", {
           method: "POST",
           body,

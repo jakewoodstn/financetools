@@ -10,6 +10,8 @@ from datetime import date, datetime, timedelta, timezone
 from decimal import Decimal
 from urllib.parse import urlencode
 
+from app.services.calendar_dates import instant_to_calendar_date
+
 
 class SimpleFinError(Exception):
     """SimpleFIN API or configuration error."""
@@ -34,10 +36,10 @@ class SimpleFinAccount:
 
     @property
     def balance_date(self) -> date | None:
-        """Local calendar day the balance was captured (balance-at is a UTC instant)."""
+        """App-local calendar day the balance was captured (balance-at is a UTC instant)."""
         if self.balance_at is None:
             return None
-        return self.balance_at.astimezone().date()
+        return instant_to_calendar_date(self.balance_at)
 
 
 def validate_access_url(value: str) -> str:

@@ -22,6 +22,7 @@ from app.services.balance_series import (
     observations_in_range,
     record_balance_observation,
 )
+from app.services.calendar_dates import local_today, parse_calendar_date
 
 router = APIRouter(tags=["balances"])
 templates = Jinja2Templates(directory=str(Path(__file__).resolve().parent.parent / "templates"))
@@ -48,7 +49,7 @@ def balances_page(
     db: Session = Depends(get_db),
 ):
     accounts = db.execute(select(Account).where(Account.id > 0).order_by(Account.id)).scalars().all()
-    end = date.today()
+    end = local_today()
     start = end - timedelta(days=365)
     drift_rows = drift_report(db)
     recent_drift = [
@@ -201,23 +202,30 @@ def balances_api(
 def create_balance_observation(
     db: Session = Depends(get_db),
     account_id: int = Form(...),
-    as_of_date: date = Form(...),
+    as_of_date: str = Form(...),
     amount: str = Form(...),
 ) -> dict:
     account = db.get(Account, account_id)
     if account is None or account.id <= 0:
         raise HTTPException(status_code=404, detail="Account not found")
     try:
+        observation_date = parse_calendar_date(as_of_date)
+    except ValueError as exc:
+        raise HTTPException(
+            status_code=400,
+            detail="Balance date must be a calendar date (YYYY-MM-DD), not a datetime",
+        ) from exc
+    try:
         parsed_amount = Decimal(amount.strip().replace(",", ""))
     except (InvalidOperation, AttributeError) as exc:
         raise HTTPException(status_code=400, detail="Invalid amount") from exc
-    if as_of_date > date.today():
+    if observation_date > local_today():
         raise HTTPException(status_code=400, detail="Balance date cannot be in the future")
 
     observation = record_balance_observation(
         db,
         account_id,
-        as_of_date,
+        observation_date,
         parsed_amount,
         SOURCE_MANUAL,
         commit=True,
