@@ -52,6 +52,10 @@ finance_app/.env
 .env.*
 !.env.example
 
+# Local start/stop helpers (machine-specific)
+start.sh
+stop.sh
+
 # Logs and temp
 *.log
 *.tmp
