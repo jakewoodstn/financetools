@@ -134,9 +134,9 @@ def main() -> None:
             print("Seeding category rules ...")
             rule_count = seed_category_rules(pcur)
             print(f"  {rule_count} rules")
-            print(f"Seeding balance anchors/observations from {len(daily_balances)} DailyBalance rows ...")
-            anchor_count, observation_count = seed_balance_history(pcur, daily_balances)
-            print(f"  anchors: {anchor_count}, legacy observations: {observation_count}")
+            print(f"Seeding observed balances from {len(daily_balances)} DailyBalance rows ...")
+            _, observation_count = seed_balance_history(pcur, daily_balances)
+            print(f"  observations: {observation_count}")
             print("Recomputing daily_balances ...")
             daily_balance_rows = recompute_daily_balances_sql(pcur)
             print(f"  daily_balances rows: {daily_balance_rows}")
@@ -154,7 +154,6 @@ def main() -> None:
                 "payees",
                 "payee_aliases",
                 "category_rules",
-                "balance_anchors",
                 "balance_observations",
             ):
                 reset_sequence(pcur, table)
@@ -167,11 +166,10 @@ def main() -> None:
         print(f"  tag links loaded: {tag_link_count}")
         print(f"  payees: {payee_count}")
         print(f"  category rules: {rule_count}")
-        print(f"  balance anchors: {anchor_count}")
-        print(f"  legacy balance observations: {observation_count}")
+        print(f"  balance observations: {observation_count}")
         print(f"  daily_balances rows: {daily_balance_rows}")
         if drift_rows:
-            print("\nLegacy balance drift (max abs / mismatches):")
+            print("\nObserved balance drift (max abs / mismatches):")
             for account_id, max_drift, avg_drift, mismatches in drift_rows:
                 print(
                     f"  account {account_id}: max_abs={max_drift} avg_abs={avg_drift} "

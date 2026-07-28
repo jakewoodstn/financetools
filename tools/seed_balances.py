@@ -1,10 +1,9 @@
 #!/usr/bin/env python3
-"""Seed balance anchors and legacy observations from SQL Server DailyBalance.
+"""Seed observed balances from SQL Server DailyBalance.
 
 Standalone (non-destructive) version of the balance seeding that migrate_data.py
-performs during a full reload: reads dbo.DailyBalance, upserts balance_anchors
-(earliest row per real account) and balance_observations (source='legacy'),
-rebuilds daily_balances, and prints a drift summary.
+performs during a full reload: reads dbo.DailyBalance, upserts
+balance_observations, rebuilds daily_balances, and prints a drift summary.
 
 Setup (same as migrate_data.py):
     cd tools && uv sync
@@ -53,18 +52,17 @@ def main() -> None:
 
         with pg:
             pcur = pg.cursor()
-            print("Seeding balance anchors and legacy observations ...")
-            anchor_count, observation_count = seed_balance_history(pcur, daily_balances)
-            print(f"  anchors: {anchor_count}, legacy observations: {observation_count}")
+            print("Seeding observed balances ...")
+            _, observation_count = seed_balance_history(pcur, daily_balances)
+            print(f"  observations: {observation_count}")
             print("Recomputing daily_balances ...")
             rows = recompute_daily_balances_sql(pcur)
             print(f"  daily_balances rows: {rows}")
-            for table in ("balance_anchors", "balance_observations"):
-                reset_sequence(pcur, table)
+            reset_sequence(pcur, "balance_observations")
             drift_rows = legacy_balance_drift_summary(pcur)
 
         if drift_rows:
-            print("\nLegacy balance drift vs recomputed series (tolerance 0.01):")
+            print("\nObserved balance drift vs prior+txns (tolerance 0.01):")
             for account_id, max_drift, avg_drift, mismatches in drift_rows:
                 print(
                     f"  account {account_id}: max_abs={max_drift} avg_abs={avg_drift} "

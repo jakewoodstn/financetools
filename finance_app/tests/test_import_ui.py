@@ -32,7 +32,7 @@ def test_balances_page_loads():
     assert "Balances" in response.text
     assert "balance-chart" in response.text
     assert "confirm-balance-form" in response.text
-    assert "Confirm balance" in response.text
+    assert "Observed balance" in response.text
 
 
 def test_balances_api_returns_datasets():

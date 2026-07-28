@@ -14,7 +14,6 @@ from app.config import settings
 from app.models import Account, BankTransaction, ImportBatch, RawTransaction, TransactionAccount
 from app.services.balance_series import (
     BalanceReconciliation,
-    SOURCE_SIMPLEFIN,
     latest_observations,
     recompute_daily_balances,
     reconcile_observation,
@@ -253,7 +252,6 @@ def run_simplefin_import(
             account_id,
             observation_date,
             sf_account.balance,
-            SOURCE_SIMPLEFIN,
             commit=True,
         )
         recompute_daily_balances(db, account_id=account_id, commit=True)

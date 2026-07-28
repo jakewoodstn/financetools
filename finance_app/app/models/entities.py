@@ -20,7 +20,6 @@ class Account(Base):
     transaction_accounts: Mapped[list["TransactionAccount"]] = relationship(back_populates="account")
     raw_transactions: Mapped[list["RawTransaction"]] = relationship(back_populates="account")
     balance_observations: Mapped[list["BalanceObservation"]] = relationship(back_populates="account")
-    balance_anchors: Mapped[list["BalanceAnchor"]] = relationship(back_populates="account")
     daily_balances: Mapped[list["DailyBalance"]] = relationship(back_populates="account")
 
 
@@ -247,8 +246,7 @@ class BalanceObservation(Base):
         UniqueConstraint(
             "account_id",
             "as_of_date",
-            "source",
-            name="uq_balance_observations_account_date_source",
+            name="uq_balance_observations_account_date",
         ),
     )
 
@@ -256,25 +254,9 @@ class BalanceObservation(Base):
     account_id: Mapped[int] = mapped_column(ForeignKey("accounts.id"))
     as_of_date: Mapped[date] = mapped_column(Date)
     amount: Mapped[Decimal] = mapped_column(Numeric(19, 4))
-    source: Mapped[str] = mapped_column(String(50))
     observed_at: Mapped[datetime] = mapped_column(DateTime, server_default="now()")
 
     account: Mapped[Account] = relationship(back_populates="balance_observations")
-
-
-class BalanceAnchor(Base):
-    __tablename__ = "balance_anchors"
-    __table_args__ = (
-        UniqueConstraint("account_id", "as_of_date", name="uq_balance_anchors_account_date"),
-    )
-
-    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
-    account_id: Mapped[int] = mapped_column(ForeignKey("accounts.id"))
-    as_of_date: Mapped[date] = mapped_column(Date)
-    amount: Mapped[Decimal] = mapped_column(Numeric(19, 4))
-    note: Mapped[str | None] = mapped_column(String(500))
-
-    account: Mapped[Account] = relationship(back_populates="balance_anchors")
 
 
 class DailyBalance(Base):

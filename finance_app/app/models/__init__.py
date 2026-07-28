@@ -1,7 +1,6 @@
 from app.models.base import Base
 from app.models.entities import (
     Account,
-    BalanceAnchor,
     BalanceObservation,
     BankTransaction,
     CategoryRule,
@@ -23,7 +22,6 @@ from app.models.entities import (
 __all__ = [
     "Base",
     "Account",
-    "BalanceAnchor",
     "BalanceObservation",
     "BankTransaction",
     "CategoryRule",

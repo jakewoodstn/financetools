@@ -1,3 +1,5 @@
+from datetime import date
+
 from sqlalchemy import case, func, select
 from sqlalchemy.orm import Session
 
@@ -10,16 +12,29 @@ STATUS_APPROVED = -1
 DEFAULT_LIMIT = 500
 
 
+def list_accounts(db: Session) -> list[Account]:
+    return list(
+        db.scalars(select(Account).where(Account.id > 0).order_by(Account.id)).all()
+    )
+
+
 def list_transactions(
     db: Session,
     *,
     account_id: int = 0,
+    account_ids: list[int] | None = None,
+    start_date: date | None = None,
+    end_date: date | None = None,
     include_categorized: bool = False,
     limit: int = DEFAULT_LIMIT,
 ) -> list[TransactionOut]:
     category_label = case(
         (SpendingCategoryGroup.id.in_([-1, 2]), SpendingCategory.category_name),
         else_=func.concat(SpendingCategoryGroup.group_name, " - ", SpendingCategory.category_name),
+    )
+    effective_date = func.coalesce(
+        BankTransaction.accounting_date,
+        BankTransaction.transaction_date,
     )
 
     stmt = (
@@ -34,12 +49,20 @@ def list_transactions(
             SpendingCategory.spending_category_group_id == SpendingCategoryGroup.id,
         )
         .join(Account, BankTransaction.account_id == Account.id)
-        .order_by(BankTransaction.accounting_date.desc(), BankTransaction.external_id.desc())
+        .order_by(effective_date.desc(), BankTransaction.external_id.desc())
         .limit(limit)
     )
 
-    if account_id:
+    if account_ids is not None:
+        if not account_ids:
+            return []
+        stmt = stmt.where(BankTransaction.account_id.in_(account_ids))
+    elif account_id:
         stmt = stmt.where(BankTransaction.account_id == account_id)
+    if start_date is not None:
+        stmt = stmt.where(effective_date >= start_date)
+    if end_date is not None:
+        stmt = stmt.where(effective_date <= end_date)
 
     if not include_categorized:
         stmt = stmt.where(BankTransaction.category_status == STATUS_NEEDS_CATEGORIZATION)

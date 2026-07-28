@@ -15,11 +15,10 @@ from app.database import get_db
 from app.models import Account
 from app.services.balance_series import (
     DRIFT_TOLERANCE,
-    SOURCE_MANUAL,
     balance_series,
-    drift_report,
     drift_series,
     observations_in_range,
+    recompute_daily_balances,
     record_balance_observation,
 )
 from app.services.calendar_dates import local_today, parse_calendar_date
@@ -51,12 +50,6 @@ def balances_page(
     accounts = db.execute(select(Account).where(Account.id > 0).order_by(Account.id)).scalars().all()
     end = local_today()
     start = end - timedelta(days=365)
-    drift_rows = drift_report(db)
-    recent_drift = [
-        row
-        for row in drift_rows
-        if row.drift is None or abs(row.drift) > DRIFT_TOLERANCE
-    ][:50]
     return templates.TemplateResponse(
         request=request,
         name="balances.html",
@@ -64,7 +57,6 @@ def balances_page(
             "accounts": accounts,
             "start_default": start.isoformat(),
             "end_default": end.isoformat(),
-            "drift_rows": recent_drift,
             "drift_tolerance": DRIFT_TOLERANCE,
         },
     )
@@ -100,7 +92,7 @@ def balances_api(
                     "account_id": 0,
                     "label": "Total",
                     "color": "#111827",
-                    "kind": "series",
+                    "kind": "computed",
                     "points": [
                         {"date": day.isoformat(), "amount": float(totals[day])}
                         for day in sorted(totals)
@@ -125,9 +117,9 @@ def balances_api(
         datasets.append(
             {
                 "account_id": acct_id,
-                "label": f"{name} — computed (txns)",
+                "label": f"{name} — computed",
                 "color": color,
-                "kind": "series",
+                "kind": "computed",
                 "points": [
                     {"date": measurement_date.isoformat(), "amount": float(amount)}
                     for measurement_date, amount in points
@@ -139,16 +131,15 @@ def balances_api(
             datasets.append(
                 {
                     "account_id": acct_id,
-                    "label": f"{name} — confirmed balance",
+                    "label": f"{name} — observed",
                     "color": color,
-                    "kind": "observation",
+                    "kind": "observed",
                     "points": [
                         {
                             "date": as_of.isoformat(),
                             "amount": float(amount),
-                            "source": source,
                         }
-                        for as_of, amount, source in obs_points
+                        for as_of, amount in obs_points
                     ],
                 }
             )
@@ -164,11 +155,10 @@ def balances_api(
                         {
                             "date": as_of.isoformat(),
                             "amount": float(drift) if drift is not None else None,
-                            "source": source,
                             "observed": float(observed),
                             "computed": float(computed) if computed is not None else None,
                         }
-                        for as_of, source, observed, computed, drift in drift_points
+                        for as_of, observed, computed, drift in drift_points
                     ],
                 }
             )
@@ -183,7 +173,7 @@ def balances_api(
                 "account_id": 0,
                 "label": "Total",
                 "color": "#111827",
-                "kind": "series",
+                "kind": "computed",
                 "points": [
                     {"date": day.isoformat(), "amount": float(totals[day])}
                     for day in sorted(totals)
@@ -227,13 +217,12 @@ def create_balance_observation(
         account_id,
         observation_date,
         parsed_amount,
-        SOURCE_MANUAL,
         commit=True,
     )
+    recompute_daily_balances(db, account_id=account_id, commit=True)
     return {
         "id": observation.id,
         "account_id": observation.account_id,
         "as_of_date": observation.as_of_date.isoformat(),
         "amount": float(observation.amount),
-        "source": observation.source,
     }

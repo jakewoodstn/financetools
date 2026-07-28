@@ -87,7 +87,7 @@ TRUNCATE_TABLES = (
     "transfer_links, transaction_tagged_events, tagged_events, "
     "category_suggestions, category_rules, payee_aliases, payees, "
     "raw_transactions, import_batches, "
-    "daily_balances, balance_observations, balance_anchors, "
+    "daily_balances, balance_observations, "
     "category_split_details, bank_transactions, "
     "transaction_accounts, spending_categories, spending_category_groups, accounts"
 )
@@ -193,9 +193,9 @@ def reset_sequence(pg_cur, table: str, pk: str = "id") -> None:
 
 
 def seed_balance_history(pg_cur, daily_balance_rows: list[tuple]) -> tuple[int, int]:
-    """Seed balance_anchors (earliest per account) and legacy balance_observations.
+    """Seed balance_observations from legacy DailyBalance (one row per account/date).
 
-    Skips synthetic account_id 0. Returns (anchor_count, observation_count).
+    Skips synthetic account_id 0. Returns (0, observation_count) — anchors removed.
     """
     account_idx = date_index(DAILY_BALANCE_COLUMNS, "account_id")
     date_idx = date_index(DAILY_BALANCE_COLUMNS, "as_of_date")
@@ -212,46 +212,30 @@ def seed_balance_history(pg_cur, daily_balance_rows: list[tuple]) -> tuple[int, 
     if not real_rows:
         return 0, 0
 
-    earliest: dict[int, tuple] = {}
+    # One observed value per account/date (last write wins if duplicates).
+    by_key: dict[tuple[int, object], object] = {}
     for row in real_rows:
-        account_id = int(row[account_idx])
-        current = earliest.get(account_id)
-        if current is None or row[date_idx] < current[date_idx]:
-            earliest[account_id] = row
-
-    anchor_rows = [
-        (int(row[account_idx]), row[date_idx], row[amount_idx], "seeded from legacy DailyBalance")
-        for row in earliest.values()
-    ]
-    pg_cur.executemany(
-        """
-        INSERT INTO balance_anchors (account_id, as_of_date, amount, note)
-        VALUES (%s, %s, %s, %s)
-        ON CONFLICT (account_id, as_of_date) DO UPDATE
-        SET amount = EXCLUDED.amount, note = EXCLUDED.note
-        """,
-        anchor_rows,
-    )
+        by_key[(int(row[account_idx]), row[date_idx])] = row[amount_idx]
 
     observation_rows = [
-        (int(row[account_idx]), row[date_idx], row[amount_idx], "legacy") for row in real_rows
+        (account_id, as_of_date, amount) for (account_id, as_of_date), amount in by_key.items()
     ]
     pg_cur.executemany(
         """
-        INSERT INTO balance_observations (account_id, as_of_date, amount, source)
-        VALUES (%s, %s, %s, %s)
-        ON CONFLICT (account_id, as_of_date, source) DO UPDATE
+        INSERT INTO balance_observations (account_id, as_of_date, amount)
+        VALUES (%s, %s, %s)
+        ON CONFLICT (account_id, as_of_date) DO UPDATE
         SET amount = EXCLUDED.amount, observed_at = now()
         """,
         observation_rows,
     )
-    return len(anchor_rows), len(observation_rows)
+    return 0, len(observation_rows)
 
 
 def recompute_daily_balances_sql(pg_cur, account_id: int | None = None) -> int:
-    """Set-based rebuild of daily_balances (mirrors finance_app balance_series)."""
+    """Set-based rebuild of daily_balances from observations (mirrors balance_series)."""
     if account_id is None:
-        pg_cur.execute("SELECT DISTINCT account_id FROM balance_anchors ORDER BY account_id")
+        pg_cur.execute("SELECT DISTINCT account_id FROM balance_observations ORDER BY account_id")
         account_ids = [row[0] for row in pg_cur.fetchall()]
     else:
         account_ids = [account_id]
@@ -260,19 +244,16 @@ def recompute_daily_balances_sql(pg_cur, account_id: int | None = None) -> int:
     for acct_id in account_ids:
         pg_cur.execute(
             """
-            SELECT as_of_date, amount
-            FROM balance_anchors
+            SELECT MIN(as_of_date)
+            FROM balance_observations
             WHERE account_id = %s
-            ORDER BY as_of_date
-            LIMIT 1
             """,
             (acct_id,),
         )
-        anchor = pg_cur.fetchone()
-        if anchor is None:
+        earliest = pg_cur.fetchone()[0]
+        if earliest is None:
             pg_cur.execute("DELETE FROM daily_balances WHERE account_id = %s", (acct_id,))
             continue
-        anchor_date, anchor_amount = anchor
         pg_cur.execute(
             """
             SELECT GREATEST(
@@ -281,67 +262,123 @@ def recompute_daily_balances_sql(pg_cur, account_id: int | None = None) -> int:
                 CURRENT_DATE
             )
             """,
-            (anchor_date, acct_id, anchor_date),
+            (earliest, acct_id, earliest),
         )
         end_date = pg_cur.fetchone()[0]
         pg_cur.execute("DELETE FROM daily_balances WHERE account_id = %s", (acct_id,))
         pg_cur.execute(
             """
-            INSERT INTO daily_balances (account_id, measurement_date, amount)
-            SELECT
-                %s AS account_id,
-                days.d AS measurement_date,
-                CAST(%s AS numeric)
-                  + COALESCE(
-                      SUM(COALESCE(daily.day_total, 0)) OVER (
-                          ORDER BY days.d
-                          ROWS BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW
-                      ),
-                      0
-                  ) AS amount
-            FROM generate_series(%s::date, %s::date, interval '1 day') AS days(d)
-            LEFT JOIN (
+            WITH obs AS (
+                SELECT
+                    as_of_date AS seed_date,
+                    amount AS seed_amount,
+                    LEAD(as_of_date) OVER (ORDER BY as_of_date) AS next_date,
+                    LAG(as_of_date) OVER (ORDER BY as_of_date) AS prev_date
+                FROM balance_observations
+                WHERE account_id = %s
+            ),
+            first_day AS (
+                SELECT seed_date AS measurement_date, seed_amount AS amount
+                FROM obs
+                WHERE prev_date IS NULL
+            ),
+            segments AS (
+                SELECT
+                    seed_date,
+                    seed_amount,
+                    (seed_date + INTERVAL '1 day')::date AS segment_start,
+                    COALESCE(next_date, %s::date) AS segment_end
+                FROM obs
+            ),
+            days AS (
+                SELECT
+                    s.seed_date,
+                    s.seed_amount,
+                    gs.d::date AS measurement_date
+                FROM segments s
+                CROSS JOIN LATERAL generate_series(
+                    s.segment_start,
+                    s.segment_end,
+                    interval '1 day'
+                ) AS gs(d)
+                WHERE s.segment_end >= s.segment_start
+            ),
+            daily AS (
                 SELECT transaction_date, COALESCE(SUM(amount), 0) AS day_total
                 FROM bank_transactions
                 WHERE account_id = %s
                   AND transaction_date > %s::date
                   AND transaction_date <= %s::date
                 GROUP BY transaction_date
-            ) AS daily ON daily.transaction_date = days.d
+            ),
+            computed_days AS (
+                SELECT
+                    days.measurement_date,
+                    days.seed_amount
+                      + COALESCE(
+                          SUM(COALESCE(daily.day_total, 0)) OVER (
+                              PARTITION BY days.seed_date
+                              ORDER BY days.measurement_date
+                              ROWS BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW
+                          ),
+                          0
+                      ) AS amount
+                FROM days
+                LEFT JOIN daily
+                  ON daily.transaction_date = days.measurement_date
+                 AND daily.transaction_date > days.seed_date
+            )
+            INSERT INTO daily_balances (account_id, measurement_date, amount)
+            SELECT %s, measurement_date, amount FROM first_day
+            UNION ALL
+            SELECT %s, measurement_date, amount FROM computed_days
             """,
-            (acct_id, anchor_amount, anchor_date, end_date, acct_id, anchor_date, end_date),
+            (acct_id, end_date, acct_id, earliest, end_date, acct_id, acct_id),
         )
         total += pg_cur.rowcount or 0
     return total
 
 
 def legacy_balance_drift_summary(pg_cur) -> list[tuple[int, Decimal | None, Decimal | None, int]]:
-    """Per-account max abs drift of legacy observations vs recomputed daily_balances.
-
-    Computed balance carries forward: latest daily_balances row on or before the
-    observation date.
-    """
+    """Per-account max abs drift of observations vs prior-observation implication."""
     pg_cur.execute(
         """
+        WITH ordered AS (
+            SELECT
+                account_id,
+                as_of_date,
+                amount,
+                LAG(as_of_date) OVER (PARTITION BY account_id ORDER BY as_of_date) AS prior_date,
+                LAG(amount) OVER (PARTITION BY account_id ORDER BY as_of_date) AS prior_amount
+            FROM balance_observations
+        ),
+        compared AS (
+            SELECT
+                o.account_id,
+                o.as_of_date,
+                o.amount AS observed,
+                CASE
+                    WHEN o.prior_date IS NULL THEN NULL
+                    ELSE o.prior_amount + COALESCE((
+                        SELECT SUM(t.amount)
+                        FROM bank_transactions t
+                        WHERE t.account_id = o.account_id
+                          AND t.transaction_date > o.prior_date
+                          AND t.transaction_date <= o.as_of_date
+                    ), 0)
+                END AS computed
+            FROM ordered o
+        )
         SELECT
-            o.account_id,
-            MAX(ABS(o.amount - d.amount)) FILTER (WHERE d.amount IS NOT NULL) AS max_abs_drift,
-            AVG(ABS(o.amount - d.amount)) FILTER (WHERE d.amount IS NOT NULL) AS avg_abs_drift,
+            account_id,
+            MAX(ABS(observed - computed)) FILTER (WHERE computed IS NOT NULL) AS max_abs_drift,
+            AVG(ABS(observed - computed)) FILTER (WHERE computed IS NOT NULL) AS avg_abs_drift,
             COUNT(*) FILTER (
-                WHERE d.amount IS NULL OR ABS(o.amount - d.amount) > 0.01
+                WHERE computed IS NULL OR ABS(observed - computed) > 0.01
             ) AS mismatch_count
-        FROM balance_observations o
-        LEFT JOIN LATERAL (
-            SELECT amount
-            FROM daily_balances db
-            WHERE db.account_id = o.account_id
-              AND db.measurement_date <= o.as_of_date
-            ORDER BY db.measurement_date DESC
-            LIMIT 1
-        ) d ON true
-        WHERE o.source = 'legacy'
-        GROUP BY o.account_id
-        ORDER BY o.account_id
+        FROM compared
+        GROUP BY account_id
+        ORDER BY account_id
         """
     )
     return pg_cur.fetchall()

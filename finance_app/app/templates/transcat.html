@@ -19,9 +19,50 @@
   </header>
 
   <main class="layout">
-    <aside class="panel categories-panel">
+    <aside class="panel gutter-panel">
+      <h2>Search</h2>
+      <form id="search-form" class="filters" method="get" action="/transcat">
+        <div class="filter-section">
+          <span class="filter-label">Accounts</span>
+          <div class="account-toggles">
+            {% for account in accounts %}
+            {% set full_name = account.account_name or ("Account " ~ account.id) %}
+            <label class="account-toggle {% if account.id in selected_account_ids %}is-on{% endif %}" title="{{ full_name }}">
+              <input
+                type="checkbox"
+                class="account-check"
+                name="account"
+                value="{{ account.id }}"
+                {% if account.id in selected_account_ids %}checked{% endif %}
+              >
+              <span class="account-toggle-text">{{ full_name }}</span>
+            </label>
+            {% endfor %}
+          </div>
+        </div>
+        <label>
+          Start
+          <input type="date" id="filter-start" name="start" value="{{ start_date }}" required>
+        </label>
+        <label>
+          End
+          <input type="date" id="filter-end" name="end" value="{{ end_date }}" required>
+        </label>
+        <div class="preset-row">
+          <button type="button" class="btn-secondary preset" data-range="mtd">MTD</button>
+          <button type="button" class="btn-secondary preset" data-range="last-month">Last mo</button>
+          <button type="button" class="btn-secondary preset" data-range="qtd">QTD</button>
+          <button type="button" class="btn-secondary preset" data-range="ytd">YTD</button>
+          <button type="button" class="btn-secondary preset" data-range="last-year">Last yr</button>
+          <button type="button" class="btn-secondary preset" data-days="90">90d</button>
+          <button type="button" class="btn-secondary preset" data-days="365">1y</button>
+          <button type="button" class="btn-secondary preset" data-days="1825">5y</button>
+        </div>
+        <button type="submit" class="btn-primary">Search</button>
+      </form>
+
       <h2>Categories</h2>
-      <ul>
+      <ul class="category-list">
         {% for cat in categories %}
         <li>{{ cat.category_name }}</li>
         {% else %}
@@ -53,12 +94,93 @@
           </tr>
           {% else %}
           <tr>
-            <td colspan="5" class="muted">No transactions loaded (empty database)</td>
+            <td colspan="5" class="muted">No transactions for this search</td>
           </tr>
           {% endfor %}
         </tbody>
       </table>
     </section>
   </main>
+
+  <script>
+    // Calendar dates only — never use Date#toISOString (UTC) for business dates.
+    function formatLocalDate(d) {
+      const y = d.getFullYear();
+      const m = String(d.getMonth() + 1).padStart(2, "0");
+      const day = String(d.getDate()).padStart(2, "0");
+      return `${y}-${m}-${day}`;
+    }
+
+    function isoDaysAgo(days) {
+      const end = new Date();
+      const start = new Date(end.getFullYear(), end.getMonth(), end.getDate() - days);
+      return formatLocalDate(start);
+    }
+
+    function presetRange(name) {
+      const today = new Date();
+      const y = today.getFullYear();
+      const m = today.getMonth();
+      if (name === "mtd") {
+        return {
+          start: formatLocalDate(new Date(y, m, 1)),
+          end: formatLocalDate(today),
+        };
+      }
+      if (name === "last-month") {
+        return {
+          start: formatLocalDate(new Date(y, m - 1, 1)),
+          end: formatLocalDate(new Date(y, m, 0)),
+        };
+      }
+      if (name === "qtd") {
+        const qStartMonth = Math.floor(m / 3) * 3;
+        return {
+          start: formatLocalDate(new Date(y, qStartMonth, 1)),
+          end: formatLocalDate(today),
+        };
+      }
+      if (name === "ytd") {
+        return {
+          start: formatLocalDate(new Date(y, 0, 1)),
+          end: formatLocalDate(today),
+        };
+      }
+      if (name === "last-year") {
+        return {
+          start: formatLocalDate(new Date(y - 1, 0, 1)),
+          end: formatLocalDate(new Date(y - 1, 11, 31)),
+        };
+      }
+      return null;
+    }
+
+    const form = document.getElementById("search-form");
+    const startInput = document.getElementById("filter-start");
+    const endInput = document.getElementById("filter-end");
+
+    document.querySelectorAll(".account-check").forEach((box) => {
+      box.addEventListener("change", () => {
+        box.closest(".account-toggle")?.classList.toggle("is-on", box.checked);
+        form.requestSubmit();
+      });
+    });
+
+    document.querySelectorAll(".preset").forEach((btn) => {
+      btn.addEventListener("click", () => {
+        if (btn.dataset.range) {
+          const range = presetRange(btn.dataset.range);
+          if (!range) return;
+          startInput.value = range.start;
+          endInput.value = range.end;
+        } else {
+          const days = Number(btn.dataset.days);
+          startInput.value = isoDaysAgo(days);
+          endInput.value = formatLocalDate(new Date());
+        }
+        form.requestSubmit();
+      });
+    });
+  </script>
 </body>
 </html>

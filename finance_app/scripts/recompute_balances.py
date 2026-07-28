@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Rebuild daily_balances from anchors + bank_transactions.
+"""Rebuild daily_balances from observations + bank_transactions.
 
 Usage:
     cd finance_app
@@ -36,13 +36,12 @@ def main() -> None:
             for row in report:
                 status = "OK"
                 if row.computed is None:
-                    status = "NO_COMPUTED"
-                    mismatches += 1
+                    status = "NO_PRIOR"
                 elif row.drift is not None and abs(row.drift) > DRIFT_TOLERANCE:
                     status = "DRIFT"
                     mismatches += 1
                 print(
-                    f"  acct={row.account_id} {row.as_of_date} src={row.source} "
+                    f"  acct={row.account_id} {row.as_of_date} "
                     f"obs={row.observed} computed={row.computed} drift={row.drift} [{status}]"
                 )
             print(f"mismatches: {mismatches} / {len(report)}")

@@ -28,7 +28,8 @@ Operational GL tables live in the Postgres `public` schema. Alembic migrations a
 | `009_raw_promotion_review` | Hold ambiguous promotion rows for review |
 | `010_transient_raw_staging` | Persist provider identity on ledger rows and clear successful staging rows |
 | `011_last_import_batch_id` | Stamp ledger rows with the import batch that last touched them |
-| `012_balance_tracking` | Balance observations, anchors, and regenerable daily_balances |
+| `012_balance_tracking` | Balance observations and regenerable daily_balances |
+| `013_observed_computed` | One observed balance per account/date; drop anchors/source |
 
 ## Core tables
 
@@ -45,9 +46,8 @@ Operational GL tables live in the Postgres `public` schema. Alembic migrations a
 - **category_rules** / **category_suggestions** — payee→category memory and AI suggestions
 - **import_batches** / **raw_transactions** — ingest staging before promotion to `bank_transactions`
 - **transfer_links** — pairs outbound/inbound transfer transactions
-- **balance_observations** — external balance facts (SimpleFIN, legacy DailyBalance, manual)
-- **balance_anchors** — certified end-of-day seeds used to compute running balances
-- **daily_balances** — disposable/derived daily series (`anchor + cumulative txn sums`); safe to truncate and rebuild
+- **balance_observations** — sparse documented end-of-day balances (observed truth; one per account/date)
+- **daily_balances** — disposable/derived daily series from the latest prior observation + intervening transactions; safe to truncate and rebuild
 
 ## Local commands
 
@@ -135,12 +135,17 @@ UI previews the latest batch via `bank_transactions.last_import_batch_id`.
 
 ### Balance tracking
 
-Running balances are recomputed set-based from the earliest `balance_anchors` row
-per account plus cumulative `bank_transactions` amounts after that date:
+Observed balances are sparse end-of-day truths. Computed (implied) daily balances
+are rebuilt set-based from the latest *prior* observation:
 
 ```text
-balance(d) = anchor.amount + SUM(txns where date > anchor.date and date <= d)
+balance(B) = observed(A).amount + SUM(txns where A < D <= B)
 ```
+
+where A is the latest observation with `as_of_date < B`. On an observation day
+the computed value can differ from the observed amount — that gap is drift.
+After that day, later computed balances reseed from the new observation.
+The first observation day is seeded as computed = observed.
 
 Rebuild after imports:
 
@@ -151,10 +156,10 @@ uv run python scripts/recompute_balances.py --account 1 --drift
 ```
 
 SimpleFIN imports record a `balance_observations` row **only when the import
-`end_date` is today**, then compare observed vs computed on that `balance-date`
+`end_date` is today**, then compare observed vs computed-from-prior on that date
 and show hold/drift on the import result panel. The import sidebar shows each
-account’s latest observed balance date and amount. Charts live at `/balances`.
+account’s latest observed balance date and amount. Charts live at `/balances`
+and label series only as **observed** or **computed**.
 
-Full remigration seeds anchors from the earliest legacy `DailyBalance` row per
-account and copies the full series into `balance_observations` (`source=legacy`)
-for acceptance drift checks.
+Full remigration copies legacy `DailyBalance` into `balance_observations` and
+rebuilds `daily_balances` for acceptance drift checks.

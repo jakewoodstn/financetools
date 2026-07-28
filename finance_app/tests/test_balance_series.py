@@ -11,7 +11,10 @@ from app.services.balance_series import (
 
 def test_reconcile_observation_holds_within_tolerance():
     db = MagicMock()
-    db.scalar.return_value = Decimal("100.00")
+    prior = MagicMock()
+    prior.as_of_date = date(2026, 7, 1)
+    prior.amount = Decimal("100.00")
+    db.scalar.side_effect = [prior, Decimal("0.005")]
     result = reconcile_observation(db, 1, date(2026, 7, 18), Decimal("100.005"))
     assert isinstance(result, BalanceReconciliation)
     assert result.holds
@@ -20,7 +23,10 @@ def test_reconcile_observation_holds_within_tolerance():
 
 def test_reconcile_observation_reports_drift():
     db = MagicMock()
-    db.scalar.return_value = Decimal("100.00")
+    prior = MagicMock()
+    prior.as_of_date = date(2026, 7, 1)
+    prior.amount = Decimal("100.00")
+    db.scalar.side_effect = [prior, Decimal("0")]
     result = reconcile_observation(db, 1, date(2026, 7, 18), Decimal("105.00"))
     assert not result.holds
     assert result.observed == Decimal("105.00")
@@ -28,7 +34,7 @@ def test_reconcile_observation_reports_drift():
     assert result.drift == Decimal("5.00")
 
 
-def test_reconcile_observation_missing_computed():
+def test_reconcile_observation_missing_prior():
     db = MagicMock()
     db.scalar.return_value = None
     result = reconcile_observation(db, 1, date(2026, 7, 18), Decimal("50.00"))
@@ -37,7 +43,7 @@ def test_reconcile_observation_missing_computed():
     assert result.drift is None
 
 
-def test_record_balance_observation_uses_upsert_constraint():
+def test_record_balance_observation_uses_account_date_upsert():
     from app.services.balance_series import record_balance_observation
 
     db = MagicMock()
@@ -50,7 +56,6 @@ def test_record_balance_observation_uses_upsert_constraint():
         account_id=1,
         as_of_date=date(2026, 7, 18),
         amount=Decimal("12.34"),
-        source="simplefin",
         commit=False,
     )
     assert result is obs
