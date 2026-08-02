@@ -333,11 +333,17 @@
               {% endif %}
             </td>
             <td class="tags-cell">
-              {% if txn.tags %}
-              {{ txn.tags.replace(";", ", ") }}
-              {% else %}
-              <button type="button" class="btn-link tag-add" title="Add tags (coming next)" disabled>+ tag</button>
-              {% endif %}
+              <div class="txn-tag-list">
+                {% if txn.tags %}
+                  {% for name in txn.tags.split(";") %}
+                    {% set label = name.strip() %}
+                    {% if label %}
+                    <span class="txn-tag">{{ label }}</span>
+                    {% endif %}
+                  {% endfor %}
+                {% endif %}
+              </div>
+              <button type="button" class="btn-link tag-add" title="Add tag">+ tag</button>
             </td>
             <td class="amount{% if txn.amount is not none and txn.amount < 0 %} is-negative{% endif %}">
               {%- if txn.amount is none -%}
@@ -793,7 +799,7 @@
     });
 
     tbody?.addEventListener("click", (ev) => {
-      if (ev.target.closest(".payee-edit, .payee-inline, input, a")) return;
+      if (ev.target.closest(".payee-edit, .payee-inline, .tag-add, .tag-edit-wrap, .tag-ac-menu, input, a")) return;
       const row = ev.target.closest("tr.txn-row");
       if (!row || ev.target.closest("button")) return;
       const index = Number(row.dataset.index);
@@ -1193,6 +1199,225 @@
       ev.stopPropagation();
       const row = btn.closest("tr.txn-row");
       if (row) startInlinePayeeEdit(row);
+    });
+
+    let tagAcItems = [];
+    let tagAcIndex = -1;
+    let tagAcTimer = null;
+    let tagSaving = false;
+
+    function parseRowTags(row) {
+      return (row.dataset.tags || "")
+        .split(";")
+        .map((t) => t.trim())
+        .filter(Boolean);
+    }
+
+    function renderRowTags(row) {
+      const list = row.querySelector(".txn-tag-list");
+      if (!list) return;
+      const tags = parseRowTags(row);
+      list.innerHTML = tags
+        .map((name) => `<span class="txn-tag">${escapeHtml(name)}</span>`)
+        .join("");
+    }
+
+    function closeTagEditor(cell) {
+      cell?.querySelector(".tag-edit-wrap")?.remove();
+      const addBtn = cell?.querySelector(".tag-add");
+      if (addBtn) addBtn.hidden = false;
+      tagAcItems = [];
+      tagAcIndex = -1;
+    }
+
+    function tagTargetsForRow(row) {
+      const id = Number(row.dataset.id);
+      if (!id) return [];
+      const selected = selectedIds();
+      if (selected.length > 1 && selected.includes(id)) return selected;
+      return [id];
+    }
+
+    async function attachTagToRows(ids, tagName) {
+      const name = (tagName || "").trim();
+      if (!ids.length || !name) return null;
+      return postJson("/api/transactions/tags/attach", {
+        transaction_ids: ids,
+        tag: name,
+      });
+    }
+
+    function applyTagToRows(ids, tagName) {
+      const name = (tagName || "").trim();
+      if (!name) return;
+      const idSet = new Set(ids.map(Number));
+      tbody?.querySelectorAll("tr.txn-row").forEach((row) => {
+        const id = Number(row.dataset.id);
+        if (!idSet.has(id)) return;
+        const tags = parseRowTags(row);
+        if (tags.some((t) => t.toLowerCase() === name.toLowerCase())) return;
+        tags.push(name);
+        row.dataset.tags = tags.join(";");
+        renderRowTags(row);
+      });
+    }
+
+    async function fetchTagAc(q) {
+      const res = await fetch(`/api/tags?q=${encodeURIComponent(q)}&limit=20`);
+      if (!res.ok) return [];
+      return res.json();
+    }
+
+    function renderTagAc(menu, query, items) {
+      tagAcItems = items;
+      tagAcIndex = -1;
+      const q = (query || "").trim();
+      const exact = items.some((item) => item.tag.toLowerCase() === q.toLowerCase());
+      const parts = items.map(
+        (item, i) =>
+          `<button type="button" class="tag-ac-item" data-index="${i}" data-tag="${escapeHtml(item.tag)}">${escapeHtml(item.tag)}</button>`
+      );
+      if (q && !exact) {
+        parts.push(
+          `<button type="button" class="tag-ac-item tag-ac-create" data-create="1" data-tag="${escapeHtml(q)}">Create “${escapeHtml(q)}”</button>`
+        );
+      }
+      if (!parts.length) {
+        menu.hidden = true;
+        menu.innerHTML = "";
+        return;
+      }
+      menu.innerHTML = parts.join("");
+      menu.hidden = false;
+    }
+
+    async function commitTagEditor(row, cell, input, menu) {
+      const name = (input.value || "").trim();
+      if (!name) {
+        closeTagEditor(cell);
+        return;
+      }
+      const ids = tagTargetsForRow(row);
+      tagSaving = true;
+      input.disabled = true;
+      try {
+        await attachTagToRows(ids, name);
+        applyTagToRows(ids, name);
+        closeTagEditor(cell);
+      } catch (err) {
+        console.error(err);
+        alert("Add tag failed");
+        input.disabled = false;
+        input.focus();
+      } finally {
+        tagSaving = false;
+      }
+    }
+
+    function startTagEditor(row) {
+      const cell = row.querySelector(".tags-cell");
+      if (!cell || cell.querySelector(".tag-edit-wrap")) return;
+      const addBtn = cell.querySelector(".tag-add");
+      if (addBtn) addBtn.hidden = true;
+
+      const wrap = document.createElement("div");
+      wrap.className = "tag-edit-wrap";
+      const input = document.createElement("input");
+      input.type = "text";
+      input.className = "tag-inline";
+      input.placeholder = "Tag name";
+      input.setAttribute("aria-label", "Add tag");
+      input.autocomplete = "off";
+      const menu = document.createElement("div");
+      menu.className = "tag-ac-menu";
+      menu.hidden = true;
+      wrap.appendChild(input);
+      wrap.appendChild(menu);
+      cell.appendChild(wrap);
+      input.focus();
+
+      const scheduleAc = () => {
+        if (tagAcTimer) clearTimeout(tagAcTimer);
+        tagAcTimer = setTimeout(async () => {
+          const q = input.value.trim();
+          if (q.length < 1) {
+            menu.hidden = true;
+            menu.innerHTML = "";
+            tagAcItems = [];
+            return;
+          }
+          try {
+            const items = await fetchTagAc(q);
+            if (document.activeElement === input) renderTagAc(menu, q, items);
+          } catch (err) {
+            console.error(err);
+          }
+        }, 120);
+      };
+
+      input.addEventListener("input", scheduleAc);
+      input.addEventListener("keydown", (ev) => {
+        const buttons = Array.from(menu.querySelectorAll(".tag-ac-item"));
+        if (ev.key === "ArrowDown" && buttons.length) {
+          ev.preventDefault();
+          tagAcIndex = (tagAcIndex + 1) % buttons.length;
+          buttons.forEach((b, i) => b.classList.toggle("is-active", i === tagAcIndex));
+          return;
+        }
+        if (ev.key === "ArrowUp" && buttons.length) {
+          ev.preventDefault();
+          tagAcIndex = (tagAcIndex - 1 + buttons.length) % buttons.length;
+          buttons.forEach((b, i) => b.classList.toggle("is-active", i === tagAcIndex));
+          return;
+        }
+        if (ev.key === "Enter") {
+          ev.preventDefault();
+          ev.stopPropagation();
+          if (tagAcIndex >= 0 && buttons[tagAcIndex]) {
+            input.value = buttons[tagAcIndex].dataset.tag || input.value;
+          }
+          commitTagEditor(row, cell, input, menu);
+          return;
+        }
+        if (ev.key === "Escape") {
+          ev.preventDefault();
+          ev.stopPropagation();
+          closeTagEditor(cell);
+        }
+      });
+      input.addEventListener("blur", () => {
+        if (tagSaving) return;
+        setTimeout(() => {
+          if (!cell.contains(document.activeElement) && cell.querySelector(".tag-edit-wrap")) {
+            closeTagEditor(cell);
+          }
+        }, 120);
+      });
+      input.addEventListener("mousedown", (ev) => ev.stopPropagation());
+      input.addEventListener("click", (ev) => ev.stopPropagation());
+
+      menu.addEventListener("mousedown", (ev) => {
+        // Keep focus on input; select on click.
+        ev.preventDefault();
+        ev.stopPropagation();
+      });
+      menu.addEventListener("click", (ev) => {
+        const btn = ev.target.closest(".tag-ac-item");
+        if (!btn) return;
+        ev.preventDefault();
+        ev.stopPropagation();
+        input.value = btn.dataset.tag || "";
+        commitTagEditor(row, cell, input, menu);
+      });
+    }
+
+    tbody?.addEventListener("click", (ev) => {
+      const btn = ev.target.closest(".tag-add");
+      if (!btn) return;
+      ev.preventDefault();
+      ev.stopPropagation();
+      const row = btn.closest("tr.txn-row");
+      if (row) startTagEditor(row);
     });
 
     function hidePayeeAc() {

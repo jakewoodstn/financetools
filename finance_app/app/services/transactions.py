@@ -211,6 +211,106 @@ def list_tags(db: Session) -> list[TagOut]:
     return [TagOut(tag_id=row.id, tag=row.tag) for row in rows]
 
 
+def autocomplete_tags(
+    db: Session,
+    query: str,
+    *,
+    limit: int = 20,
+) -> list[TagOut]:
+    q = (query or "").strip()
+    if not q:
+        return []
+    today = local_today()
+    rows = db.execute(
+        select(TaggedEvent.id, TaggedEvent.tag)
+        .where(
+            TaggedEvent.tag.ilike(f"%{q}%"),
+            or_(
+                TaggedEvent.retired_date.is_(None),
+                TaggedEvent.retired_date > today,
+            ),
+        )
+        .order_by(TaggedEvent.tag)
+        .limit(limit)
+    ).all()
+    return [TagOut(tag_id=row.id, tag=row.tag) for row in rows]
+
+
+_OPEN_ENDED_RETIRED = date(9999, 12, 31)
+
+
+def get_or_create_tag(db: Session, tag_name: str) -> TaggedEvent:
+    name = (tag_name or "").strip()
+    if not name:
+        raise ValueError("tag name required")
+    existing = db.scalar(
+        select(TaggedEvent).where(func.lower(TaggedEvent.tag) == name.lower())
+    )
+    if existing:
+        today = local_today()
+        if existing.retired_date is not None and existing.retired_date <= today:
+            existing.retired_date = _OPEN_ENDED_RETIRED
+        if existing.tag != name:
+            existing.tag = name
+        return existing
+    tag = TaggedEvent(
+        tag=name,
+        description=name,
+        effective_date=local_today(),
+        retired_date=_OPEN_ENDED_RETIRED,
+    )
+    db.add(tag)
+    db.flush()
+    return tag
+
+
+def attach_tag(
+    db: Session,
+    *,
+    external_ids: list[int],
+    tag_name: str,
+    commit: bool = True,
+) -> tuple[int, TaggedEvent | None]:
+    """Attach a tag (creating it if needed) to transactions by external_id."""
+    name = (tag_name or "").strip()
+    if not name or not external_ids:
+        return 0, None
+
+    tag = get_or_create_tag(db, name)
+    txns = list(
+        db.scalars(
+            select(BankTransaction).where(BankTransaction.external_id.in_(external_ids))
+        ).all()
+    )
+    if not txns:
+        return 0, tag
+
+    txn_ids = [txn.id for txn in txns]
+    already = set(
+        db.scalars(
+            select(TransactionTaggedEvent.bank_transaction_id).where(
+                TransactionTaggedEvent.bank_transaction_id.in_(txn_ids),
+                TransactionTaggedEvent.tagged_event_id == tag.id,
+            )
+        ).all()
+    )
+    for txn in txns:
+        if txn.id in already:
+            continue
+        db.add(
+            TransactionTaggedEvent(
+                bank_transaction_id=txn.id,
+                tagged_event_id=tag.id,
+            )
+        )
+
+    if commit:
+        db.commit()
+    else:
+        db.flush()
+    return len(txns), tag
+
+
 def list_frequent_categories(
     db: Session,
     *,

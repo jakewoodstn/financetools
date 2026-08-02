@@ -39,6 +39,17 @@ class TagOut(BaseModel):
     tag: str
 
 
+class TagAttachRequest(BaseModel):
+    transaction_ids: list[int] = Field(min_length=1)
+    tag: str = Field(min_length=1)
+
+
+class TagAttachResult(BaseModel):
+    updated: int
+    tag_id: int
+    tag: str
+
+
 class AssignCategoryRequest(BaseModel):
     transaction_ids: list[int] = Field(min_length=1)
     category_id: int

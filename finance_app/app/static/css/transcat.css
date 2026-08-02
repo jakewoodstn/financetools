@@ -840,10 +840,88 @@ th.sortable .sort-ind {
 .tags-cell {
   font-size: 0.85rem;
   color: #4b5563;
-  max-width: 12rem;
+  max-width: 14rem;
+  position: relative;
+}
+
+.txn-tag-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.25rem;
+  align-items: center;
+}
+
+.txn-tag {
+  display: inline-block;
+  max-width: 100%;
+  padding: 0.1rem 0.35rem;
+  border-radius: 4px;
+  background: #eef3f9;
+  border: 1px solid #c9d4e4;
+  color: #1f2937;
+  font-size: 0.72rem;
+  line-height: 1.25;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+}
+
+.tag-add {
+  margin-top: 0.15rem;
+  font-size: 0.75rem;
+}
+
+.tag-edit-wrap {
+  position: relative;
+  margin-top: 0.2rem;
+}
+
+.tag-inline {
+  width: 100%;
+  box-sizing: border-box;
+  font: inherit;
+  font-size: 0.8rem;
+  padding: 0.2rem 0.35rem;
+  border: 1px solid var(--theme-accent, #1d4ed8);
+  border-radius: 4px;
+  background: #fff;
+}
+
+.tag-ac-menu {
+  position: absolute;
+  z-index: 30;
+  left: 0;
+  right: 0;
+  top: calc(100% + 2px);
+  max-height: 180px;
+  overflow: auto;
+  border: 1px solid #d8dde6;
+  border-radius: 4px;
+  background: #fff;
+  box-shadow: 0 4px 12px rgba(15, 23, 42, 0.08);
+}
+
+.tag-ac-item {
+  display: block;
+  width: 100%;
+  text-align: left;
+  border: none;
+  background: transparent;
+  padding: 0.35rem 0.5rem;
+  font: inherit;
+  font-size: 0.8rem;
+  cursor: pointer;
+  color: #1f2937;
+}
+
+.tag-ac-item:hover,
+.tag-ac-item.is-active {
+  background: #eef5ff;
+}
+
+.tag-ac-create {
+  color: #4b5563;
+  font-style: italic;
 }
 
 @media (max-width: 1100px) {

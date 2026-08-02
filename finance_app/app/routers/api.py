@@ -17,6 +17,9 @@ from app.schemas.transaction import (
     AssignCategoryRequest,
     AssignCategoryResult,
     CategoryOut,
+    TagAttachRequest,
+    TagAttachResult,
+    TagOut,
     TransactionOut,
 )
 from app.services import payees as payee_service
@@ -55,6 +58,33 @@ def get_transactions(
 @router.get("/categories", response_model=list[CategoryOut])
 def get_categories(db: Session = Depends(get_db)) -> list[CategoryOut]:
     return txn_service.list_categories(db)
+
+
+@router.get("/tags", response_model=list[TagOut])
+def search_tags(
+    q: str = Query(default="", min_length=1),
+    limit: int = Query(20, ge=1, le=50),
+    db: Session = Depends(get_db),
+) -> list[TagOut]:
+    return txn_service.autocomplete_tags(db, q, limit=limit)
+
+
+@router.post("/transactions/tags/attach", response_model=TagAttachResult)
+def attach_tag(
+    body: TagAttachRequest,
+    db: Session = Depends(get_db),
+) -> TagAttachResult:
+    name = body.tag.strip()
+    if not name:
+        raise HTTPException(status_code=400, detail="tag required")
+    updated, tag = txn_service.attach_tag(
+        db,
+        external_ids=body.transaction_ids,
+        tag_name=name,
+    )
+    if tag is None or updated == 0:
+        raise HTTPException(status_code=404, detail="No matching transactions")
+    return TagAttachResult(updated=updated, tag_id=tag.id, tag=tag.tag)
 
 
 @router.get("/payees", response_model=list[PayeeAutocompleteItem])
