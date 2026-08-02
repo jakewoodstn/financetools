@@ -11,7 +11,12 @@ from app.schemas.payee import (
     PayeeSuggestRequest,
     PayeeSuggestionOut,
 )
-from app.schemas.transaction import CategoryOut, TransactionOut
+from app.schemas.transaction import (
+    AssignCategoryRequest,
+    AssignCategoryResult,
+    CategoryOut,
+    TransactionOut,
+)
 from app.services import payees as payee_service
 from app.services import transactions as txn_service
 
@@ -94,3 +99,22 @@ def apply_payee(
     if updated == 0:
         raise HTTPException(status_code=404, detail="No matching transactions")
     return PayeeApplyResult(updated=updated, canonical_name=name)
+
+
+@router.post("/transactions/assign", response_model=AssignCategoryResult)
+def assign_category(
+    body: AssignCategoryRequest,
+    db: Session = Depends(get_db),
+) -> AssignCategoryResult:
+    updated = txn_service.assign_categories(
+        db,
+        external_ids=body.transaction_ids,
+        category_id=body.category_id,
+    )
+    if updated == 0:
+        raise HTTPException(status_code=404, detail="Category or transactions not found")
+    return AssignCategoryResult(
+        updated=updated,
+        category_id=body.category_id,
+        category_name=txn_service.category_label_for_id(db, body.category_id),
+    )

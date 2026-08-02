@@ -198,7 +198,15 @@
       </div>
 
       <div id="action-bar" class="action-bar">
-        <div class="action-bar-meta"><span id="selected-count">0 selected</span></div>
+        <div class="action-bar-meta">
+          <span id="selected-count">0 selected</span>
+          <div class="clipboard-actions">
+            <button type="button" class="btn-secondary" id="btn-copy" disabled>Copy</button>
+            <button type="button" class="btn-secondary" id="btn-paste-payee" disabled title="No payee copied">Paste payee</button>
+            <button type="button" class="btn-secondary" id="btn-paste-category" disabled title="No category copied">Paste category</button>
+            <span class="clipboard-hint" id="clipboard-hint" hidden></span>
+          </div>
+        </div>
         <div class="action-zones">
           <div class="action-zone categorize-zone">
             <span class="action-zone-label">Categorize</span>
@@ -221,7 +229,7 @@
                 <option value="{{ cat.category_id }}">{{ cat.category_name }}</option>
                 {% endfor %}
               </select>
-              <button type="button" class="btn-secondary" id="btn-assign" disabled title="Assign coming next">Assign</button>
+              <button type="button" class="btn-secondary" id="btn-assign" disabled>Assign</button>
               <button type="button" class="btn-approve" id="btn-approve" disabled title="Approve coming next">Approve</button>
             </div>
           </div>
@@ -265,6 +273,7 @@
             data-date="{{ display_date }}"
             data-payee="{{ txn.description or "" }}"
             data-category="{{ txn.category_name or "" }}"
+            data-category-id="{{ txn.category_id if txn.category_id is not none else "" }}"
             data-tags="{{ txn.tags or "" }}"
             data-amount="{{ txn.amount if txn.amount is not none else "" }}"
             data-index="{{ loop.index0 }}"
@@ -281,7 +290,7 @@
               <span class="split-label">Split</span>
               <button type="button" class="split-btn" title="Split editor (coming next)" aria-label="Edit split" disabled>⧉</button>
               {% else %}
-              {{ txn.category_name or "Uncategorized" }}
+              <span class="category-text">{{ txn.category_name or "Uncategorized" }}</span>
               {% endif %}
             </td>
             <td class="tags-cell">
@@ -484,10 +493,11 @@
         selectedCountEl.textContent = `${n} selected`;
       }
       const enable = n > 0;
-      ["btn-assign", "btn-approve", "btn-suggest", "btn-payee-save"].forEach((id) => {
+      ["btn-assign", "btn-approve", "btn-suggest", "btn-payee-save", "btn-copy"].forEach((id) => {
         const el = document.getElementById(id);
         if (el) el.disabled = !enable;
       });
+      updateClipboardButtons();
       const payeeInput = document.getElementById("bulk-payee");
       if (payeeInput) {
         payeeInput.disabled = !enable;
@@ -501,6 +511,64 @@
       if (suggestResult && n === 0) {
         suggestResult.hidden = true;
       }
+    }
+
+    // In-app clipboard for copy/paste payee + category (not OS clipboard)
+    const txnClipboard = { payee: "", categoryId: "", categoryName: "" };
+
+    function updateClipboardButtons() {
+      const n = selectedRows().length;
+      const pastePayee = document.getElementById("btn-paste-payee");
+      const pasteCat = document.getElementById("btn-paste-category");
+      if (pastePayee) {
+        const ok = n > 0 && Boolean(txnClipboard.payee);
+        pastePayee.disabled = !ok;
+        pastePayee.title = txnClipboard.payee ? `Paste “${txnClipboard.payee}”` : "No payee copied";
+      }
+      if (pasteCat) {
+        const ok = n > 0 && Boolean(txnClipboard.categoryId);
+        pasteCat.disabled = !ok;
+        pasteCat.title = txnClipboard.categoryName
+          ? `Paste “${txnClipboard.categoryName}”`
+          : "No category copied";
+      }
+    }
+
+    function setClipboardHint() {
+      const hint = document.getElementById("clipboard-hint");
+      if (!hint) return;
+      const parts = [];
+      if (txnClipboard.payee) parts.push(txnClipboard.payee);
+      if (txnClipboard.categoryName) parts.push(txnClipboard.categoryName);
+      if (!parts.length) {
+        hint.hidden = true;
+        hint.textContent = "";
+        return;
+      }
+      hint.textContent = `Copied: ${parts.join(" · ")}`;
+      hint.hidden = false;
+    }
+
+    function applyCategoryToSelectedRows(categoryId, categoryName) {
+      const label = categoryName || "Uncategorized";
+      selectedRows().forEach((row) => {
+        row.dataset.categoryId = String(categoryId);
+        row.dataset.category = label;
+        const text = row.querySelector(".category-text");
+        if (text) text.textContent = label;
+        // If it was showing Split UI only, leave structure; still update dataset
+      });
+      const select = document.getElementById("assign-category");
+      if (select) select.value = String(categoryId);
+    }
+
+    async function assignCategoryToSelected(categoryId) {
+      const ids = selectedIds();
+      if (!ids.length || !categoryId) return null;
+      return postJson("/api/transactions/assign", {
+        transaction_ids: ids,
+        category_id: Number(categoryId),
+      });
     }
 
     tbody?.addEventListener("click", (ev) => {
@@ -532,6 +600,68 @@
       if (!chip) return;
       const select = document.getElementById("assign-category");
       if (select) select.value = chip.dataset.categoryId;
+    });
+
+    document.getElementById("btn-copy")?.addEventListener("click", () => {
+      const row = selectedRows()[0];
+      if (!row) return;
+      txnClipboard.payee = (row.dataset.payee || "").trim();
+      txnClipboard.categoryId = (row.dataset.categoryId || "").trim();
+      txnClipboard.categoryName = (row.dataset.category || "").trim();
+      if (!txnClipboard.categoryId) {
+        txnClipboard.categoryName = "";
+      }
+      setClipboardHint();
+      updateClipboardButtons();
+    });
+
+    document.getElementById("btn-paste-payee")?.addEventListener("click", async () => {
+      const ids = selectedIds();
+      const name = txnClipboard.payee;
+      if (!ids.length || !name) return;
+      try {
+        await postJson("/api/transactions/payee/apply", {
+          transaction_ids: ids,
+          canonical_name: name,
+        });
+        applyPayeeToSelectedRows(name);
+      } catch (err) {
+        console.error(err);
+        alert("Paste payee failed");
+      }
+    });
+
+    document.getElementById("btn-paste-category")?.addEventListener("click", async () => {
+      const categoryId = txnClipboard.categoryId;
+      if (!categoryId) return;
+      try {
+        const result = await assignCategoryToSelected(categoryId);
+        if (!result) return;
+        applyCategoryToSelectedRows(
+          result.category_id,
+          result.category_name || txnClipboard.categoryName
+        );
+      } catch (err) {
+        console.error(err);
+        alert("Paste category failed");
+      }
+    });
+
+    document.getElementById("btn-assign")?.addEventListener("click", async () => {
+      const select = document.getElementById("assign-category");
+      const categoryId = select?.value;
+      if (!categoryId) {
+        alert("Pick a category first");
+        return;
+      }
+      try {
+        const result = await assignCategoryToSelected(categoryId);
+        if (!result) return;
+        applyCategoryToSelectedRows(result.category_id, result.category_name);
+      } catch (err) {
+        console.error(err);
+        alert("Assign failed");
+      }
     });
 
     // --- Payee suggest / autocomplete / save ---

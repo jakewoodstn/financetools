@@ -267,3 +267,44 @@ def parse_amount(raw: str | None) -> Decimal | None:
         return Decimal(text)
     except InvalidOperation:
         return None
+
+
+def assign_categories(
+    db: Session,
+    *,
+    external_ids: list[int],
+    category_id: int,
+    commit: bool = True,
+) -> int:
+    """Draft-assign a spending category; does not change category_status."""
+    if not external_ids:
+        return 0
+    category = db.get(SpendingCategory, category_id)
+    if category is None:
+        return 0
+    txns = list(
+        db.scalars(
+            select(BankTransaction).where(BankTransaction.external_id.in_(external_ids))
+        ).all()
+    )
+    for txn in txns:
+        txn.spending_category_id = category_id
+    if commit:
+        db.commit()
+    else:
+        db.flush()
+    return len(txns)
+
+
+def category_label_for_id(db: Session, category_id: int) -> str | None:
+    category_label = _category_label()
+    row = db.execute(
+        select(category_label.label("category_name"))
+        .select_from(SpendingCategory)
+        .join(
+            SpendingCategoryGroup,
+            SpendingCategory.spending_category_group_id == SpendingCategoryGroup.id,
+        )
+        .where(SpendingCategory.id == category_id)
+    ).first()
+    return row.category_name if row else None

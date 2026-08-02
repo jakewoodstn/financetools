@@ -322,9 +322,30 @@ body {
 }
 
 .action-bar-meta {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem 1rem;
   font-size: 0.75rem;
   color: #6b7280;
   margin-bottom: 0.35rem;
+}
+
+.clipboard-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.35rem;
+}
+
+.clipboard-hint {
+  font-size: 0.72rem;
+  color: #6b7280;
+  max-width: 16rem;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .action-zones {
