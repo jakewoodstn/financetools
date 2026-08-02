@@ -550,6 +550,8 @@ th.sortable .sort-ind {
 
 .txn-row {
   cursor: pointer;
+  user-select: none;
+  -webkit-user-select: none;
 }
 
 .txn-row.is-selected {

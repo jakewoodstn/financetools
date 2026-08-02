@@ -571,6 +571,13 @@
       });
     }
 
+    tbody?.addEventListener("mousedown", (ev) => {
+      // Shift/⌘ range toggles must not create a native text selection.
+      if ((ev.shiftKey || ev.metaKey || ev.ctrlKey) && ev.target.closest("tr.txn-row")) {
+        ev.preventDefault();
+      }
+    });
+
     tbody?.addEventListener("click", (ev) => {
       const row = ev.target.closest("tr.txn-row");
       if (!row || ev.target.closest("button")) return;
@@ -591,6 +598,7 @@
         if (!wasOnly) row.classList.add("is-selected");
         lastSelectedIndex = index;
       }
+      window.getSelection()?.removeAllRanges();
       updateSelectionUi();
       hideSuggestResult();
     });
