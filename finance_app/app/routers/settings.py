@@ -23,6 +23,11 @@ from app.services.app_settings import (
     get_last_import_at,
     set_import_stale_days,
 )
+from app.services.lookup_bookmarks import (
+    TOKEN_NAMES,
+    get_lookup_bookmarks,
+    set_lookup_bookmarks,
+)
 from app.services.ui_context import ui_page_context
 
 router = APIRouter(tags=["settings"])
@@ -68,6 +73,8 @@ def settings_page(
             "error": error,
             "import_stale_days_value": get_import_stale_days(db),
             "last_import_at_display": last_display,
+            "lookup_bookmarks": get_lookup_bookmarks(db),
+            "lookup_token_names": TOKEN_NAMES,
             **theme_ctx,
         },
     )
@@ -124,3 +131,35 @@ def save_import_alerts(
     except (TypeError, ValueError):
         return RedirectResponse(url="/settings?error=invalid_stale_days", status_code=303)
     return RedirectResponse(url="/settings?saved=import-alerts", status_code=303)
+
+
+@router.post("/settings/lookup-bookmarks")
+async def save_lookup_bookmarks(
+    request: Request,
+    db: Session = Depends(get_db),
+):
+    form = await request.form()
+    labels = form.getlist("bookmark_label")
+    urls = form.getlist("bookmark_url")
+    ids = form.getlist("bookmark_id")
+    bookmarks = []
+    for i, label in enumerate(labels):
+        url = urls[i] if i < len(urls) else ""
+        bookmark_id = ids[i] if i < len(ids) else ""
+        label_s = str(label).strip()
+        url_s = str(url).strip()
+        if not label_s and not url_s:
+            continue
+        if not label_s or not url_s:
+            return RedirectResponse(url="/settings?error=invalid_bookmark", status_code=303)
+        if not (url_s.startswith("https://") or url_s.startswith("http://")):
+            return RedirectResponse(url="/settings?error=invalid_bookmark_url", status_code=303)
+        bookmarks.append(
+            {
+                "id": str(bookmark_id).strip(),
+                "label": label_s,
+                "url": url_s,
+            }
+        )
+    set_lookup_bookmarks(db, bookmarks, commit=True)
+    return RedirectResponse(url="/settings?saved=lookup-bookmarks", status_code=303)

@@ -253,3 +253,47 @@ body {
     grid-column: 1 / -1;
   }
 }
+
+.bookmark-rows {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  margin-bottom: 0.85rem;
+}
+
+.bookmark-row {
+  display: grid;
+  grid-template-columns: minmax(8rem, 0.35fr) minmax(12rem, 1fr) auto;
+  gap: 0.5rem;
+  align-items: end;
+}
+
+.bookmark-row label {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  font-size: 0.85rem;
+  color: #4b5563;
+  min-width: 0;
+}
+
+.bookmark-row input[type="text"],
+.bookmark-row input[type="url"] {
+  width: 100%;
+  box-sizing: border-box;
+  border: 1px solid #d8dde6;
+  border-radius: 4px;
+  padding: 0.35rem 0.5rem;
+  font: inherit;
+}
+
+.mono {
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  font-size: 0.85em;
+}
+
+@media (max-width: 700px) {
+  .bookmark-row {
+    grid-template-columns: 1fr;
+  }
+}

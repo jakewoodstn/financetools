@@ -31,3 +31,17 @@ def test_suggest_uses_alias_when_present():
 
     hit = suggest_payee(db, txn)
     assert hit == PayeeSuggestion("Amazon", 1, "alias")
+
+
+def test_suggest_falls_back_to_brand_list():
+    db = MagicMock()
+    txn = MagicMock()
+    txn.bank_orig_description = "CHECKCARD 07/08 AMAZON MKTPLACE AMZN.COM/BILL WA 9876543210"
+    txn.orig_description = None
+    txn.description = txn.bank_orig_description
+    txn.payee_id = None
+    # Alias + history queries return nothing.
+    db.execute.return_value.all.return_value = []
+
+    hit = suggest_payee(db, txn)
+    assert hit == PayeeSuggestion("Amazon", 0, "brand")

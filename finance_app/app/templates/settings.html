@@ -12,7 +12,7 @@
   <header class="page-header">
     {% include "_nav.html" %}
     <h1>Settings</h1>
-    <p class="subtitle">Theme, account colors, and import alerts</p>
+    <p class="subtitle">Theme, account colors, import alerts, and lookup bookmarks</p>
   </header>
 
   <main class="settings-layout">
@@ -20,6 +20,8 @@
     <p class="status-ok" role="status">Colors saved.</p>
     {% elif saved == "import-alerts" %}
     <p class="status-ok" role="status">Import alert settings saved.</p>
+    {% elif saved == "lookup-bookmarks" %}
+    <p class="status-ok" role="status">Lookup bookmarks saved.</p>
     {% endif %}
     {% if error == "invalid_color" %}
     <p class="status-err" role="alert">Could not save: use a valid #RRGGBB color for each account.</p>
@@ -27,9 +29,44 @@
     <p class="status-err" role="alert">Could not save: unknown theme.</p>
     {% elif error == "invalid_stale_days" %}
     <p class="status-err" role="alert">Could not save: enter a whole number of days (1–3650).</p>
+    {% elif error == "invalid_bookmark" %}
+    <p class="status-err" role="alert">Could not save: each bookmark needs both a label and a URL.</p>
+    {% elif error == "invalid_bookmark_url" %}
+    <p class="status-err" role="alert">Could not save: bookmark URLs must start with http:// or https://.</p>
     {% elif error %}
     <p class="status-err" role="alert">Could not save settings.</p>
     {% endif %}
+
+    <section class="panel">
+      <h2>Lookup bookmarks</h2>
+      <p class="panel-hint">
+        Used by the Lookup rail on Transactions. Opens in a docked browser window (Amazon/PayPal block iframes).
+        URL templates may include
+        {% for token in lookup_token_names %}<code class="mono">{ {{ '{' }}{{ token }}{{ '}' }}</code>{% if not loop.last %}, {% endif %}{% endfor %}.
+      </p>
+      <form method="post" action="/settings/lookup-bookmarks" id="lookup-bookmarks-form">
+        <div id="bookmark-rows" class="bookmark-rows">
+          {% for bookmark in lookup_bookmarks %}
+          <div class="bookmark-row">
+            <input type="hidden" name="bookmark_id" value="{{ bookmark.id }}">
+            <label class="bookmark-label">
+              Label
+              <input type="text" name="bookmark_label" value="{{ bookmark.label }}" required>
+            </label>
+            <label class="bookmark-url">
+              URL
+              <input type="url" name="bookmark_url" value="{{ bookmark.url }}" required>
+            </label>
+            <button type="button" class="btn-link bookmark-remove">Remove</button>
+          </div>
+          {% endfor %}
+        </div>
+        <div class="settings-actions">
+          <button type="button" class="btn-secondary" id="bookmark-add">Add bookmark</button>
+          <button type="submit" class="btn-primary">Save lookup bookmarks</button>
+        </div>
+      </form>
+    </section>
 
     <section class="panel">
       <h2>Import alerts</h2>
@@ -204,6 +241,31 @@
           card.classList.toggle("is-selected", card === btn);
         });
       });
+    });
+
+    const bookmarkRows = document.getElementById("bookmark-rows");
+    document.getElementById("bookmark-add")?.addEventListener("click", () => {
+      if (!bookmarkRows) return;
+      const row = document.createElement("div");
+      row.className = "bookmark-row";
+      row.innerHTML = `
+        <input type="hidden" name="bookmark_id" value="">
+        <label class="bookmark-label">
+          Label
+          <input type="text" name="bookmark_label" value="" required>
+        </label>
+        <label class="bookmark-url">
+          URL
+          <input type="url" name="bookmark_url" value="https://" required>
+        </label>
+        <button type="button" class="btn-link bookmark-remove">Remove</button>
+      `;
+      bookmarkRows.appendChild(row);
+    });
+    bookmarkRows?.addEventListener("click", (ev) => {
+      const btn = ev.target.closest(".bookmark-remove");
+      if (!btn) return;
+      btn.closest(".bookmark-row")?.remove();
     });
   </script>
 </body>

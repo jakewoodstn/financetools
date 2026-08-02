@@ -172,6 +172,7 @@
       </form>
     </aside>
 
+    <div class="work-surface" id="work-surface">
     <section class="panel transactions-panel">
       <h2>Transactions</h2>
       <div class="txn-stats" aria-label="Transaction totals" id="txn-stats">
@@ -339,6 +340,59 @@
         </tbody>
       </table>
     </section>
+
+    <aside class="lookup-rail" id="lookup-rail" aria-label="Lookup">
+      <button type="button" class="lookup-toggle" id="lookup-toggle" aria-expanded="false" title="Lookup">
+        <span class="lookup-toggle-label">Lookup</span>
+      </button>
+      <div class="lookup-body">
+        <h2>Lookup</h2>
+        <p class="lookup-hint">Amazon, PayPal, and Venmo open anytime. Google needs one selected transaction.</p>
+        <div class="lookup-context" id="lookup-context">
+          <div class="lookup-context-empty muted" id="lookup-context-empty">Select a transaction to copy fields / use Google</div>
+          <div class="lookup-context-detail" id="lookup-context-detail" hidden>
+            <div class="lookup-field">
+              <span class="lookup-field-label">Payee</span>
+              <span class="lookup-field-value" id="lookup-payee"></span>
+            </div>
+            <div class="lookup-field">
+              <span class="lookup-field-label">Amount</span>
+              <span class="lookup-field-value" id="lookup-amount"></span>
+            </div>
+            <div class="lookup-field">
+              <span class="lookup-field-label">Date</span>
+              <span class="lookup-field-value" id="lookup-date"></span>
+            </div>
+            <div class="lookup-field">
+              <span class="lookup-field-label">Bank text</span>
+              <span class="lookup-field-value lookup-bank" id="lookup-bank"></span>
+            </div>
+            <div class="lookup-copy-row">
+              <button type="button" class="btn-secondary lookup-copy" data-copy="payee">Copy payee</button>
+              <button type="button" class="btn-secondary lookup-copy" data-copy="amount">Copy amount</button>
+              <button type="button" class="btn-secondary lookup-copy" data-copy="date">Copy date</button>
+              <button type="button" class="btn-secondary lookup-copy" data-copy="bank">Copy bank text</button>
+            </div>
+          </div>
+        </div>
+        <h3 class="lookup-subhead">Bookmarks</h3>
+        <div class="lookup-bookmarks" id="lookup-bookmarks">
+          {% for bookmark in lookup_bookmarks %}
+          <button
+            type="button"
+            class="lookup-bookmark"
+            data-url="{{ bookmark.url }}"
+            data-needs-txn="{{ '1' if '{' in bookmark.url and '}' in bookmark.url else '0' }}"
+            title="{{ bookmark.url }}"
+          >{{ bookmark.label }}</button>
+          {% else %}
+          <p class="muted">No bookmarks — add some in Settings.</p>
+          {% endfor %}
+        </div>
+        <a class="lookup-settings-link" href="/settings">Edit bookmarks in Settings</a>
+      </div>
+    </aside>
+    </div>
   </main>
 
   <script>
@@ -593,6 +647,7 @@
       if (suggestResult && n === 0) {
         suggestResult.hidden = true;
       }
+      refreshLookupContext();
     }
 
     // In-app clipboard for copy/paste payee + category (not OS clipboard)
@@ -848,8 +903,12 @@
     function showSuggestResult(hit) {
       pendingSuggestion = hit;
       if (!suggestResult || !suggestText) return;
-      const src = hit.source === "alias" ? "alias" : hit.source === "prefix" ? "prefix" : "fingerprint";
-      suggestText.textContent = `${hit.canonical_name} · used ${hit.observation_count}× (${src})`;
+      if (hit.source === "brand") {
+        suggestText.textContent = `${hit.canonical_name} · brand list`;
+      } else {
+        const src = hit.source === "alias" ? "alias" : hit.source === "prefix" ? "prefix" : "fingerprint";
+        suggestText.textContent = `${hit.canonical_name} · used ${hit.observation_count}× (${src})`;
+      }
       suggestResult.hidden = false;
       const applyBtn = document.getElementById("btn-apply");
       if (applyBtn) applyBtn.hidden = false;
@@ -1086,6 +1145,139 @@
         const cur = sortState[col];
         sortState[col] = cur === null ? "asc" : cur === "asc" ? "desc" : null;
         applySort();
+      });
+    });
+
+    // --- Lookup rail (docked pop-out bookmarks) ---
+    const workSurface = document.getElementById("work-surface");
+    const lookupRail = document.getElementById("lookup-rail");
+    const lookupToggle = document.getElementById("lookup-toggle");
+    const LOOKUP_WINDOW = "financetools-lookup";
+    let lookupCopyValues = { payee: "", amount: "", date: "", bank: "" };
+
+    function formatLookupAmount(raw) {
+      if (raw === "" || raw == null) return "";
+      const n = Number(raw);
+      if (Number.isNaN(n)) return String(raw);
+      const abs = Math.abs(n).toLocaleString(undefined, {
+        minimumFractionDigits: 2,
+        maximumFractionDigits: 2,
+      });
+      return n < 0 ? `($${abs})` : `$${abs}`;
+    }
+
+    function refreshLookupContext() {
+      const rows = selectedRows();
+      const empty = document.getElementById("lookup-context-empty");
+      const detail = document.getElementById("lookup-context-detail");
+      if (!empty || !detail) return;
+      if (rows.length !== 1) {
+        empty.hidden = false;
+        empty.textContent = rows.length
+          ? "Select a single transaction to copy fields / use Google"
+          : "Select a transaction to copy fields / use Google";
+        detail.hidden = true;
+        lookupCopyValues = { payee: "", amount: "", date: "", bank: "" };
+        return;
+      }
+      const row = rows[0];
+      const payee = row.dataset.payee || "";
+      const amountRaw = row.dataset.amount || "";
+      const date = row.dataset.date || "";
+      const bank = row.dataset.bankOrig || "";
+      const account = row.title || "";
+      const payeeEl = document.getElementById("lookup-payee");
+      const amountEl = document.getElementById("lookup-amount");
+      const dateEl = document.getElementById("lookup-date");
+      const bankEl = document.getElementById("lookup-bank");
+      if (payeeEl) payeeEl.textContent = payee || "—";
+      if (amountEl) amountEl.textContent = formatLookupAmount(amountRaw) || "—";
+      if (dateEl) dateEl.textContent = date || "—";
+      if (bankEl) bankEl.textContent = bank || payee || "—";
+      empty.hidden = true;
+      detail.hidden = false;
+      const absAmount = amountRaw === "" ? "" : String(Math.abs(Number(amountRaw)));
+      lookupCopyValues = {
+        payee,
+        amount: amountRaw === "" || Number.isNaN(Number(amountRaw)) ? "" : String(Number(amountRaw)),
+        abs_amount: absAmount === "NaN" ? "" : absAmount,
+        date,
+        bank,
+        bank_orig: bank || payee,
+        account,
+      };
+    }
+
+    function fillLookupUrl(template) {
+      return String(template).replace(/\{([a-z_]+)\}/gi, (_, key) => {
+        const val = lookupCopyValues[key.toLowerCase()];
+        if (val == null || val === "") return "";
+        return encodeURIComponent(val);
+      });
+    }
+
+    function openLookupWindow(url) {
+      const width = Math.max(480, Math.floor(window.screen.availWidth / 2));
+      const height = Math.max(500, Math.floor(window.screen.availHeight * 0.88));
+      const left = Math.max(0, window.screen.availWidth - width);
+      const top = 40;
+      const features = [
+        "popup=yes",
+        `width=${width}`,
+        `height=${height}`,
+        `left=${left}`,
+        `top=${top}`,
+      ].join(",");
+      const win = window.open(url, LOOKUP_WINDOW, features);
+      if (win) {
+        try { win.focus(); } catch (_) { /* ignore */ }
+      } else {
+        alert("Pop-up blocked — allow pop-ups for this site to use Lookup.");
+      }
+    }
+
+    lookupToggle?.addEventListener("click", () => {
+      const open = !(lookupRail?.classList.contains("is-open"));
+      lookupRail?.classList.toggle("is-open", open);
+      workSurface?.classList.toggle("is-lookup-open", open);
+      lookupToggle.setAttribute("aria-expanded", open ? "true" : "false");
+    });
+
+    document.getElementById("lookup-bookmarks")?.addEventListener("click", (ev) => {
+      const btn = ev.target.closest(".lookup-bookmark");
+      if (!btn) return;
+      const template = btn.dataset.url || "";
+      const needsTxn = btn.dataset.needsTxn === "1" || /\{[a-z_]+\}/i.test(template);
+      if (needsTxn && selectedRows().length !== 1) {
+        alert("Select a single transaction first — this bookmark uses payee/amount from the row.");
+        return;
+      }
+      refreshLookupContext();
+      const url = needsTxn ? fillLookupUrl(template) : template;
+      if (!url) return;
+      openLookupWindow(url);
+    });
+
+    document.querySelectorAll(".lookup-copy").forEach((btn) => {
+      btn.addEventListener("click", async () => {
+        const key = btn.dataset.copy;
+        const map = {
+          payee: lookupCopyValues.payee,
+          amount: lookupCopyValues.amount,
+          date: lookupCopyValues.date,
+          bank: lookupCopyValues.bank || lookupCopyValues.bank_orig,
+        };
+        const text = map[key] || "";
+        if (!text) return;
+        try {
+          await navigator.clipboard.writeText(text);
+          const prev = btn.textContent;
+          btn.textContent = "Copied";
+          setTimeout(() => { btn.textContent = prev; }, 900);
+        } catch (err) {
+          console.error(err);
+          alert("Could not copy");
+        }
       });
     });
 

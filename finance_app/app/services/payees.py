@@ -7,6 +7,7 @@ from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
 from app.models import BankTransaction, Payee, PayeeAlias
+from app.services.payee_brands import match_brand
 from app.services.payee_normalize import (
     looks_like_clean_payee_name,
     payee_fingerprint,
@@ -24,7 +25,7 @@ AUTOCOMPLETE_LIMIT = 20
 class PayeeSuggestion:
     canonical_name: str
     observation_count: int
-    source: str  # alias | fingerprint | prefix
+    source: str  # alias | fingerprint | prefix | brand
 
 
 @dataclass(frozen=True)
@@ -41,7 +42,7 @@ def bank_text_for_transaction(txn: BankTransaction) -> str:
 
 
 def suggest_payee(db: Session, txn: BankTransaction) -> PayeeSuggestion | None:
-    """On-demand suggest: alias hit, then fingerprint history, then unique prefix."""
+    """On-demand suggest: alias, fingerprint/prefix history, then brand list."""
     raw = bank_text_for_transaction(txn)
     if not raw:
         return None
@@ -58,6 +59,10 @@ def suggest_payee(db: Session, txn: BankTransaction) -> PayeeSuggestion | None:
     history_hit = _suggest_from_history(db, raw)
     if history_hit:
         return history_hit
+
+    brand_name = match_brand(raw)
+    if brand_name:
+        return PayeeSuggestion(brand_name, 0, "brand")
     return None
 
 

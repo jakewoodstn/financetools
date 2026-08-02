@@ -11,6 +11,7 @@ from app.schemas.transaction import TransactionOut
 from app.services import transactions as txn_service
 from app.services.account_colors import account_color_map
 from app.services.calendar_dates import local_today
+from app.services.lookup_bookmarks import get_lookup_bookmarks
 from app.services.ui_context import ui_page_context
 
 router = APIRouter(tags=["ui"])
@@ -116,6 +117,7 @@ def transcat(
             "txn_stats": _transaction_stats(transactions),
             "start_date": start_date.isoformat(),
             "end_date": end_date.isoformat(),
+            "lookup_bookmarks": get_lookup_bookmarks(db),
             **ui_page_context(db, nav_active="transcat"),
         },
     )
