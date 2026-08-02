@@ -386,7 +386,7 @@ body {
   font-size: 0.72rem;
   color: #374151;
   cursor: pointer;
-  max-width: 8rem;
+  max-width: 14rem;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -395,6 +395,35 @@ body {
 .freq-chip:hover {
   border-color: var(--theme-accent);
   color: var(--theme-accent);
+}
+
+.action-row .single-select {
+  flex: 1 1 10rem;
+  min-width: 0;
+}
+
+.single-option {
+  display: block;
+  width: 100%;
+  text-align: left;
+  border: none;
+  background: #fff;
+  padding: 0.3rem 0.4rem;
+  font: inherit;
+  font-size: 0.8rem;
+  color: #374151;
+  cursor: pointer;
+  border-radius: 3px;
+}
+
+.single-option:hover,
+.single-option.is-selected {
+  background: #eef5ff;
+  color: #1a1a1a;
+}
+
+.single-option[hidden] {
+  display: none !important;
 }
 
 .action-row {

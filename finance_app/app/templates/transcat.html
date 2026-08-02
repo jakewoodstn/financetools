@@ -216,19 +216,43 @@
                 type="button"
                 class="freq-chip"
                 data-category-id="{{ cat.category_id }}"
+                data-category-name="{{ cat.category_name }}"
                 title="{{ cat.category_name }}"
-              >{% if " - " in cat.category_name %}{{ cat.category_name.split(" - ")[-1] }}{% else %}{{ cat.category_name }}{% endif %}</button>
+              >{{ cat.category_name }}</button>
               {% else %}
               <span class="hint">No frequent categories yet</span>
               {% endfor %}
             </div>
             <div class="action-row">
-              <select id="assign-category" aria-label="Category">
-                <option value="">Category…</option>
-                {% for cat in categories %}
-                <option value="{{ cat.category_id }}">{{ cat.category_name }}</option>
-                {% endfor %}
-              </select>
+              <details class="multi-select single-select" id="assign-category-picker">
+                <summary>
+                  <span class="multi-select-summary" id="assign-category-summary" data-empty="Category…">Category…</span>
+                </summary>
+                <div class="multi-select-menu">
+                  <input
+                    type="search"
+                    class="multi-select-filter"
+                    id="assign-category-filter"
+                    placeholder="Search categories…"
+                    autocomplete="off"
+                  >
+                  <div class="multi-select-options" id="assign-category-options">
+                    {% for cat in categories %}
+                    <button
+                      type="button"
+                      class="single-option"
+                      data-category-id="{{ cat.category_id }}"
+                      data-label="{{ cat.category_name|lower }}"
+                      data-category-name="{{ cat.category_name }}"
+                    >{{ cat.category_name }}</button>
+                    {% else %}
+                    <p class="muted">No categories loaded</p>
+                    {% endfor %}
+                    <p class="muted multi-select-empty" hidden>No matches</p>
+                  </div>
+                </div>
+              </details>
+              <input type="hidden" id="assign-category" value="">
               <button type="button" class="btn-secondary" id="btn-assign" disabled>Assign</button>
               <button type="button" class="btn-approve" id="btn-approve" disabled>Approve</button>
             </div>
@@ -410,7 +434,9 @@
     });
 
     function updateMultiSummaries() {
-      document.querySelectorAll(".multi-select").forEach((el) => {
+      ["category-multi", "tag-multi"].forEach((id) => {
+        const el = document.getElementById(id);
+        if (!el) return;
         const summary = el.querySelector(".multi-select-summary");
         if (!summary) return;
         const n = el.querySelectorAll('input[type="checkbox"]:checked').length;
@@ -447,9 +473,59 @@
       filterCategoryOptions(ev.target.value);
     });
 
-    // Prevent search field from submitting the form on Enter
     document.getElementById("category-filter")?.addEventListener("keydown", (ev) => {
       if (ev.key === "Enter") ev.preventDefault();
+    });
+
+    function filterAssignCategoryOptions(query) {
+      const root = document.getElementById("assign-category-picker");
+      if (!root) return;
+      const q = (query || "").trim().toLowerCase();
+      let visible = 0;
+      root.querySelectorAll(".single-option").forEach((opt) => {
+        const label = opt.dataset.label || opt.textContent.toLowerCase();
+        const show = !q || label.includes(q);
+        opt.hidden = !show;
+        if (show) visible += 1;
+      });
+      const empty = root.querySelector(".multi-select-empty");
+      if (empty) empty.hidden = visible > 0 || root.querySelectorAll(".single-option").length === 0;
+    }
+
+    function resetAssignCategoryFilter() {
+      const input = document.getElementById("assign-category-filter");
+      if (input) input.value = "";
+      filterAssignCategoryOptions("");
+    }
+
+    function setAssignCategoryPicker(categoryId, categoryName) {
+      const hidden = document.getElementById("assign-category");
+      const summary = document.getElementById("assign-category-summary");
+      const id = categoryId != null && categoryId !== "" ? String(categoryId) : "";
+      if (hidden) hidden.value = id;
+      if (summary) {
+        summary.textContent = id ? (categoryName || summary.dataset.empty || "Category…") : (summary.dataset.empty || "Category…");
+      }
+      document.querySelectorAll("#assign-category-options .single-option").forEach((opt) => {
+        opt.classList.toggle("is-selected", opt.dataset.categoryId === id);
+      });
+    }
+
+    document.getElementById("assign-category-filter")?.addEventListener("input", (ev) => {
+      filterAssignCategoryOptions(ev.target.value);
+    });
+
+    document.getElementById("assign-category-filter")?.addEventListener("keydown", (ev) => {
+      if (ev.key === "Enter") ev.preventDefault();
+    });
+
+    document.getElementById("assign-category-options")?.addEventListener("click", (ev) => {
+      const opt = ev.target.closest(".single-option");
+      if (!opt) return;
+      setAssignCategoryPicker(opt.dataset.categoryId, opt.dataset.categoryName || opt.textContent.trim());
+      const picker = document.getElementById("assign-category-picker");
+      if (picker) picker.open = false;
+      resetAssignCategoryFilter();
     });
 
     // Close other multi-selects when one opens; focus category search
@@ -457,6 +533,7 @@
       el.addEventListener("toggle", () => {
         if (!el.open) {
           if (el.id === "category-multi") resetCategoryFilter();
+          if (el.id === "assign-category-picker") resetAssignCategoryFilter();
           return;
         }
         document.querySelectorAll(".multi-select").forEach((other) => {
@@ -465,6 +542,11 @@
         if (el.id === "category-multi") {
           const input = document.getElementById("category-filter");
           resetCategoryFilter();
+          queueMicrotask(() => input?.focus());
+        }
+        if (el.id === "assign-category-picker") {
+          const input = document.getElementById("assign-category-filter");
+          resetAssignCategoryFilter();
           queueMicrotask(() => input?.focus());
         }
       });
@@ -556,10 +638,8 @@
         row.dataset.category = label;
         const text = row.querySelector(".category-text");
         if (text) text.textContent = label;
-        // If it was showing Split UI only, leave structure; still update dataset
       });
-      const select = document.getElementById("assign-category");
-      if (select) select.value = String(categoryId);
+      setAssignCategoryPicker(categoryId, label);
     }
 
     async function assignCategoryToSelected(categoryId) {
@@ -606,8 +686,10 @@
     document.getElementById("freq-chips")?.addEventListener("click", (ev) => {
       const chip = ev.target.closest(".freq-chip");
       if (!chip) return;
-      const select = document.getElementById("assign-category");
-      if (select) select.value = chip.dataset.categoryId;
+      setAssignCategoryPicker(
+        chip.dataset.categoryId,
+        chip.dataset.categoryName || chip.title || chip.textContent.trim()
+      );
     });
 
     document.getElementById("btn-copy")?.addEventListener("click", () => {
