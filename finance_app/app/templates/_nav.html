@@ -1,0 +1,20 @@
+<nav class="nav">
+  <a href="/transcat" class="{% if nav_active == 'transcat' %}active{% endif %}">Transactions</a>
+  <a
+    href="/import"
+    class="nav-import{% if nav_active == 'import' %} active{% endif %}"
+    {% if import_stale and import_stale_title %}title="{{ import_stale_title }}"{% endif %}
+  >
+    Import
+    {% if import_stale %}
+    <span class="nav-badge" aria-label="{{ import_stale_title or 'Import needed' }}">
+      {%- if import_days_since is not none -%}{{ import_days_since }}{%- else -%}!{%- endif -%}
+    </span>
+    {% endif %}
+  </a>
+  <a href="/balances" class="{% if nav_active == 'balances' %}active{% endif %}">Balances</a>
+  {% if nav_active == 'import_review' %}
+  <a href="/import/review" class="active">Import Review</a>
+  {% endif %}
+  <a href="/settings" class="nav-settings{% if nav_active == 'settings' %} active{% endif %}">Settings</a>
+</nav>

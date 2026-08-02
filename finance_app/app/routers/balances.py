@@ -13,6 +13,7 @@ from sqlalchemy.orm import Session
 
 from app.database import get_db
 from app.models import Account
+from app.services.account_colors import account_color_map, default_color_for_id
 from app.services.balance_series import (
     DRIFT_TOLERANCE,
     balance_series,
@@ -22,18 +23,10 @@ from app.services.balance_series import (
     record_balance_observation,
 )
 from app.services.calendar_dates import local_today, parse_calendar_date
+from app.services.ui_context import ui_page_context
 
 router = APIRouter(tags=["balances"])
 templates = Jinja2Templates(directory=str(Path(__file__).resolve().parent.parent / "templates"))
-
-CHART_COLORS = [
-    "#1d4ed8",
-    "#b45309",
-    "#166534",
-    "#7c3aed",
-    "#be123c",
-    "#0f766e",
-]
 
 
 def _parse_account_ids(account: list[int] | None) -> list[int] | None:
@@ -47,7 +40,9 @@ def balances_page(
     request: Request,
     db: Session = Depends(get_db),
 ):
-    accounts = db.execute(select(Account).where(Account.id > 0).order_by(Account.id)).scalars().all()
+    accounts = list(
+        db.execute(select(Account).where(Account.id > 0).order_by(Account.id)).scalars().all()
+    )
     end = local_today()
     start = end - timedelta(days=365)
     return templates.TemplateResponse(
@@ -55,9 +50,11 @@ def balances_page(
         name="balances.html",
         context={
             "accounts": accounts,
+            "account_colors": account_color_map(accounts),
             "start_default": start.isoformat(),
             "end_default": end.isoformat(),
             "drift_tolerance": DRIFT_TOLERANCE,
+            **ui_page_context(db, nav_active="balances"),
         },
     )
 
@@ -101,17 +98,17 @@ def balances_api(
             ],
         }
 
-    names = dict(
-        db.execute(
-            select(Account.id, Account.account_name).where(Account.id.in_(account_ids))
-        ).all()
+    account_rows = list(
+        db.scalars(select(Account).where(Account.id.in_(account_ids))).all()
     )
+    names = {row.id: row.account_name for row in account_rows}
+    colors = account_color_map(account_rows)
     observations = observations_in_range(db, account_ids=account_ids, start=start, end=end)
     drift = drift_series(db, account_ids=account_ids, start=start, end=end)
 
     datasets = []
-    for idx, acct_id in enumerate(account_ids):
-        color = CHART_COLORS[idx % len(CHART_COLORS)]
+    for acct_id in account_ids:
+        color = colors.get(acct_id) or default_color_for_id(acct_id)
         name = names.get(acct_id) or f"Account {acct_id}"
         points = series.get(acct_id, [])
         datasets.append(

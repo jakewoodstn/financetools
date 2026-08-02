@@ -4,12 +4,13 @@ from fastapi import FastAPI
 from fastapi.staticfiles import StaticFiles
 
 from app.config import settings
-from app.routers import api, balances, import_ui, pages
+from app.routers import api, balances, import_ui, pages, settings as settings_ui
 
 app = FastAPI(title="Finance Tools", debug=settings.app_debug)
 app.include_router(pages.router)
 app.include_router(import_ui.router)
 app.include_router(balances.router)
+app.include_router(settings_ui.router)
 app.include_router(api.router)
 
 static_dir = Path(__file__).parent / "static"

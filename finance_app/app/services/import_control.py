@@ -12,6 +12,7 @@ from sqlalchemy.orm import Session
 
 from app.config import settings
 from app.models import Account, BankTransaction, ImportBatch, RawTransaction, TransactionAccount
+from app.services.app_settings import touch_last_import_at
 from app.services.balance_series import (
     BalanceReconciliation,
     latest_observations,
@@ -21,6 +22,7 @@ from app.services.balance_series import (
 )
 from app.services.csv_import import CsvImportError, CsvTableRegion, parse_csv_rows
 from app.services.calendar_dates import local_today
+from app.services.account_colors import color_for_account
 from app.services.ingest_staging import StageResult, stage_csv_rows, stage_simplefin_account
 from app.services.promote_staging import (
     PROMOTION_STATUS_NEEDS_REVIEW,
@@ -82,6 +84,7 @@ class ImportableAccount:
     latest_transaction_date: date | None = None
     latest_balance_date: date | None = None
     latest_balance_amount: Decimal | None = None
+    color: str | None = None
 
 
 @dataclass
@@ -179,6 +182,7 @@ def list_importable_accounts(db: Session) -> list[ImportableAccount]:
                 latest_transaction_date=latest_transaction_date,
                 latest_balance_date=balance_date,
                 latest_balance_amount=balance_amount,
+                color=color_for_account(account),
             )
         )
     return results
@@ -264,6 +268,7 @@ def run_simplefin_import(
     else:
         recompute_daily_balances(db, account_id=account_id, commit=True)
 
+    touch_last_import_at(db, commit=True)
     return ImportRunResult(
         account_id=account_id,
         account_name=account.account_name,
@@ -298,6 +303,7 @@ def run_csv_import(
     stage = stage_csv_rows(db, rows, account_id=account_id, filename=filename, mode=mode)
     promote = promote_raw_transactions(db, account_id=account_id)
     recompute_daily_balances(db, account_id=account_id, commit=True)
+    touch_last_import_at(db, commit=True)
     dates = [row.transaction_date for row in rows]
     return ImportRunResult(
         account_id=account_id,

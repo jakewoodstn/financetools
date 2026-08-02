@@ -1,19 +1,17 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" style="{{ ui_theme_style }}">
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Import Control</title>
   <script src="https://cdn.jsdelivr.net/npm/htmx.org@2.0.4/dist/htmx.min.js"></script>
   <link rel="stylesheet" href="/static/css/import.css">
+  <link rel="stylesheet" href="/static/css/theme.css">
+  <link rel="stylesheet" href="/static/css/account_colors.css">
 </head>
 <body>
   <header class="page-header">
-    <nav class="nav">
-      <a href="/transcat">Transactions</a>
-      <a href="/import" class="active">Import</a>
-      <a href="/balances">Balances</a>
-    </nav>
+    {% include "_nav.html" %}
     <h1>Import Control</h1>
     <p class="subtitle">SimpleFIN sync and bank CSV uploads — per account</p>
   </header>

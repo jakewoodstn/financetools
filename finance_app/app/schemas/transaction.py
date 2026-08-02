@@ -20,6 +20,7 @@ class TransactionOut(BaseModel):
     category_status: int
     tags: str | None = None
     tag_count: int | None = None
+    is_split: bool = False
 
 
 class CategoryOut(BaseModel):
@@ -28,3 +29,10 @@ class CategoryOut(BaseModel):
     category_id: int
     category_name: str
     group_id: int
+
+
+class TagOut(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    tag_id: int
+    tag: str

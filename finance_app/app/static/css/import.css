@@ -9,8 +9,6 @@ body {
 }
 
 .page-header {
-  background: #1f3b63;
-  color: #fff;
   padding: 1rem 1.5rem;
 }
 
@@ -21,7 +19,6 @@ body {
 
 .subtitle {
   margin: 0.25rem 0 0;
-  opacity: 0.85;
   font-size: 0.9rem;
 }
 
@@ -32,14 +29,12 @@ body {
   font-size: 0.9rem;
 }
 
-.nav a {
-  color: rgba(255, 255, 255, 0.75);
-  text-decoration: none;
+.nav .nav-settings {
+  margin-left: auto;
 }
 
-.nav a:hover,
-.nav a.active {
-  color: #fff;
+.nav a {
+  text-decoration: none;
 }
 
 .layout {
@@ -86,7 +81,7 @@ body {
   padding: 0.65rem 1rem;
   text-decoration: none;
   color: #1a1a1a;
-  border-left: 3px solid transparent;
+  border-left: 8px solid transparent;
 }
 
 .account-nav-item:hover {
@@ -95,7 +90,6 @@ body {
 
 .account-nav-item.active {
   background: #eef1f5;
-  border-left-color: #1f3b63;
 }
 
 .account-nav-name {
@@ -325,8 +319,6 @@ input[type="date"] {
 }
 
 .btn-primary {
-  background: #1f3b63;
-  color: #fff;
   border: none;
   border-radius: 6px;
   padding: 0.5rem 1rem;
@@ -334,14 +326,10 @@ input[type="date"] {
   cursor: pointer;
 }
 
-.btn-primary:hover {
-  background: #16304f;
-}
-
 .btn-secondary {
   background: #fff;
-  color: #1f3b63;
-  border: 1px solid #1f3b63;
+  border: 1px solid var(--theme-accent);
+  color: var(--theme-accent);
   border-radius: 6px;
   padding: 0.5rem 1rem;
   font: inherit;
@@ -349,7 +337,7 @@ input[type="date"] {
 }
 
 .btn-secondary:hover {
-  background: #eef1f5;
+  background: color-mix(in srgb, var(--theme-accent) 10%, #fff);
 }
 
 .form-heading {
@@ -721,6 +709,5 @@ code {
 
   .account-nav-item.active {
     border-left-color: transparent;
-    border-bottom-color: #1f3b63;
   }
 }

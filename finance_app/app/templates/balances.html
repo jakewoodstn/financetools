@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" style="{{ ui_theme_style }}">
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
@@ -7,62 +7,82 @@
   <script src="https://cdn.jsdelivr.net/npm/htmx.org@2.0.4/dist/htmx.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.7/dist/chart.umd.min.js"></script>
   <link rel="stylesheet" href="/static/css/balances.css">
+  <link rel="stylesheet" href="/static/css/theme.css">
+  <link rel="stylesheet" href="/static/css/account_colors.css">
 </head>
 <body>
   <header class="page-header">
-    <nav class="nav">
-      <a href="/transcat">Transactions</a>
-      <a href="/import">Import</a>
-      <a href="/balances" class="active">Balances</a>
-    </nav>
+    {% include "_nav.html" %}
     <h1>Balances</h1>
     <p class="subtitle">Computed daily series from anchors + transactions, with observed true-up points</p>
   </header>
 
-  <main class="balances-layout">
-    <section class="panel controls">
-      <h2>Accounts</h2>
-      <label class="check-row">
-        <input type="checkbox" id="include-total" checked>
-        Total (sum of selected)
-      </label>
-      <div class="account-toggles">
-        {% for account in accounts %}
-        {% set full_name = account.account_name or ("Account " ~ account.id) %}
-        <label class="account-toggle is-on" title="{{ full_name }}">
-          <input type="checkbox" class="account-check" value="{{ account.id }}" checked>
-          <span class="account-toggle-text">{{ full_name if full_name|length <= 18 else full_name[:17] ~ "…" }}</span>
+  <main class="layout">
+    <aside class="panel gutter-panel">
+      <h2>Search</h2>
+      <div class="filters">
+        <div class="filter-section">
+          <span class="filter-label">Accounts</span>
+          <label class="check-row">
+            <input type="checkbox" id="include-total" checked>
+            Total (sum of selected)
+          </label>
+          <div class="account-toggles">
+            {% for account in accounts %}
+            {% set full_name = account.account_name or ("Account " ~ account.id) %}
+            <label
+              class="account-toggle is-on"
+              title="{{ full_name }}"
+              style="--acct-color: {{ account_colors.get(account.id, '#1d4ed8') }}"
+            >
+              <input type="checkbox" class="account-check" value="{{ account.id }}" checked>
+              <span class="account-toggle-text">{{ full_name }}</span>
+            </label>
+            {% endfor %}
+          </div>
+        </div>
+        <label>
+          Start
+          <input type="date" id="start-date" value="{{ start_default }}">
         </label>
-        {% endfor %}
+        <label>
+          End
+          <input type="date" id="end-date" value="{{ end_default }}">
+        </label>
+        <div class="preset-row">
+          <button type="button" class="btn-secondary preset" data-range="mtd">MTD</button>
+          <button type="button" class="btn-secondary preset" data-range="last-month">Last mo</button>
+          <button type="button" class="btn-secondary preset" data-range="qtd">QTD</button>
+          <button type="button" class="btn-secondary preset" data-range="ytd">YTD</button>
+          <button type="button" class="btn-secondary preset" data-range="last-year">Last yr</button>
+          <button type="button" class="btn-secondary preset" data-days="90">90d</button>
+          <button type="button" class="btn-secondary preset" data-days="365">1y</button>
+          <button type="button" class="btn-secondary preset" data-days="1825">5y</button>
+        </div>
+        <button type="button" class="btn-primary" id="refresh-chart">Update chart</button>
       </div>
 
-      <h2>Range</h2>
-      <div class="range-row">
-        <label>Start <input type="date" id="start-date" value="{{ start_default }}"></label>
-        <label>End <input type="date" id="end-date" value="{{ end_default }}"></label>
-      </div>
-      <div class="preset-row">
-        <button type="button" class="btn-secondary preset" data-range="mtd">MTD</button>
-        <button type="button" class="btn-secondary preset" data-range="last-month">Last mo</button>
-        <button type="button" class="btn-secondary preset" data-range="qtd">QTD</button>
-        <button type="button" class="btn-secondary preset" data-range="ytd">YTD</button>
-        <button type="button" class="btn-secondary preset" data-range="last-year">Last yr</button>
-        <button type="button" class="btn-secondary preset" data-days="90">90d</button>
-        <button type="button" class="btn-secondary preset" data-days="365">1y</button>
-        <button type="button" class="btn-secondary preset" data-days="1825">5y</button>
-      </div>
-
-      <p class="control-hint">Solid lines are computed from the prior observed balance plus transactions through that day. Markers are observed end-of-day balances — a gap between marker and line is drift.</p>
-      <button type="button" class="btn-primary" id="refresh-chart">Update chart</button>
-
-      <h2>Observed balance</h2>
-      <form id="confirm-balance-form" class="confirm-form">
+      <h2 class="heading-with-info">
+        Observed balance
+        <button
+          type="button"
+          class="info-tip"
+          id="observed-info-btn"
+          aria-label="About observed balances"
+          aria-expanded="false"
+          aria-controls="observed-help"
+        >i</button>
+        <span id="observed-help" class="info-tip-panel" role="tooltip" hidden>
+          Solid lines are computed from the prior observed balance plus transactions through that day. Markers are observed end-of-day balances — a gap between marker and line is drift.
+        </span>
+      </h2>
+      <form id="confirm-balance-form" class="filters confirm-form">
         <label>
           Account
           <select id="confirm-account" name="account_id" required>
             {% for account in accounts %}
             {% set full_name = account.account_name or ("Account " ~ account.id) %}
-            <option value="{{ account.id }}" title="{{ full_name }}">{% if full_name|length > 18 %}{{ full_name[:17] }}…{% else %}{{ full_name }}{% endif %}</option>
+            <option value="{{ account.id }}" title="{{ full_name }}">{{ full_name }}</option>
             {% endfor %}
           </select>
         </label>
@@ -77,19 +97,21 @@
         <button type="submit" class="btn-primary" id="confirm-balance-submit">Save observed</button>
         <p id="confirm-balance-status" class="confirm-status" aria-live="polite"></p>
       </form>
-    </section>
+    </aside>
 
-    <section class="panel chart-panel">
-      <h2>Balance history <span class="legend-hint">solid line = computed from prior observation + txns · markers = observed (gap = drift)</span></h2>
-      <canvas id="balance-chart" height="120"></canvas>
-      <p id="chart-empty" class="muted card-note hidden">No daily balances for the selected range. Add an observed balance and recompute after import.</p>
-    </section>
+    <div class="balances-main">
+      <section class="panel chart-panel">
+        <h2>Balance history <span class="legend-hint">solid line = computed from prior observation + txns · markers = observed (gap = drift)</span></h2>
+        <canvas id="balance-chart" height="120"></canvas>
+        <p id="chart-empty" class="muted card-note hidden">No daily balances for the selected range. Add an observed balance and recompute after import.</p>
+      </section>
 
-    <section class="panel drift-panel">
-      <h2>Drift periods <span class="legend-hint">contiguous ranges where observed and computed diverge — use start/end dates to hunt missing or duplicate bank transactions</span></h2>
-      <div id="drift-periods"></div>
-      <p id="drift-periods-empty" class="muted card-note hidden">Select one or more accounts to see drift periods for the chart range.</p>
-    </section>
+      <section class="panel drift-panel">
+        <h2>Drift periods <span class="legend-hint">contiguous ranges where observed and computed diverge — use start/end dates to hunt missing or duplicate bank transactions</span></h2>
+        <div id="drift-periods"></div>
+        <p id="drift-periods-empty" class="muted card-note hidden">Select one or more accounts to see drift periods for the chart range.</p>
+      </section>
+    </div>
   </main>
 
   <script>
@@ -437,6 +459,31 @@
         submit.disabled = false;
       }
     });
+
+    (function setupObservedInfoTip() {
+      const btn = document.getElementById("observed-info-btn");
+      const panel = document.getElementById("observed-help");
+      if (!btn || !panel) return;
+
+      function setOpen(open) {
+        panel.hidden = !open;
+        btn.setAttribute("aria-expanded", open ? "true" : "false");
+      }
+
+      btn.addEventListener("click", (event) => {
+        event.stopPropagation();
+        setOpen(panel.hidden);
+      });
+      btn.addEventListener("mouseenter", () => setOpen(true));
+      btn.addEventListener("mouseleave", () => setOpen(false));
+      btn.addEventListener("focus", () => setOpen(true));
+      btn.addEventListener("blur", () => setOpen(false));
+      document.addEventListener("click", (event) => {
+        if (!btn.contains(event.target) && !panel.contains(event.target)) {
+          setOpen(false);
+        }
+      });
+    })();
 
     loadChart();
   </script>

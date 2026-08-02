@@ -7,6 +7,7 @@
     <a
       href="{{ page_base }}?account={{ account.id }}"
       class="account-nav-item{% if account.id == selected_account_id %} active{% endif %}"
+      style="--acct-color: {{ account_colors.get(account.id, account.color or '#1d4ed8') }}"
     >
       <span class="account-nav-name">{{ account.account_name or ("Account " ~ account.id) }}</span>
           <span class="account-nav-meta">

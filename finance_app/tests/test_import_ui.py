@@ -1,8 +1,12 @@
 from pathlib import Path
+from unittest.mock import patch
 
 from fastapi.testclient import TestClient
 
 from app.main import app
+from app.services.import_control import ImportRunResult
+from app.services.ingest_staging import StageResult
+from app.services.promote_staging import PromoteResult
 
 FIXTURES = Path(__file__).parent / "fixtures"
 
@@ -101,13 +105,34 @@ def test_import_review_page_loads():
     assert "Import Review" in response.text
 
 
-def test_csv_upload_endpoint():
+def test_csv_upload_endpoint_does_not_write_fixture_rows():
+    """Upload route smoke test — never import fixture CSV into the live ledger."""
     client = TestClient(app)
     csv_bytes = (FIXTURES / "bank_download.csv").read_bytes()
-    response = client.post(
-        "/import/1/csv",
-        data={"mode": "merge"},
-        files={"file": ("bank_download.csv", csv_bytes, "text/csv")},
+    fake_result = ImportRunResult(
+        account_id=1,
+        account_name="Checking",
+        mode="merge",
+        source="csv",
+        stage=StageResult(import_batch_id=0, inserted=3),
+        promote=PromoteResult(promoted=3),
+        filename="bank_download.csv",
+        column_mapping={
+            "transaction_date": "Date",
+            "amount": "Amount",
+            "description": "Description",
+        },
     )
+    with patch(
+        "app.routers.import_ui.import_service.run_csv_import",
+        return_value=fake_result,
+    ) as mocked:
+        response = client.post(
+            "/import/1/csv",
+            data={"mode": "merge"},
+            files={"file": ("bank_download.csv", csv_bytes, "text/csv")},
+        )
     assert response.status_code == 200
-    assert "CSV imported" in response.text or "Failed" in response.text
+    assert "CSV imported" in response.text
+    mocked.assert_called_once()
+    assert b"AMAZON MARKETPLACE" in csv_bytes  # fixture still exists for parse tests

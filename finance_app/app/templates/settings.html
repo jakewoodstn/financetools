@@ -1,0 +1,210 @@
+<!DOCTYPE html>
+<html lang="en" style="{{ ui_theme_style }}">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Settings</title>
+  <link rel="stylesheet" href="/static/css/settings.css">
+  <link rel="stylesheet" href="/static/css/theme.css">
+  <link rel="stylesheet" href="/static/css/account_colors.css">
+</head>
+<body>
+  <header class="page-header">
+    {% include "_nav.html" %}
+    <h1>Settings</h1>
+    <p class="subtitle">Theme, account colors, and import alerts</p>
+  </header>
+
+  <main class="settings-layout">
+    {% if saved == "colors" %}
+    <p class="status-ok" role="status">Colors saved.</p>
+    {% elif saved == "import-alerts" %}
+    <p class="status-ok" role="status">Import alert settings saved.</p>
+    {% endif %}
+    {% if error == "invalid_color" %}
+    <p class="status-err" role="alert">Could not save: use a valid #RRGGBB color for each account.</p>
+    {% elif error == "invalid_theme" %}
+    <p class="status-err" role="alert">Could not save: unknown theme.</p>
+    {% elif error == "invalid_stale_days" %}
+    <p class="status-err" role="alert">Could not save: enter a whole number of days (1–3650).</p>
+    {% elif error %}
+    <p class="status-err" role="alert">Could not save settings.</p>
+    {% endif %}
+
+    <section class="panel">
+      <h2>Import alerts</h2>
+      <p class="panel-hint">Show a badge on Import in the top nav when no successful import has run for this many days.</p>
+      <form method="post" action="/settings/import-alerts" class="import-alert-form">
+        <label>
+          Alert after (days)
+          <input
+            type="number"
+            name="import_stale_days"
+            min="1"
+            max="3650"
+            step="1"
+            value="{{ import_stale_days_value }}"
+            required
+          >
+        </label>
+        <p class="panel-hint last-import-note">
+          {% if last_import_at_display %}
+          Last recorded import: <span class="mono">{{ last_import_at_display }}</span>
+          {% else %}
+          No import timestamp recorded yet.
+          {% endif %}
+        </p>
+        <div class="settings-actions">
+          <button type="submit" class="btn-primary">Save import alerts</button>
+        </div>
+      </form>
+    </section>
+
+    <section class="panel">
+      <h2>Account colors</h2>
+      <p class="panel-hint">Pick a theme to set account colors plus the page header, presets, and primary buttons. Tweak accounts individually, then save.</p>
+
+      {% if accounts %}
+      <div class="theme-section">
+        <h3 class="theme-heading">Themes</h3>
+        <div class="theme-grid" id="theme-grid">
+          {% for theme in color_themes %}
+          <button
+            type="button"
+            class="theme-card{% if theme.id == ui_theme_id %} is-selected{% endif %}"
+            data-theme-id="{{ theme.id }}"
+            data-colors="{{ theme.colors | join(',') }}"
+            data-header="{{ theme.header }}"
+            data-header-fg="{{ theme.header_fg }}"
+            data-accent="{{ theme.accent }}"
+            data-accent-hover="{{ theme.accent_hover }}"
+            data-accent-fg="{{ theme.accent_fg }}"
+            aria-label="Apply {{ theme.name }} theme"
+          >
+            <span class="theme-name">{{ theme.name }}</span>
+            <span class="theme-swatches" aria-hidden="true">
+              <span class="theme-swatch" style="background: {{ theme.header }}" title="Header"></span>
+              <span class="theme-swatch" style="background: {{ theme.accent }}" title="Accent"></span>
+              {% for swatch in theme.colors %}
+              <span class="theme-swatch" style="background: {{ swatch }}"></span>
+              {% endfor %}
+            </span>
+          </button>
+          {% endfor %}
+        </div>
+        <div class="theme-preview-actions" aria-hidden="true">
+          <button type="button" class="btn-secondary preset">MTD</button>
+          <button type="button" class="btn-primary">Primary</button>
+        </div>
+      </div>
+
+      <form id="color-form" method="post" action="/settings/account-colors">
+        <input type="hidden" name="theme_id" id="theme-id" value="{{ ui_theme_id }}">
+        <div class="color-list">
+          {% for account in accounts %}
+          {% set color = account_colors.get(account.id, '#1d4ed8') %}
+          {% set default_color = default_colors.get(account.id, '#1d4ed8') %}
+          {% set full_name = account.account_name or ("Account " ~ account.id) %}
+          <div class="color-row" style="--acct-color: {{ color }}" data-account-id="{{ account.id }}">
+            <span class="color-row-name" title="{{ full_name }}">{{ full_name }}</span>
+            <input
+              type="color"
+              class="color-picker"
+              name="color_{{ account.id }}"
+              value="{{ color }}"
+              data-default="{{ default_color }}"
+              aria-label="Color for {{ full_name }}"
+            >
+            <input
+              type="text"
+              class="color-hex"
+              value="{{ color }}"
+              maxlength="7"
+              spellcheck="false"
+              aria-label="Hex color for {{ full_name }}"
+            >
+            <button type="button" class="btn-secondary color-reset" data-default="{{ default_color }}">Reset</button>
+          </div>
+          {% endfor %}
+        </div>
+        <div class="settings-actions">
+          <button type="submit" class="btn-primary">Save colors</button>
+        </div>
+      </form>
+      {% else %}
+      <p class="muted">No accounts loaded.</p>
+      {% endif %}
+    </section>
+  </main>
+
+  <script>
+    function syncRow(row, color) {
+      const picker = row.querySelector(".color-picker");
+      const hex = row.querySelector(".color-hex");
+      if (picker) picker.value = color;
+      if (hex) hex.value = color;
+      row.style.setProperty("--acct-color", color);
+    }
+
+    function applyThemeColors(colors) {
+      const rows = Array.from(document.querySelectorAll(".color-row"));
+      rows.forEach((row, idx) => {
+        const color = colors[idx % colors.length];
+        syncRow(row, color);
+      });
+    }
+
+    function applyChrome(theme) {
+      const root = document.documentElement;
+      root.style.setProperty("--theme-header", theme.header);
+      root.style.setProperty("--theme-header-fg", theme.headerFg);
+      root.style.setProperty("--theme-accent", theme.accent);
+      root.style.setProperty("--theme-accent-hover", theme.accentHover);
+      root.style.setProperty("--theme-accent-fg", theme.accentFg);
+      const themeInput = document.getElementById("theme-id");
+      if (themeInput) themeInput.value = theme.id;
+    }
+
+    document.querySelectorAll(".color-row").forEach((row) => {
+      const picker = row.querySelector(".color-picker");
+      const hex = row.querySelector(".color-hex");
+      const reset = row.querySelector(".color-reset");
+
+      picker?.addEventListener("input", () => syncRow(row, picker.value));
+      hex?.addEventListener("change", () => {
+        const value = hex.value.trim();
+        if (/^#[0-9A-Fa-f]{6}$/.test(value)) {
+          syncRow(row, value.toLowerCase());
+        } else {
+          hex.value = picker.value;
+        }
+      });
+      reset?.addEventListener("click", () => {
+        syncRow(row, reset.dataset.default || "#1d4ed8");
+      });
+    });
+
+    document.querySelectorAll(".theme-card").forEach((btn) => {
+      btn.addEventListener("click", () => {
+        const colors = (btn.dataset.colors || "")
+          .split(",")
+          .map((c) => c.trim())
+          .filter((c) => /^#[0-9A-Fa-f]{6}$/.test(c));
+        if (!colors.length) return;
+        applyThemeColors(colors);
+        applyChrome({
+          id: btn.dataset.themeId,
+          header: btn.dataset.header,
+          headerFg: btn.dataset.headerFg,
+          accent: btn.dataset.accent,
+          accentHover: btn.dataset.accentHover,
+          accentFg: btn.dataset.accentFg,
+        });
+        document.querySelectorAll(".theme-card").forEach((card) => {
+          card.classList.toggle("is-selected", card === btn);
+        });
+      });
+    });
+  </script>
+</body>
+</html>

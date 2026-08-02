@@ -30,10 +30,14 @@ Operational GL tables live in the Postgres `public` schema. Alembic migrations a
 | `011_last_import_batch_id` | Stamp ledger rows with the import batch that last touched them |
 | `012_balance_tracking` | Balance observations and regenerable daily_balances |
 | `013_observed_computed` | One observed balance per account/date; drop anchors/source |
+| `014_account_color` | Per-account UI/chart color (`accounts.color`) |
+| `015_app_settings` | Key-value `app_settings` (stores selected `ui_theme`) |
+| `016_import_stale_settings` | Seed `import_stale_days` / `last_import_at` for Import nav badge |
 
 ## Core tables
 
-- **accounts** — financial accounts (checking, credit card, etc.)
+- **accounts** — financial accounts (checking, credit card, etc.); `color` is a `#RRGGBB` display color for charts and UI accents
+- **app_settings** — app-wide preferences (`key` / `value`); currently `ui_theme`, `import_stale_days`, and `last_import_at`
 - **spending_category_groups** / **spending_categories** — category taxonomy
 - **transaction_accounts** — import source account names mapped to accounts (includes SimpleFIN Bridge names)
 - **bank_transactions** — categorized ledger entries
@@ -55,7 +59,7 @@ Operational GL tables live in the Postgres `public` schema. Alembic migrations a
 cd finance_app
 docker compose up -d
 uv run alembic upgrade head
-uv run alembic current   # should show 012_balance_tracking
+uv run alembic current   # should show 016_import_stale_settings
 ```
 
 ## Sample data

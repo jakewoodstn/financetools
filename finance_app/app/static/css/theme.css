@@ -1,0 +1,87 @@
+/* App chrome driven by --theme-* CSS variables set on <html>. */
+
+:root {
+  --theme-header: #1f3b63;
+  --theme-header-fg: #ffffff;
+  --theme-accent: #1f3b63;
+  --theme-accent-hover: #274d7e;
+  --theme-accent-fg: #ffffff;
+}
+
+.page-header {
+  background: var(--theme-header);
+  color: var(--theme-header-fg);
+}
+
+.page-header h1,
+.page-header .subtitle {
+  color: inherit;
+}
+
+.page-header .subtitle {
+  opacity: 0.85;
+}
+
+.nav a {
+  color: color-mix(in srgb, var(--theme-header-fg) 75%, transparent);
+}
+
+.nav a:hover,
+.nav a.active {
+  color: var(--theme-header-fg);
+}
+
+.nav-import {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+}
+
+.nav-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 1.15rem;
+  height: 1.15rem;
+  padding: 0 0.3rem;
+  border-radius: 999px;
+  background: #fecaca;
+  color: #9f1239;
+  font-size: 0.68rem;
+  font-weight: 700;
+  line-height: 1;
+}
+
+.btn-primary {
+  border-color: var(--theme-accent);
+  background: var(--theme-accent);
+  color: var(--theme-accent-fg);
+}
+
+.btn-primary:hover {
+  border-color: var(--theme-accent-hover);
+  background: var(--theme-accent-hover);
+  color: var(--theme-accent-fg);
+  filter: none;
+}
+
+.btn-secondary.preset,
+.preset.btn-secondary,
+button.preset {
+  border-color: var(--theme-accent);
+  color: var(--theme-accent);
+  background: #fff;
+}
+
+.btn-secondary.preset:hover,
+.preset.btn-secondary:hover,
+button.preset:hover {
+  border-color: var(--theme-accent-hover);
+  color: var(--theme-accent-hover);
+  background: color-mix(in srgb, var(--theme-accent) 10%, #fff);
+}
+
+.btn-secondary:hover {
+  border-color: var(--theme-accent);
+  color: var(--theme-accent);
+}

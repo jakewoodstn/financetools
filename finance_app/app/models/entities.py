@@ -15,6 +15,7 @@ class Account(Base):
     created_at: Mapped[date | None] = mapped_column(Date)
     closed_on: Mapped[date | None] = mapped_column(Date)
     import_transactions: Mapped[int | None] = mapped_column(SmallInteger)
+    color: Mapped[str | None] = mapped_column(String(7))
 
     bank_transactions: Mapped[list["BankTransaction"]] = relationship(back_populates="account")
     transaction_accounts: Mapped[list["TransactionAccount"]] = relationship(back_populates="account")
@@ -267,3 +268,10 @@ class DailyBalance(Base):
     amount: Mapped[Decimal] = mapped_column(Numeric(19, 4))
 
     account: Mapped[Account] = relationship(back_populates="daily_balances")
+
+
+class AppSetting(Base):
+    __tablename__ = "app_settings"
+
+    key: Mapped[str] = mapped_column(String(64), primary_key=True)
+    value: Mapped[str] = mapped_column(String(255))

@@ -1,29 +1,39 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" style="{{ ui_theme_style }}">
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Transaction Categorization</title>
   <script src="https://cdn.jsdelivr.net/npm/htmx.org@2.0.4/dist/htmx.min.js"></script>
   <link rel="stylesheet" href="/static/css/transcat.css">
+  <link rel="stylesheet" href="/static/css/theme.css">
+  <link rel="stylesheet" href="/static/css/account_colors.css">
 </head>
 <body>
   <header class="page-header">
-    <nav class="nav">
-      <a href="/transcat" class="active">Transactions</a>
-      <a href="/import">Import</a>
-      <a href="/balances">Balances</a>
-    </nav>
+    {% include "_nav.html" %}
     <h1>Transaction Categorization</h1>
-    <p class="subtitle">Python replatform — initial shell</p>
+    <p class="subtitle">Work queue — assign then approve</p>
   </header>
 
   <main class="layout">
     <aside class="panel gutter-panel">
-      <h2>Search</h2>
       <form id="search-form" class="filters" method="get" action="/transcat">
+        <h2>Work queue</h2>
+        <div class="filter-section queue-radios">
+          <label class="radio-row">
+            <input type="radio" name="queue" value="needs" {% if queue_mode != "all" %}checked{% endif %}>
+            <span>Needs work</span>
+          </label>
+          <span class="hint">Unapproved (incl. assigned)</span>
+          <label class="radio-row">
+            <input type="radio" name="queue" value="all" {% if queue_mode == "all" %}checked{% endif %}>
+            <span>All</span>
+          </label>
+        </div>
+
+        <h2>Accounts</h2>
         <div class="filter-section">
-          <span class="filter-label">Accounts</span>
           <div class="account-toggles">
             {% for account in accounts %}
             {% set full_name = account.account_name or ("Account " ~ account.id) %}
@@ -44,6 +54,8 @@
             {% endfor %}
           </div>
         </div>
+
+        <h2>Dates</h2>
         <label>
           Start
           <input type="date" id="filter-start" name="start" value="{{ start_date }}" required>
@@ -52,9 +64,10 @@
           End
           <input type="date" id="filter-end" name="end" value="{{ end_date }}" required>
         </label>
-        <div class="preset-row">
+        <div class="preset-grid">
           <button type="button" class="btn-secondary preset" data-range="mtd">MTD</button>
           <button type="button" class="btn-secondary preset" data-range="last-month">Last mo</button>
+          <button type="button" class="btn-secondary preset" data-range="since-last-month">Since last mo</button>
           <button type="button" class="btn-secondary preset" data-range="qtd">QTD</button>
           <button type="button" class="btn-secondary preset" data-range="ytd">YTD</button>
           <button type="button" class="btn-secondary preset" data-range="last-year">Last yr</button>
@@ -62,17 +75,101 @@
           <button type="button" class="btn-secondary preset" data-days="365">1y</button>
           <button type="button" class="btn-secondary preset" data-days="1825">5y</button>
         </div>
-        <button type="submit" class="btn-primary">Search</button>
-      </form>
 
-      <h2>Categories</h2>
-      <ul class="category-list">
-        {% for cat in categories %}
-        <li>{{ cat.category_name }}</li>
-        {% else %}
-        <li class="muted">No categories loaded (empty database)</li>
-        {% endfor %}
-      </ul>
+        <h2>Keywords</h2>
+        <div class="filter-section">
+          <span class="filter-label">Match</span>
+          <div class="match-radios">
+            <label class="radio-row">
+              <input type="radio" name="match" value="all" {% if match_mode != "any" %}checked{% endif %}>
+              <span>All</span>
+            </label>
+            <label class="radio-row">
+              <input type="radio" name="match" value="any" {% if match_mode == "any" %}checked{% endif %}>
+              <span>Any</span>
+            </label>
+          </div>
+        </div>
+        <label>
+          Payee
+          <input type="text" id="filter-payee" name="payee" value="{{ payee_query }}" autocomplete="off">
+        </label>
+        <div class="filter-section">
+          <span class="filter-label">Category</span>
+          <details class="multi-select" id="category-multi">
+            <summary>
+              <span class="multi-select-summary" data-empty="Any category">
+                {% if selected_category_ids %}
+                  {{ selected_category_ids|length }} selected
+                {% else %}
+                  Any category
+                {% endif %}
+              </span>
+            </summary>
+            <div class="multi-select-menu">
+              <input
+                type="search"
+                class="multi-select-filter"
+                id="category-filter"
+                placeholder="Search categories…"
+                autocomplete="off"
+              >
+              <div class="multi-select-options">
+                {% for cat in categories %}
+                <label class="multi-option" data-label="{{ cat.category_name|lower }}">
+                  <input
+                    type="checkbox"
+                    name="category"
+                    value="{{ cat.category_id }}"
+                    {% if cat.category_id in selected_category_ids %}checked{% endif %}
+                  >
+                  <span>{{ cat.category_name }}</span>
+                </label>
+                {% else %}
+                <p class="muted">No categories loaded</p>
+                {% endfor %}
+                <p class="muted multi-select-empty" hidden>No matches</p>
+              </div>
+            </div>
+          </details>
+        </div>
+        <div class="filter-section">
+          <span class="filter-label">Tag</span>
+          <details class="multi-select" id="tag-multi">
+            <summary>
+              <span class="multi-select-summary" data-empty="Any tag">
+                {% if selected_tag_ids %}
+                  {{ selected_tag_ids|length }} selected
+                {% else %}
+                  Any tag
+                {% endif %}
+              </span>
+            </summary>
+            <div class="multi-select-menu">
+              {% for t in tags %}
+              <label class="multi-option">
+                <input
+                  type="checkbox"
+                  name="tag"
+                  value="{{ t.tag_id }}"
+                  {% if t.tag_id in selected_tag_ids %}checked{% endif %}
+                >
+                <span>{{ t.tag }}</span>
+              </label>
+              {% else %}
+              <p class="muted">No tags loaded</p>
+              {% endfor %}
+            </div>
+          </details>
+        </div>
+        <label>
+          Amount
+          <input type="text" id="filter-amount" name="amount" value="{{ amount_query }}" inputmode="decimal" autocomplete="off">
+        </label>
+        <button type="button" class="btn-link" id="clear-keywords">Clear keywords</button>
+
+        <button type="submit" class="btn-primary search-submit">Search</button>
+      </form>
     </aside>
 
     <section class="panel transactions-panel">
@@ -99,12 +196,60 @@
           </span>
         </div>
       </div>
+
+      <div id="action-bar" class="action-bar">
+        <div class="action-bar-meta"><span id="selected-count">0 selected</span></div>
+        <div class="action-zones">
+          <div class="action-zone categorize-zone">
+            <span class="action-zone-label">Categorize</span>
+            <div class="freq-chips" id="freq-chips">
+              {% for cat in frequent_categories %}
+              <button
+                type="button"
+                class="freq-chip"
+                data-category-id="{{ cat.category_id }}"
+                title="{{ cat.category_name }}"
+              >{% if " - " in cat.category_name %}{{ cat.category_name.split(" - ")[-1] }}{% else %}{{ cat.category_name }}{% endif %}</button>
+              {% else %}
+              <span class="hint">No frequent categories yet</span>
+              {% endfor %}
+            </div>
+            <div class="action-row">
+              <select id="assign-category" aria-label="Category">
+                <option value="">Category…</option>
+                {% for cat in categories %}
+                <option value="{{ cat.category_id }}">{{ cat.category_name }}</option>
+                {% endfor %}
+              </select>
+              <button type="button" class="btn-secondary" id="btn-assign" disabled title="Assign coming next">Assign</button>
+              <button type="button" class="btn-approve" id="btn-approve" disabled title="Approve coming next">Approve</button>
+            </div>
+          </div>
+          <div class="action-zone payee-zone">
+            <span class="action-zone-label">Payee</span>
+            <div class="action-row">
+              <button type="button" class="btn-secondary" id="btn-suggest" disabled>Suggest</button>
+              <div class="payee-ac-wrap">
+                <input type="text" id="bulk-payee" placeholder="Clean payee name" autocomplete="off" disabled>
+                <div id="payee-ac-menu" class="payee-ac-menu" hidden></div>
+              </div>
+              <button type="button" class="btn-secondary" id="btn-payee-save" disabled>Save</button>
+            </div>
+            <div class="suggest-result" id="suggest-result" hidden>
+              <span id="suggest-text"></span>
+              <button type="button" class="btn-link" id="btn-apply">Apply</button>
+            </div>
+          </div>
+        </div>
+      </div>
+
       <table id="txn-table">
         <thead>
           <tr>
             <th class="sortable" data-col="date" aria-sort="none">Date <span class="sort-ind"></span></th>
             <th class="sortable" data-col="payee" aria-sort="none">Payee <span class="sort-ind"></span></th>
             <th class="sortable" data-col="category" aria-sort="none">Category <span class="sort-ind"></span></th>
+            <th class="sortable" data-col="tags" aria-sort="none">Tags <span class="sort-ind"></span></th>
             <th class="sortable amount" data-col="amount" aria-sort="none">Amount <span class="sort-ind"></span></th>
           </tr>
         </thead>
@@ -116,15 +261,36 @@
             class="txn-row"
             style="--acct-color: {{ account_colors.get(txn.account_id, '#1d4ed8') }}"
             title="{{ acct_label }}"
+            data-id="{{ txn.transaction_id }}"
             data-date="{{ display_date }}"
             data-payee="{{ txn.description or "" }}"
             data-category="{{ txn.category_name or "" }}"
+            data-tags="{{ txn.tags or "" }}"
             data-amount="{{ txn.amount if txn.amount is not none else "" }}"
             data-index="{{ loop.index0 }}"
+            data-bank-orig="{{ txn.bank_orig_description or "" }}"
+            {% if txn.is_split %}data-split="1"{% endif %}
           >
             <td>{{ display_date }}</td>
-            <td>{{ txn.description or "" }}</td>
-            <td>{{ txn.category_name or "" }}</td>
+            <td class="payee-cell">
+              <span class="payee-text">{{ txn.description or "" }}</span>
+              <button type="button" class="payee-edit" title="Edit payee (coming next)" aria-label="Edit payee" disabled>✎</button>
+            </td>
+            <td class="category-cell">
+              {% if txn.is_split %}
+              <span class="split-label">Split</span>
+              <button type="button" class="split-btn" title="Split editor (coming next)" aria-label="Edit split" disabled>⧉</button>
+              {% else %}
+              {{ txn.category_name or "Uncategorized" }}
+              {% endif %}
+            </td>
+            <td class="tags-cell">
+              {% if txn.tags %}
+              {{ txn.tags.replace(";", ", ") }}
+              {% else %}
+              <button type="button" class="btn-link tag-add" title="Add tags (coming next)" disabled>+ tag</button>
+              {% endif %}
+            </td>
             <td class="amount{% if txn.amount is not none and txn.amount < 0 %} is-negative{% endif %}">
               {%- if txn.amount is none -%}
               {%- elif txn.amount < 0 -%}(${{ "{:,.2f}".format(-txn.amount) }})
@@ -134,7 +300,7 @@
           </tr>
           {% else %}
           <tr class="empty-row">
-            <td colspan="4" class="muted">No transactions for this search</td>
+            <td colspan="5" class="muted">No transactions for this search</td>
           </tr>
           {% endfor %}
         </tbody>
@@ -143,7 +309,6 @@
   </main>
 
   <script>
-    // Calendar dates only — never use Date#toISOString (UTC) for business dates.
     function formatLocalDate(d) {
       const y = d.getFullYear();
       const m = String(d.getMonth() + 1).padStart(2, "0");
@@ -162,15 +327,18 @@
       const y = today.getFullYear();
       const m = today.getMonth();
       if (name === "mtd") {
-        return {
-          start: formatLocalDate(new Date(y, m, 1)),
-          end: formatLocalDate(today),
-        };
+        return { start: formatLocalDate(new Date(y, m, 1)), end: formatLocalDate(today) };
       }
       if (name === "last-month") {
         return {
           start: formatLocalDate(new Date(y, m - 1, 1)),
           end: formatLocalDate(new Date(y, m, 0)),
+        };
+      }
+      if (name === "since-last-month") {
+        return {
+          start: formatLocalDate(new Date(y, m - 1, 1)),
+          end: formatLocalDate(new Date(y, m + 1, 0)),
         };
       }
       if (name === "qtd") {
@@ -181,10 +349,7 @@
         };
       }
       if (name === "ytd") {
-        return {
-          start: formatLocalDate(new Date(y, 0, 1)),
-          end: formatLocalDate(today),
-        };
+        return { start: formatLocalDate(new Date(y, 0, 1)), end: formatLocalDate(today) };
       }
       if (name === "last-year") {
         return {
@@ -222,10 +387,375 @@
       });
     });
 
-    // Column sort: independent 3-state per column; compare cascades left → right.
-    const COLUMN_ORDER = ["date", "payee", "category", "amount"];
-    const sortState = Object.fromEntries(COLUMN_ORDER.map((c) => [c, null]));
+    document.getElementById("clear-keywords")?.addEventListener("click", () => {
+      const payee = document.getElementById("filter-payee");
+      const amount = document.getElementById("filter-amount");
+      if (payee) payee.value = "";
+      if (amount) amount.value = "";
+      document.querySelectorAll('#category-multi input[type="checkbox"], #tag-multi input[type="checkbox"]').forEach((box) => {
+        box.checked = false;
+      });
+      document.querySelector('input[name="match"][value="all"]')?.click();
+      resetCategoryFilter();
+      updateMultiSummaries();
+    });
+
+    function updateMultiSummaries() {
+      document.querySelectorAll(".multi-select").forEach((el) => {
+        const summary = el.querySelector(".multi-select-summary");
+        if (!summary) return;
+        const n = el.querySelectorAll('input[type="checkbox"]:checked').length;
+        summary.textContent = n ? `${n} selected` : (summary.dataset.empty || "Any");
+      });
+    }
+
+    document.querySelectorAll(".multi-select input[type='checkbox']").forEach((box) => {
+      box.addEventListener("change", updateMultiSummaries);
+    });
+
+    function filterCategoryOptions(query) {
+      const root = document.getElementById("category-multi");
+      if (!root) return;
+      const q = (query || "").trim().toLowerCase();
+      let visible = 0;
+      root.querySelectorAll(".multi-option").forEach((opt) => {
+        const label = opt.dataset.label || opt.textContent.toLowerCase();
+        const show = !q || label.includes(q);
+        opt.hidden = !show;
+        if (show) visible += 1;
+      });
+      const empty = root.querySelector(".multi-select-empty");
+      if (empty) empty.hidden = visible > 0 || root.querySelectorAll(".multi-option").length === 0;
+    }
+
+    function resetCategoryFilter() {
+      const input = document.getElementById("category-filter");
+      if (input) input.value = "";
+      filterCategoryOptions("");
+    }
+
+    document.getElementById("category-filter")?.addEventListener("input", (ev) => {
+      filterCategoryOptions(ev.target.value);
+    });
+
+    // Prevent search field from submitting the form on Enter
+    document.getElementById("category-filter")?.addEventListener("keydown", (ev) => {
+      if (ev.key === "Enter") ev.preventDefault();
+    });
+
+    // Close other multi-selects when one opens; focus category search
+    document.querySelectorAll(".multi-select").forEach((el) => {
+      el.addEventListener("toggle", () => {
+        if (!el.open) {
+          if (el.id === "category-multi") resetCategoryFilter();
+          return;
+        }
+        document.querySelectorAll(".multi-select").forEach((other) => {
+          if (other !== el) other.open = false;
+        });
+        if (el.id === "category-multi") {
+          const input = document.getElementById("category-filter");
+          resetCategoryFilter();
+          queueMicrotask(() => input?.focus());
+        }
+      });
+    });
+
+    // Click / tap outside closes open multi-selects
+    document.addEventListener("pointerdown", (ev) => {
+      document.querySelectorAll(".multi-select[open]").forEach((el) => {
+        if (!el.contains(ev.target)) el.open = false;
+      });
+    });
+
+    // Selection + action bar (always visible; actions enable when selection exists)
+    const selectedCountEl = document.getElementById("selected-count");
     const tbody = document.getElementById("txn-tbody");
+    let lastSelectedIndex = null;
+
+    function selectedRows() {
+      return Array.from(tbody.querySelectorAll("tr.txn-row.is-selected"));
+    }
+
+    function updateSelectionUi() {
+      const rows = selectedRows();
+      const n = rows.length;
+      if (selectedCountEl) {
+        selectedCountEl.textContent = `${n} selected`;
+      }
+      const enable = n > 0;
+      ["btn-assign", "btn-approve", "btn-suggest", "btn-payee-save"].forEach((id) => {
+        const el = document.getElementById(id);
+        if (el) el.disabled = !enable;
+      });
+      const payeeInput = document.getElementById("bulk-payee");
+      if (payeeInput) {
+        payeeInput.disabled = !enable;
+        if (n === 1) {
+          payeeInput.value = rows[0].dataset.payee || "";
+        } else if (n === 0) {
+          payeeInput.value = "";
+        }
+      }
+      const suggestResult = document.getElementById("suggest-result");
+      if (suggestResult && n === 0) {
+        suggestResult.hidden = true;
+      }
+    }
+
+    tbody?.addEventListener("click", (ev) => {
+      const row = ev.target.closest("tr.txn-row");
+      if (!row || ev.target.closest("button")) return;
+      const index = Number(row.dataset.index);
+      if (ev.shiftKey && lastSelectedIndex !== null) {
+        const lo = Math.min(lastSelectedIndex, index);
+        const hi = Math.max(lastSelectedIndex, index);
+        tbody.querySelectorAll("tr.txn-row").forEach((r) => {
+          const i = Number(r.dataset.index);
+          if (i >= lo && i <= hi) r.classList.add("is-selected");
+        });
+      } else if (ev.metaKey || ev.ctrlKey) {
+        row.classList.toggle("is-selected");
+        lastSelectedIndex = index;
+      } else {
+        const wasOnly = row.classList.contains("is-selected") && selectedRows().length === 1;
+        tbody.querySelectorAll("tr.txn-row.is-selected").forEach((r) => r.classList.remove("is-selected"));
+        if (!wasOnly) row.classList.add("is-selected");
+        lastSelectedIndex = index;
+      }
+      updateSelectionUi();
+      hideSuggestResult();
+    });
+
+    document.getElementById("freq-chips")?.addEventListener("click", (ev) => {
+      const chip = ev.target.closest(".freq-chip");
+      if (!chip) return;
+      const select = document.getElementById("assign-category");
+      if (select) select.value = chip.dataset.categoryId;
+    });
+
+    // --- Payee suggest / autocomplete / save ---
+    const bulkPayee = document.getElementById("bulk-payee");
+    const suggestResult = document.getElementById("suggest-result");
+    const suggestText = document.getElementById("suggest-text");
+    const payeeAcMenu = document.getElementById("payee-ac-menu");
+    let pendingSuggestion = null;
+    let acTimer = null;
+    let acItems = [];
+    let acIndex = -1;
+
+    function selectedIds() {
+      return selectedRows().map((r) => Number(r.dataset.id)).filter(Boolean);
+    }
+
+    function hideSuggestResult() {
+      pendingSuggestion = null;
+      if (suggestResult) suggestResult.hidden = true;
+      if (suggestText) suggestText.textContent = "";
+    }
+
+    function showSuggestResult(hit) {
+      pendingSuggestion = hit;
+      if (!suggestResult || !suggestText) return;
+      const src = hit.source === "alias" ? "alias" : hit.source === "prefix" ? "prefix" : "fingerprint";
+      suggestText.textContent = `${hit.canonical_name} · used ${hit.observation_count}× (${src})`;
+      suggestResult.hidden = false;
+      const applyBtn = document.getElementById("btn-apply");
+      if (applyBtn) applyBtn.hidden = false;
+    }
+
+    function applyPayeeToSelectedRows(name) {
+      selectedRows().forEach((row) => {
+        row.dataset.payee = name;
+        const text = row.querySelector(".payee-text");
+        if (text) text.textContent = name;
+      });
+      if (bulkPayee) bulkPayee.value = name;
+    }
+
+    async function postJson(url, body) {
+      const res = await fetch(url, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", Accept: "application/json" },
+        body: JSON.stringify(body),
+      });
+      if (res.status === 204 || res.status === 404) {
+        const text = await res.text();
+        if (!text) return null;
+        try { return JSON.parse(text); } catch { return null; }
+      }
+      if (!res.ok) {
+        const detail = await res.text();
+        throw new Error(detail || res.statusText);
+      }
+      // FastAPI may return null JSON body for Optional response
+      const text = await res.text();
+      if (!text) return null;
+      return JSON.parse(text);
+    }
+
+    document.getElementById("btn-suggest")?.addEventListener("click", async () => {
+      const ids = selectedIds();
+      if (!ids.length) return;
+      const btn = document.getElementById("btn-suggest");
+      if (btn) btn.disabled = true;
+      try {
+        const hit = await postJson("/api/transactions/payee/suggest", { transaction_ids: ids });
+        if (!hit) {
+          pendingSuggestion = null;
+          if (suggestResult && suggestText) {
+            suggestText.textContent = "No suggestion";
+            suggestResult.hidden = false;
+          }
+          const applyBtn = document.getElementById("btn-apply");
+          if (applyBtn) applyBtn.hidden = true;
+          return;
+        }
+        showSuggestResult(hit);
+        const applyBtn = document.getElementById("btn-apply");
+        if (applyBtn) applyBtn.hidden = false;
+        if (bulkPayee) bulkPayee.value = hit.canonical_name;
+      } catch (err) {
+        console.error(err);
+        hideSuggestResult();
+        alert("Suggest failed");
+      } finally {
+        updateSelectionUi();
+      }
+    });
+
+    document.getElementById("btn-apply")?.addEventListener("click", async () => {
+      const ids = selectedIds();
+      const name = pendingSuggestion?.canonical_name || bulkPayee?.value?.trim();
+      if (!ids.length || !name) return;
+      try {
+        await postJson("/api/transactions/payee/apply", {
+          transaction_ids: ids,
+          canonical_name: name,
+        });
+        applyPayeeToSelectedRows(name);
+        hideSuggestResult();
+      } catch (err) {
+        console.error(err);
+        alert("Apply failed");
+      }
+    });
+
+    document.getElementById("btn-payee-save")?.addEventListener("click", async () => {
+      const ids = selectedIds();
+      const name = bulkPayee?.value?.trim();
+      if (!ids.length || !name) return;
+      try {
+        await postJson("/api/transactions/payee/apply", {
+          transaction_ids: ids,
+          canonical_name: name,
+        });
+        applyPayeeToSelectedRows(name);
+        hideSuggestResult();
+      } catch (err) {
+        console.error(err);
+        alert("Save failed");
+      }
+    });
+
+    function hidePayeeAc() {
+      if (payeeAcMenu) payeeAcMenu.hidden = true;
+      acItems = [];
+      acIndex = -1;
+    }
+
+    function renderPayeeAc(items) {
+      acItems = items;
+      acIndex = -1;
+      if (!payeeAcMenu) return;
+      if (!items.length) {
+        hidePayeeAc();
+        return;
+      }
+      payeeAcMenu.innerHTML = items
+        .map(
+          (item, i) =>
+            `<button type="button" class="payee-ac-item" data-index="${i}">${escapeHtml(item.canonical_name)}</button>`
+        )
+        .join("");
+      payeeAcMenu.hidden = false;
+    }
+
+    function escapeHtml(s) {
+      return String(s)
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;")
+        .replace(/"/g, "&quot;");
+    }
+
+    async function fetchPayeeAc(q) {
+      const res = await fetch(`/api/payees?q=${encodeURIComponent(q)}&limit=20`);
+      if (!res.ok) return [];
+      return res.json();
+    }
+
+    bulkPayee?.addEventListener("input", () => {
+      hideSuggestResult();
+      const q = bulkPayee.value.trim();
+      if (acTimer) clearTimeout(acTimer);
+      if (q.length < 1) {
+        hidePayeeAc();
+        return;
+      }
+      acTimer = setTimeout(async () => {
+        try {
+          const items = await fetchPayeeAc(q);
+          if (bulkPayee.value.trim() !== q) return;
+          renderPayeeAc(items);
+        } catch (err) {
+          console.error(err);
+          hidePayeeAc();
+        }
+      }, 150);
+    });
+
+    payeeAcMenu?.addEventListener("click", (ev) => {
+      const btn = ev.target.closest(".payee-ac-item");
+      if (!btn || !bulkPayee) return;
+      const item = acItems[Number(btn.dataset.index)];
+      if (!item) return;
+      bulkPayee.value = item.canonical_name;
+      hidePayeeAc();
+      bulkPayee.focus();
+    });
+
+    bulkPayee?.addEventListener("keydown", (ev) => {
+      if (payeeAcMenu?.hidden || !acItems.length) return;
+      if (ev.key === "ArrowDown") {
+        ev.preventDefault();
+        acIndex = Math.min(acIndex + 1, acItems.length - 1);
+      } else if (ev.key === "ArrowUp") {
+        ev.preventDefault();
+        acIndex = Math.max(acIndex - 1, 0);
+      } else if (ev.key === "Enter" && acIndex >= 0) {
+        ev.preventDefault();
+        bulkPayee.value = acItems[acIndex].canonical_name;
+        hidePayeeAc();
+        return;
+      } else if (ev.key === "Escape") {
+        hidePayeeAc();
+        return;
+      } else {
+        return;
+      }
+      payeeAcMenu.querySelectorAll(".payee-ac-item").forEach((el, i) => {
+        el.classList.toggle("is-active", i === acIndex);
+      });
+    });
+
+    document.addEventListener("pointerdown", (ev) => {
+      if (!ev.target.closest(".payee-ac-wrap")) hidePayeeAc();
+    });
+
+    // Column sort
+    const COLUMN_ORDER = ["date", "payee", "category", "tags", "amount"];
+    const sortState = Object.fromEntries(COLUMN_ORDER.map((c) => [c, null]));
 
     function compareValues(col, a, b) {
       const av = a.dataset[col] ?? "";
@@ -241,7 +771,6 @@
     function applySort() {
       const rows = Array.from(tbody.querySelectorAll("tr.txn-row"));
       if (!rows.length) return;
-
       const active = COLUMN_ORDER.filter((c) => sortState[c]);
       rows.sort((a, b) => {
         for (const col of active) {
@@ -251,7 +780,6 @@
         return Number(a.dataset.index) - Number(b.dataset.index);
       });
       rows.forEach((row) => tbody.appendChild(row));
-
       document.querySelectorAll("th.sortable").forEach((th) => {
         const col = th.dataset.col;
         const dir = sortState[col];
@@ -269,6 +797,8 @@
         applySort();
       });
     });
+
+    updateSelectionUi();
   </script>
 </body>
 </html>

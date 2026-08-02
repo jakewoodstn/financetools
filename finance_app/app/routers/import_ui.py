@@ -18,6 +18,7 @@ from app.services.promote_staging import (
     review_row_detail,
 )
 from app.services.simplefin import SimpleFinError
+from app.services.ui_context import ui_page_context
 
 router = APIRouter(tags=["ui"])
 templates = Jinja2Templates(directory=str(Path(__file__).resolve().parent.parent / "templates"))
@@ -34,12 +35,14 @@ def _import_page_context(db: Session, account: int | None) -> dict:
         "accounts": accounts,
         "selected_account_id": selected_account_id,
         "selected_account": selected_account,
+        "account_colors": {row.id: (row.color or "#1d4ed8") for row in accounts},
         "alias_map": import_service.lookup_simplefin_names(db),
         "sample_map": import_service.sample_raw_transactions(db),
         "preview_map": import_service.latest_import_preview(db),
         "start_default": start_default.isoformat(),
         "end_default": end_default.isoformat(),
         "simplefin_configured": bool(settings.simplefin_access_url),
+        **ui_page_context(db, nav_active="import"),
     }
 
 
@@ -71,6 +74,7 @@ def _review_page_context(db: Session, account: int | None) -> dict:
     if selected_id is not None:
         review_rows = list_review_row_details(db, selected_id)
     ctx["review_rows"] = review_rows
+    ctx["nav_active"] = "import_review"
     return ctx
 
 
