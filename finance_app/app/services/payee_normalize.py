@@ -54,6 +54,26 @@ _TRAILING_LOC_RE = re.compile(
 _NON_ALNUM_RE = re.compile(r"[^A-Z0-9]+")
 _SPACE_RE = re.compile(r"\s+")
 
+# ACH / bank-blob markers that mean the "payee" was never cleaned.
+_BANK_BLOB_MARKERS = re.compile(
+    r"""
+    \bDES:
+    |\bINDN:
+    |\bCO\s*ID:
+    |\bID:
+    |\bPPD\b
+    |\bCHECKCARD\b
+    |\bACH\b
+    |\bDIRECT\s+DEP\b
+    |\bXXXXX
+    """,
+    re.VERBOSE | re.IGNORECASE,
+)
+
+# Clean hand-entered payee names stay short; import blobs do not.
+_MAX_CLEAN_NAME_LEN = 80
+_MAX_CLEAN_TOKEN_COUNT = 4
+
 
 def normalize_payee_text(raw: str | None) -> str:
     """Uppercase, strip masks/dates/ids/location stubs, collapse whitespace."""
@@ -93,3 +113,26 @@ def payee_prefix_key(raw: str | None, *, n: int = 3) -> str:
     if not tokens:
         return ""
     return " ".join(tokens[:n])
+
+
+def looks_like_clean_payee_name(name: str | None) -> bool:
+    """True for hand-cleaned payee labels; false for leftover bank/ACH blobs.
+
+    Used so Suggest can ignore import-created payees whose canonical_name is
+    still essentially the raw bank description.
+    """
+    if not name:
+        return False
+    text = str(name).strip()
+    if not text:
+        return False
+    if len(text) > _MAX_CLEAN_NAME_LEN:
+        return False
+    if _BANK_BLOB_MARKERS.search(text):
+        return False
+    tokens = fingerprint_tokens(text)
+    if not tokens:
+        return False
+    if len(tokens) > _MAX_CLEAN_TOKEN_COUNT:
+        return False
+    return True

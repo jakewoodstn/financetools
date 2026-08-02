@@ -2,6 +2,7 @@ from decimal import Decimal
 
 from app.services.payee_normalize import (
     fingerprint_tokens,
+    looks_like_clean_payee_name,
     normalize_payee_text,
     payee_fingerprint,
     payee_prefix_key,
@@ -38,3 +39,16 @@ def test_empty():
     assert payee_fingerprint(None) == ""
     assert payee_fingerprint("   ") == ""
     assert payee_prefix_key("") == ""
+
+
+def test_looks_like_clean_payee_name():
+    assert looks_like_clean_payee_name("AdhereHealth")
+    assert looks_like_clean_payee_name("Amazon Marketplace")
+    assert not looks_like_clean_payee_name(
+        "ADHEREHEALTH SOL DES:PAYROLL ID:12V05 A0A50CJP1 INDN:WOODS, JAKE CO ID:XXXXX34033 PPD"
+    )
+    assert not looks_like_clean_payee_name(
+        "Adherehealth Sol Des:payroll Id:12v05 A0a50cjp1 Indn:woods, Jake Co Id:xxxxxx4033 Ppd"
+    )
+    assert not looks_like_clean_payee_name("")
+    assert not looks_like_clean_payee_name(None)

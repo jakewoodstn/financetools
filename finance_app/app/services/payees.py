@@ -8,6 +8,7 @@ from sqlalchemy.orm import Session
 
 from app.models import BankTransaction, Payee, PayeeAlias
 from app.services.payee_normalize import (
+    looks_like_clean_payee_name,
     payee_fingerprint,
     payee_prefix_key,
 )
@@ -51,7 +52,7 @@ def suggest_payee(db: Session, txn: BankTransaction) -> PayeeSuggestion | None:
 
     if txn.payee_id:
         payee = db.get(Payee, txn.payee_id)
-        if payee and payee.canonical_name:
+        if payee and looks_like_clean_payee_name(payee.canonical_name):
             return PayeeSuggestion(payee.canonical_name, 1, "alias")
 
     history_hit = _suggest_from_history(db, raw)
@@ -74,7 +75,14 @@ def _suggest_from_aliases(db: Session, raw: str) -> PayeeSuggestion | None:
         .where(func.lower(PayeeAlias.raw_text).in_(lowered))
     ).all()
 
-    if not rows and fp:
+    clean_exact = [
+        name for name, _, _ in rows if looks_like_clean_payee_name(name)
+    ]
+    if clean_exact:
+        name, count = Counter(clean_exact).most_common(1)[0]
+        return PayeeSuggestion(name, count, "alias")
+
+    if fp:
         # Fingerprint-match aliases whose stored raw fingerprints equal ours.
         # Narrow with first significant token, then exact-compare in Python.
         token = fp.split(" ", 1)[0]
@@ -87,18 +95,13 @@ def _suggest_from_aliases(db: Session, raw: str) -> PayeeSuggestion | None:
         matched = [
             name
             for name, alias_raw in candidates
-            if payee_fingerprint(alias_raw) == fp and name
+            if looks_like_clean_payee_name(name)
+            and payee_fingerprint(alias_raw) == fp
         ]
         if matched:
             name, count = Counter(matched).most_common(1)[0]
             return PayeeSuggestion(name, count, "alias")
-        return None
-
-    if not rows:
-        return None
-    counts = Counter(name for name, _, _ in rows if name)
-    name, count = counts.most_common(1)[0]
-    return PayeeSuggestion(name, count, "alias")
+    return None
 
 
 def _suggest_from_history(db: Session, raw: str) -> PayeeSuggestion | None:
