@@ -96,15 +96,17 @@
         </label>
         <div class="filter-section">
           <span class="filter-label">Category</span>
+          <div class="multi-select-chips" id="category-chips" aria-live="polite">
+            {% for cat in categories if cat.category_id in selected_category_ids %}
+            <button type="button" class="multi-chip" data-root="category-multi" data-value="{{ cat.category_id }}" title="Remove {{ cat.category_name }}">
+              <span class="multi-chip-label">{{ cat.category_name }}</span>
+              <span class="multi-chip-x" aria-hidden="true">×</span>
+            </button>
+            {% endfor %}
+          </div>
           <details class="multi-select" id="category-multi">
             <summary>
-              <span class="multi-select-summary" data-empty="Any category">
-                {% if selected_category_ids %}
-                  {{ selected_category_ids|length }} selected
-                {% else %}
-                  Any category
-                {% endif %}
-              </span>
+              <span class="multi-select-summary" data-empty="Choose categories…">Choose categories…</span>
             </summary>
             <div class="multi-select-menu">
               <input
@@ -135,30 +137,42 @@
         </div>
         <div class="filter-section">
           <span class="filter-label">Tag</span>
+          <div class="multi-select-chips" id="tag-chips" aria-live="polite">
+            {% for t in tags if t.tag_id in selected_tag_ids %}
+            <button type="button" class="multi-chip" data-root="tag-multi" data-value="{{ t.tag_id }}" title="Remove {{ t.tag }}">
+              <span class="multi-chip-label">{{ t.tag }}</span>
+              <span class="multi-chip-x" aria-hidden="true">×</span>
+            </button>
+            {% endfor %}
+          </div>
           <details class="multi-select" id="tag-multi">
             <summary>
-              <span class="multi-select-summary" data-empty="Any tag">
-                {% if selected_tag_ids %}
-                  {{ selected_tag_ids|length }} selected
-                {% else %}
-                  Any tag
-                {% endif %}
-              </span>
+              <span class="multi-select-summary" data-empty="Choose tags…">Choose tags…</span>
             </summary>
             <div class="multi-select-menu">
-              {% for t in tags %}
-              <label class="multi-option">
-                <input
-                  type="checkbox"
-                  name="tag"
-                  value="{{ t.tag_id }}"
-                  {% if t.tag_id in selected_tag_ids %}checked{% endif %}
-                >
-                <span>{{ t.tag }}</span>
-              </label>
-              {% else %}
-              <p class="muted">No tags loaded</p>
-              {% endfor %}
+              <input
+                type="search"
+                class="multi-select-filter"
+                id="tag-filter"
+                placeholder="Search tags…"
+                autocomplete="off"
+              >
+              <div class="multi-select-options">
+                {% for t in tags %}
+                <label class="multi-option" data-label="{{ t.tag|lower }}">
+                  <input
+                    type="checkbox"
+                    name="tag"
+                    value="{{ t.tag_id }}"
+                    {% if t.tag_id in selected_tag_ids %}checked{% endif %}
+                  >
+                  <span>{{ t.tag }}</span>
+                </label>
+                {% else %}
+                <p class="muted">No tags loaded</p>
+                {% endfor %}
+                <p class="muted multi-select-empty" hidden>No matches</p>
+              </div>
             </div>
           </details>
         </div>
@@ -484,17 +498,36 @@
       });
       document.querySelector('input[name="match"][value="all"]')?.click();
       resetCategoryFilter();
+      resetTagFilter();
       updateMultiSummaries();
     });
 
     function updateMultiSummaries() {
-      ["category-multi", "tag-multi"].forEach((id) => {
-        const el = document.getElementById(id);
-        if (!el) return;
+      const configs = [
+        { rootId: "category-multi", chipsId: "category-chips" },
+        { rootId: "tag-multi", chipsId: "tag-chips" },
+      ];
+      configs.forEach(({ rootId, chipsId }) => {
+        const el = document.getElementById(rootId);
+        const chips = document.getElementById(chipsId);
+        if (!el || !chips) return;
         const summary = el.querySelector(".multi-select-summary");
-        if (!summary) return;
-        const n = el.querySelectorAll('input[type="checkbox"]:checked').length;
-        summary.textContent = n ? `${n} selected` : (summary.dataset.empty || "Any");
+        if (summary) summary.textContent = summary.dataset.empty || "Choose…";
+
+        const selected = Array.from(el.querySelectorAll('input[type="checkbox"]:checked')).map((box) => {
+          const label = box.closest("label")?.querySelector("span")?.textContent?.trim() || box.value;
+          return { value: box.value, label };
+        });
+        chips.innerHTML = selected
+          .map(
+            (item) =>
+              `<button type="button" class="multi-chip" data-root="${rootId}" data-value="${escapeHtml(item.value)}" title="Remove ${escapeHtml(item.label)}">` +
+              `<span class="multi-chip-label">${escapeHtml(item.label)}</span>` +
+              `<span class="multi-chip-x" aria-hidden="true">×</span>` +
+              `</button>`
+          )
+          .join("");
+        chips.hidden = selected.length === 0;
       });
     }
 
@@ -502,8 +535,26 @@
       box.addEventListener("change", updateMultiSummaries);
     });
 
-    function filterCategoryOptions(query) {
-      const root = document.getElementById("category-multi");
+    document.querySelectorAll(".multi-select-chips").forEach((chips) => {
+      chips.addEventListener("click", (ev) => {
+        const chip = ev.target.closest(".multi-chip");
+        if (!chip) return;
+        ev.preventDefault();
+        const root = document.getElementById(chip.dataset.root || "");
+        const value = chip.dataset.value;
+        if (!root || value == null) return;
+        const box = root.querySelector(`input[type="checkbox"][value="${CSS.escape(value)}"]`);
+        if (box) {
+          box.checked = false;
+          box.dispatchEvent(new Event("change", { bubbles: true }));
+        }
+      });
+    });
+
+    updateMultiSummaries();
+
+    function filterMultiOptions(rootId, query) {
+      const root = document.getElementById(rootId);
       if (!root) return;
       const q = (query || "").trim().toLowerCase();
       let visible = 0;
@@ -517,10 +568,24 @@
       if (empty) empty.hidden = visible > 0 || root.querySelectorAll(".multi-option").length === 0;
     }
 
+    function filterCategoryOptions(query) {
+      filterMultiOptions("category-multi", query);
+    }
+
     function resetCategoryFilter() {
       const input = document.getElementById("category-filter");
       if (input) input.value = "";
       filterCategoryOptions("");
+    }
+
+    function filterTagOptions(query) {
+      filterMultiOptions("tag-multi", query);
+    }
+
+    function resetTagFilter() {
+      const input = document.getElementById("tag-filter");
+      if (input) input.value = "";
+      filterTagOptions("");
     }
 
     document.getElementById("category-filter")?.addEventListener("input", (ev) => {
@@ -528,6 +593,14 @@
     });
 
     document.getElementById("category-filter")?.addEventListener("keydown", (ev) => {
+      if (ev.key === "Enter") ev.preventDefault();
+    });
+
+    document.getElementById("tag-filter")?.addEventListener("input", (ev) => {
+      filterTagOptions(ev.target.value);
+    });
+
+    document.getElementById("tag-filter")?.addEventListener("keydown", (ev) => {
       if (ev.key === "Enter") ev.preventDefault();
     });
 
@@ -582,11 +655,12 @@
       resetAssignCategoryFilter();
     });
 
-    // Close other multi-selects when one opens; focus category search
+    // Close other multi-selects when one opens; focus search when present
     document.querySelectorAll(".multi-select").forEach((el) => {
       el.addEventListener("toggle", () => {
         if (!el.open) {
           if (el.id === "category-multi") resetCategoryFilter();
+          if (el.id === "tag-multi") resetTagFilter();
           if (el.id === "assign-category-picker") resetAssignCategoryFilter();
           return;
         }
@@ -596,6 +670,11 @@
         if (el.id === "category-multi") {
           const input = document.getElementById("category-filter");
           resetCategoryFilter();
+          queueMicrotask(() => input?.focus());
+        }
+        if (el.id === "tag-multi") {
+          const input = document.getElementById("tag-filter");
+          resetTagFilter();
           queueMicrotask(() => input?.focus());
         }
         if (el.id === "assign-category-picker") {

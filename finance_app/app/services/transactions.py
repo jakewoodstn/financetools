@@ -196,9 +196,16 @@ def list_categories(db: Session) -> list[CategoryOut]:
 
 
 def list_tags(db: Session) -> list[TagOut]:
+    # Legacy data uses 9999-12-31 as "not retired" (same pattern as account end dates).
+    today = local_today()
     rows = db.execute(
         select(TaggedEvent.id, TaggedEvent.tag)
-        .where(TaggedEvent.retired_date.is_(None))
+        .where(
+            or_(
+                TaggedEvent.retired_date.is_(None),
+                TaggedEvent.retired_date > today,
+            )
+        )
         .order_by(TaggedEvent.tag)
     ).all()
     return [TagOut(tag_id=row.id, tag=row.tag) for row in rows]

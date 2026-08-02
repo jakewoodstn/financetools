@@ -355,6 +355,53 @@ body {
   background: #fff;
 }
 
+.multi-select-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.3rem;
+  margin-bottom: 0.35rem;
+}
+
+.multi-select-chips:empty,
+.multi-select-chips[hidden] {
+  display: none;
+}
+
+.multi-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.2rem;
+  max-width: 100%;
+  border: 1px solid #c9d4e4;
+  border-radius: 4px;
+  background: #eef3f9;
+  color: #1f2937;
+  font: inherit;
+  font-size: 0.72rem;
+  line-height: 1.2;
+  padding: 0.15rem 0.35rem;
+  cursor: pointer;
+}
+
+.multi-chip:hover {
+  border-color: var(--theme-accent, #1d4ed8);
+  color: var(--theme-accent, #1d4ed8);
+}
+
+.multi-chip-label {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.multi-chip-x {
+  flex: 0 0 auto;
+  color: #6b7280;
+  font-size: 0.9rem;
+  line-height: 1;
+}
+
 .multi-select summary {
   list-style: none;
   cursor: pointer;
