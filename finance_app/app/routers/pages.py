@@ -12,6 +12,15 @@ from app.services.calendar_dates import local_today
 router = APIRouter(tags=["ui"])
 templates = Jinja2Templates(directory=str(Path(__file__).resolve().parent.parent / "templates"))
 
+ACCOUNT_COLORS = [
+    "#1d4ed8",
+    "#b45309",
+    "#166534",
+    "#7c3aed",
+    "#be123c",
+    "#0f766e",
+]
+
 
 @router.get("/")
 def home(request: Request):
@@ -54,6 +63,10 @@ def transcat(
         start_date=start_date,
         end_date=end_date,
     )
+    account_colors = {
+        account.id: ACCOUNT_COLORS[idx % len(ACCOUNT_COLORS)]
+        for idx, account in enumerate(accounts)
+    }
     return templates.TemplateResponse(
         request=request,
         name="transcat.html",
@@ -62,6 +75,7 @@ def transcat(
             "accounts": accounts,
             "transactions": transactions,
             "selected_account_ids": selected_account_ids,
+            "account_colors": account_colors,
             "start_date": start_date.isoformat(),
             "end_date": end_date.isoformat(),
         },

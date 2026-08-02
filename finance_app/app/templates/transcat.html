@@ -10,7 +10,7 @@
 <body>
   <header class="page-header">
     <nav class="nav">
-      <a href="/transcat" class="active">Transcat</a>
+      <a href="/transcat" class="active">Transactions</a>
       <a href="/import">Import</a>
       <a href="/balances">Balances</a>
     </nav>
@@ -27,7 +27,11 @@
           <div class="account-toggles">
             {% for account in accounts %}
             {% set full_name = account.account_name or ("Account " ~ account.id) %}
-            <label class="account-toggle {% if account.id in selected_account_ids %}is-on{% endif %}" title="{{ full_name }}">
+            <label
+              class="account-toggle {% if account.id in selected_account_ids %}is-on{% endif %}"
+              title="{{ full_name }}"
+              style="--acct-color: {{ account_colors.get(account.id, '#1d4ed8') }}"
+            >
               <input
                 type="checkbox"
                 class="account-check"
@@ -73,28 +77,42 @@
 
     <section class="panel transactions-panel">
       <h2>Transactions <span class="count">({{ transactions|length }})</span></h2>
-      <table>
+      <table id="txn-table">
         <thead>
           <tr>
-            <th>Date</th>
-            <th>Payee</th>
-            <th>Category</th>
-            <th class="amount">Amount</th>
-            <th>Account</th>
+            <th class="sortable" data-col="date" aria-sort="none">Date <span class="sort-ind"></span></th>
+            <th class="sortable" data-col="payee" aria-sort="none">Payee <span class="sort-ind"></span></th>
+            <th class="sortable" data-col="category" aria-sort="none">Category <span class="sort-ind"></span></th>
+            <th class="sortable amount" data-col="amount" aria-sort="none">Amount <span class="sort-ind"></span></th>
           </tr>
         </thead>
-        <tbody>
+        <tbody id="txn-tbody">
           {% for txn in transactions %}
-          <tr>
-            <td>{{ txn.accounting_date or txn.transaction_date or "" }}</td>
+          {% set acct_label = txn.account_name or txn.account_id %}
+          {% set display_date = txn.accounting_date or txn.transaction_date or "" %}
+          <tr
+            class="txn-row"
+            style="--acct-color: {{ account_colors.get(txn.account_id, '#1d4ed8') }}"
+            title="{{ acct_label }}"
+            data-date="{{ display_date }}"
+            data-payee="{{ txn.description or "" }}"
+            data-category="{{ txn.category_name or "" }}"
+            data-amount="{{ txn.amount if txn.amount is not none else "" }}"
+            data-index="{{ loop.index0 }}"
+          >
+            <td>{{ display_date }}</td>
             <td>{{ txn.description or "" }}</td>
             <td>{{ txn.category_name or "" }}</td>
-            <td class="amount">{{ txn.amount if txn.amount is not none else "" }}</td>
-            <td>{{ txn.account_name or txn.account_id }}</td>
+            <td class="amount{% if txn.amount is not none and txn.amount < 0 %} is-negative{% endif %}">
+              {%- if txn.amount is none -%}
+              {%- elif txn.amount < 0 -%}(${{ "{:,.2f}".format(-txn.amount) }})
+              {%- else -%}${{ "{:,.2f}".format(txn.amount) }}
+              {%- endif -%}
+            </td>
           </tr>
           {% else %}
-          <tr>
-            <td colspan="5" class="muted">No transactions for this search</td>
+          <tr class="empty-row">
+            <td colspan="4" class="muted">No transactions for this search</td>
           </tr>
           {% endfor %}
         </tbody>
@@ -179,6 +197,54 @@
           endInput.value = formatLocalDate(new Date());
         }
         form.requestSubmit();
+      });
+    });
+
+    // Column sort: independent 3-state per column; compare cascades left → right.
+    const COLUMN_ORDER = ["date", "payee", "category", "amount"];
+    const sortState = Object.fromEntries(COLUMN_ORDER.map((c) => [c, null]));
+    const tbody = document.getElementById("txn-tbody");
+
+    function compareValues(col, a, b) {
+      const av = a.dataset[col] ?? "";
+      const bv = b.dataset[col] ?? "";
+      if (col === "amount") {
+        const an = av === "" ? Number.NEGATIVE_INFINITY : Number(av);
+        const bn = bv === "" ? Number.NEGATIVE_INFINITY : Number(bv);
+        return an === bn ? 0 : an < bn ? -1 : 1;
+      }
+      return av.localeCompare(bv, undefined, { sensitivity: "base", numeric: true });
+    }
+
+    function applySort() {
+      const rows = Array.from(tbody.querySelectorAll("tr.txn-row"));
+      if (!rows.length) return;
+
+      const active = COLUMN_ORDER.filter((c) => sortState[c]);
+      rows.sort((a, b) => {
+        for (const col of active) {
+          const cmp = compareValues(col, a, b);
+          if (cmp !== 0) return sortState[col] === "asc" ? cmp : -cmp;
+        }
+        return Number(a.dataset.index) - Number(b.dataset.index);
+      });
+      rows.forEach((row) => tbody.appendChild(row));
+
+      document.querySelectorAll("th.sortable").forEach((th) => {
+        const col = th.dataset.col;
+        const dir = sortState[col];
+        th.setAttribute("aria-sort", dir === "asc" ? "ascending" : dir === "desc" ? "descending" : "none");
+        const ind = th.querySelector(".sort-ind");
+        if (ind) ind.textContent = dir === "asc" ? "▲" : dir === "desc" ? "▼" : "";
+      });
+    }
+
+    document.querySelectorAll("th.sortable").forEach((th) => {
+      th.addEventListener("click", () => {
+        const col = th.dataset.col;
+        const cur = sortState[col];
+        sortState[col] = cur === null ? "asc" : cur === "asc" ? "desc" : null;
+        applySort();
       });
     });
   </script>
