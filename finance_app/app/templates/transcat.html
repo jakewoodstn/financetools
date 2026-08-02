@@ -76,7 +76,29 @@
     </aside>
 
     <section class="panel transactions-panel">
-      <h2>Transactions <span class="count">({{ transactions|length }})</span></h2>
+      <h2>Transactions</h2>
+      <div class="txn-stats" aria-label="Transaction totals">
+        <div class="txn-stat">
+          <span class="txn-stat-label">Count</span>
+          <span class="txn-stat-value">{{ txn_stats.count }}</span>
+        </div>
+        <div class="txn-stat">
+          <span class="txn-stat-label">Total credit</span>
+          <span class="txn-stat-value">${{ "{:,.2f}".format(txn_stats.credit) }}</span>
+        </div>
+        <div class="txn-stat">
+          <span class="txn-stat-label">Total debit</span>
+          <span class="txn-stat-value is-negative">(${{ "{:,.2f}".format(txn_stats.debit) }})</span>
+        </div>
+        <div class="txn-stat">
+          <span class="txn-stat-label">Net total</span>
+          <span class="txn-stat-value{% if txn_stats.net < 0 %} is-negative{% endif %}">
+            {%- if txn_stats.net < 0 -%}(${{ "{:,.2f}".format(-txn_stats.net) }})
+            {%- else -%}${{ "{:,.2f}".format(txn_stats.net) }}
+            {%- endif -%}
+          </span>
+        </div>
+      </div>
       <table id="txn-table">
         <thead>
           <tr>

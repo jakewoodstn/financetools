@@ -1,4 +1,5 @@
 from datetime import date, timedelta
+from decimal import Decimal
 from pathlib import Path
 
 from fastapi import APIRouter, Depends, Query, Request
@@ -6,6 +7,7 @@ from fastapi.templating import Jinja2Templates
 from sqlalchemy.orm import Session
 
 from app.database import get_db
+from app.schemas.transaction import TransactionOut
 from app.services import transactions as txn_service
 from app.services.calendar_dates import local_today
 
@@ -20,6 +22,24 @@ ACCOUNT_COLORS = [
     "#be123c",
     "#0f766e",
 ]
+
+
+def _transaction_stats(transactions: list[TransactionOut]) -> dict:
+    credit = Decimal("0")
+    debit = Decimal("0")
+    for txn in transactions:
+        if txn.amount is None:
+            continue
+        if txn.amount > 0:
+            credit += txn.amount
+        elif txn.amount < 0:
+            debit += -txn.amount
+    return {
+        "count": len(transactions),
+        "credit": credit,
+        "debit": debit,
+        "net": credit - debit,
+    }
 
 
 @router.get("/")
@@ -76,6 +96,7 @@ def transcat(
             "transactions": transactions,
             "selected_account_ids": selected_account_ids,
             "account_colors": account_colors,
+            "txn_stats": _transaction_stats(transactions),
             "start_date": start_date.isoformat(),
             "end_date": end_date.isoformat(),
         },
