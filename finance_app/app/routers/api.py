@@ -12,6 +12,8 @@ from app.schemas.payee import (
     PayeeSuggestionOut,
 )
 from app.schemas.transaction import (
+    ApproveCategoryRequest,
+    ApproveCategoryResult,
     AssignCategoryRequest,
     AssignCategoryResult,
     CategoryOut,
@@ -118,3 +120,17 @@ def assign_category(
         category_id=body.category_id,
         category_name=txn_service.category_label_for_id(db, body.category_id),
     )
+
+
+@router.post("/transactions/approve", response_model=ApproveCategoryResult)
+def approve_category(
+    body: ApproveCategoryRequest,
+    db: Session = Depends(get_db),
+) -> ApproveCategoryResult:
+    updated = txn_service.approve_categories(
+        db,
+        external_ids=body.transaction_ids,
+    )
+    if updated == 0:
+        raise HTTPException(status_code=404, detail="No matching transactions")
+    return ApproveCategoryResult(updated=updated)

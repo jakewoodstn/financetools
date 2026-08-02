@@ -174,22 +174,22 @@
 
     <section class="panel transactions-panel">
       <h2>Transactions</h2>
-      <div class="txn-stats" aria-label="Transaction totals">
+      <div class="txn-stats" aria-label="Transaction totals" id="txn-stats">
         <div class="txn-stat">
           <span class="txn-stat-label">Count</span>
-          <span class="txn-stat-value">{{ txn_stats.count }}</span>
+          <span class="txn-stat-value" id="stat-count">{{ txn_stats.count }}</span>
         </div>
         <div class="txn-stat">
           <span class="txn-stat-label">Total credit</span>
-          <span class="txn-stat-value">${{ "{:,.2f}".format(txn_stats.credit) }}</span>
+          <span class="txn-stat-value" id="stat-credit">${{ "{:,.2f}".format(txn_stats.credit) }}</span>
         </div>
         <div class="txn-stat">
           <span class="txn-stat-label">Total debit</span>
-          <span class="txn-stat-value is-negative">(${{ "{:,.2f}".format(txn_stats.debit) }})</span>
+          <span class="txn-stat-value is-negative" id="stat-debit">(${{ "{:,.2f}".format(txn_stats.debit) }})</span>
         </div>
         <div class="txn-stat">
           <span class="txn-stat-label">Net total</span>
-          <span class="txn-stat-value{% if txn_stats.net < 0 %} is-negative{% endif %}">
+          <span class="txn-stat-value{% if txn_stats.net < 0 %} is-negative{% endif %}" id="stat-net">
             {%- if txn_stats.net < 0 -%}(${{ "{:,.2f}".format(-txn_stats.net) }})
             {%- else -%}${{ "{:,.2f}".format(txn_stats.net) }}
             {%- endif -%}
@@ -230,7 +230,7 @@
                 {% endfor %}
               </select>
               <button type="button" class="btn-secondary" id="btn-assign" disabled>Assign</button>
-              <button type="button" class="btn-approve" id="btn-approve" disabled title="Approve coming next">Approve</button>
+              <button type="button" class="btn-approve" id="btn-approve" disabled>Approve</button>
             </div>
           </div>
           <div class="action-zone payee-zone">
@@ -661,6 +661,77 @@
       } catch (err) {
         console.error(err);
         alert("Assign failed");
+      }
+    });
+
+    const queueMode = document.querySelector('input[name="queue"]:checked')?.value || "needs";
+
+    function formatMoney(n) {
+      const abs = Math.abs(n);
+      const body = abs.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+      return n < 0 ? `($${body})` : `$${body}`;
+    }
+
+    function refreshTxnStats() {
+      const rows = Array.from(tbody.querySelectorAll("tr.txn-row"));
+      let credit = 0;
+      let debit = 0;
+      rows.forEach((row) => {
+        const raw = row.dataset.amount;
+        if (raw === "" || raw == null) return;
+        const amt = Number(raw);
+        if (Number.isNaN(amt)) return;
+        if (amt > 0) credit += amt;
+        else if (amt < 0) debit += -amt;
+      });
+      const net = credit - debit;
+      const countEl = document.getElementById("stat-count");
+      const creditEl = document.getElementById("stat-credit");
+      const debitEl = document.getElementById("stat-debit");
+      const netEl = document.getElementById("stat-net");
+      if (countEl) countEl.textContent = String(rows.length);
+      if (creditEl) creditEl.textContent = formatMoney(credit);
+      if (debitEl) {
+        debitEl.textContent = formatMoney(-debit);
+        debitEl.classList.toggle("is-negative", debit > 0);
+      }
+      if (netEl) {
+        netEl.textContent = formatMoney(net);
+        netEl.classList.toggle("is-negative", net < 0);
+      }
+      if (!rows.length) {
+        const empty = tbody.querySelector("tr.empty-row");
+        if (!empty) {
+          const tr = document.createElement("tr");
+          tr.className = "empty-row";
+          tr.innerHTML = '<td colspan="5" class="muted">No transactions for this search</td>';
+          tbody.appendChild(tr);
+        }
+      }
+    }
+
+    function removeSelectedRowsFromQueue() {
+      selectedRows().forEach((row) => row.remove());
+      updateSelectionUi();
+      hideSuggestResult();
+      refreshTxnStats();
+    }
+
+    document.getElementById("btn-approve")?.addEventListener("click", async () => {
+      const ids = selectedIds();
+      if (!ids.length) return;
+      try {
+        await postJson("/api/transactions/approve", { transaction_ids: ids });
+        if (queueMode !== "all") {
+          removeSelectedRowsFromQueue();
+        } else {
+          selectedRows().forEach((row) => row.classList.remove("is-selected"));
+          updateSelectionUi();
+          hideSuggestResult();
+        }
+      } catch (err) {
+        console.error(err);
+        alert("Approve failed");
       }
     });
 

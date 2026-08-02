@@ -47,3 +47,11 @@ class AssignCategoryResult(BaseModel):
     updated: int
     category_id: int
     category_name: str | None = None
+
+
+class ApproveCategoryRequest(BaseModel):
+    transaction_ids: list[int] = Field(min_length=1)
+
+
+class ApproveCategoryResult(BaseModel):
+    updated: int

@@ -296,6 +296,29 @@ def assign_categories(
     return len(txns)
 
 
+def approve_categories(
+    db: Session,
+    *,
+    external_ids: list[int],
+    commit: bool = True,
+) -> int:
+    """Commit categorization: set category_status to approved (-1)."""
+    if not external_ids:
+        return 0
+    txns = list(
+        db.scalars(
+            select(BankTransaction).where(BankTransaction.external_id.in_(external_ids))
+        ).all()
+    )
+    for txn in txns:
+        txn.category_status = STATUS_APPROVED
+    if commit:
+        db.commit()
+    else:
+        db.flush()
+    return len(txns)
+
+
 def category_label_for_id(db: Session, category_id: int) -> str | None:
     category_label = _category_label()
     row = db.execute(
