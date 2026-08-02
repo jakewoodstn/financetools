@@ -760,6 +760,16 @@ th.sortable .sort-ind {
   text-overflow: ellipsis;
 }
 
+.payee-inline {
+  flex: 1;
+  min-width: 0;
+  font: inherit;
+  padding: 0.15rem 0.35rem;
+  border: 1px solid var(--theme-accent, #1d4ed8);
+  border-radius: 4px;
+  background: #fff;
+}
+
 .payee-edit,
 .split-btn {
   border: none;

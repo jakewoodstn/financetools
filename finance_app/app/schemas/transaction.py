@@ -15,6 +15,7 @@ class TransactionOut(BaseModel):
     category_name: str | None = None
     amount: Decimal | None
     bank_orig_description: str | None
+    orig_description: str | None = None
     account_id: int
     account_name: str | None = None
     category_status: int

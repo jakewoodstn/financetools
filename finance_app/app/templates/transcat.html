@@ -290,10 +290,10 @@
           {% for txn in transactions %}
           {% set acct_label = txn.account_name or txn.account_id %}
           {% set display_date = txn.accounting_date or txn.transaction_date or "" %}
+          {% set bank_orig = txn.bank_orig_description or txn.orig_description or "" %}
           <tr
             class="txn-row"
             style="--acct-color: {{ account_colors.get(txn.account_id, '#1d4ed8') }}"
-            title="{{ acct_label }}"
             data-id="{{ txn.transaction_id }}"
             data-date="{{ display_date }}"
             data-payee="{{ txn.description or "" }}"
@@ -302,13 +302,13 @@
             data-tags="{{ txn.tags or "" }}"
             data-amount="{{ txn.amount if txn.amount is not none else "" }}"
             data-index="{{ loop.index0 }}"
-            data-bank-orig="{{ txn.bank_orig_description or "" }}"
+            data-bank-orig="{{ bank_orig }}"
             {% if txn.is_split %}data-split="1"{% endif %}
           >
-            <td>{{ display_date }}</td>
-            <td class="payee-cell">
+            <td title="{{ acct_label }}">{{ display_date }}</td>
+            <td class="payee-cell"{% if bank_orig %} title="{{ bank_orig }}"{% endif %}>
               <span class="payee-text">{{ txn.description or "" }}</span>
-              <button type="button" class="payee-edit" title="Edit payee (coming next)" aria-label="Edit payee" disabled>✎</button>
+              <button type="button" class="payee-edit" title="Edit payee" aria-label="Edit payee">✎</button>
             </td>
             <td class="category-cell">
               {% if txn.is_split %}
@@ -714,6 +714,7 @@
     });
 
     tbody?.addEventListener("click", (ev) => {
+      if (ev.target.closest(".payee-edit, .payee-inline, input, a")) return;
       const row = ev.target.closest("tr.txn-row");
       if (!row || ev.target.closest("button")) return;
       const index = Number(row.dataset.index);
@@ -1006,6 +1007,113 @@
         console.error(err);
         alert("Save failed");
       }
+    });
+
+    let inlinePayeeSaving = false;
+
+    function endInlinePayeeEdit(cell, restoreText) {
+      const input = cell?.querySelector(".payee-inline");
+      const textEl = cell?.querySelector(".payee-text");
+      const editBtn = cell?.querySelector(".payee-edit");
+      if (input) input.remove();
+      if (textEl) {
+        if (restoreText !== undefined) textEl.textContent = restoreText;
+        textEl.hidden = false;
+      }
+      if (editBtn) editBtn.hidden = false;
+    }
+
+    function applyPayeeToRow(row, name) {
+      row.dataset.payee = name;
+      const text = row.querySelector(".payee-text");
+      if (text) text.textContent = name;
+      if (row.classList.contains("is-selected") && selectedRows().length === 1 && bulkPayee) {
+        bulkPayee.value = name;
+      }
+    }
+
+    async function saveInlinePayee(row, cell, input, original) {
+      const name = (input.value || "").trim();
+      if (!name || name === original) {
+        endInlinePayeeEdit(cell, original);
+        return;
+      }
+      const id = Number(row.dataset.id);
+      if (!id) {
+        endInlinePayeeEdit(cell, original);
+        return;
+      }
+      inlinePayeeSaving = true;
+      input.disabled = true;
+      try {
+        await postJson("/api/transactions/payee/apply", {
+          transaction_ids: [id],
+          canonical_name: name,
+        });
+        applyPayeeToRow(row, name);
+        endInlinePayeeEdit(cell);
+      } catch (err) {
+        console.error(err);
+        alert("Payee save failed");
+        endInlinePayeeEdit(cell, original);
+      } finally {
+        inlinePayeeSaving = false;
+      }
+    }
+
+    function startInlinePayeeEdit(row) {
+      const cell = row.querySelector(".payee-cell");
+      if (!cell || cell.querySelector(".payee-inline")) return;
+      const textEl = cell.querySelector(".payee-text");
+      const editBtn = cell.querySelector(".payee-edit");
+      const original = (row.dataset.payee || textEl?.textContent || "").trim();
+      const input = document.createElement("input");
+      input.type = "text";
+      input.className = "payee-inline";
+      input.value = original;
+      input.setAttribute("aria-label", "Edit payee");
+      if (textEl) textEl.hidden = true;
+      if (editBtn) editBtn.hidden = true;
+      cell.insertBefore(input, editBtn || null);
+      input.focus();
+      input.select();
+
+      const cancel = () => {
+        if (inlinePayeeSaving) return;
+        endInlinePayeeEdit(cell, original);
+      };
+
+      input.addEventListener("keydown", (ev) => {
+        if (ev.key === "Enter") {
+          ev.preventDefault();
+          ev.stopPropagation();
+          saveInlinePayee(row, cell, input, original);
+        } else if (ev.key === "Escape") {
+          ev.preventDefault();
+          ev.stopPropagation();
+          cancel();
+        }
+      });
+      input.addEventListener("blur", () => {
+        if (inlinePayeeSaving) return;
+        // Defer so Enter handler can run first.
+        setTimeout(() => {
+          if (!cell.contains(document.activeElement) && cell.querySelector(".payee-inline")) {
+            saveInlinePayee(row, cell, input, original);
+          }
+        }, 0);
+      });
+      input.addEventListener("click", (ev) => ev.stopPropagation());
+      input.addEventListener("mousedown", (ev) => ev.stopPropagation());
+    }
+
+    tbody?.addEventListener("click", (ev) => {
+      const btn = ev.target.closest(".payee-edit");
+      if (!btn) return;
+      ev.preventDefault();
+      ev.stopPropagation();
+      const row = btn.closest("tr.txn-row");
+      if (row) startInlinePayeeEdit(row);
     });
 
     function hidePayeeAc() {

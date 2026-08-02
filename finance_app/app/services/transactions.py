@@ -143,6 +143,7 @@ def list_transactions(
                 category_name=display_category,
                 amount=txn.amount,
                 bank_orig_description=txn.bank_orig_description,
+                orig_description=txn.orig_description,
                 account_id=txn.account_id,
                 account_name=account_name,
                 category_status=txn.category_status,
