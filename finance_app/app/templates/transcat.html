@@ -326,11 +326,11 @@
             </td>
             <td class="category-cell">
               {% if txn.is_split %}
-              <span class="split-label">Split</span>
-              <button type="button" class="split-btn" title="Split editor (coming next)" aria-label="Edit split" disabled>⧉</button>
+              <span class="split-label category-text">Split</span>
               {% else %}
               <span class="category-text">{{ txn.category_name or "Uncategorized" }}</span>
               {% endif %}
+              <button type="button" class="split-btn" title="Edit split" aria-label="Edit split">⧉</button>
             </td>
             <td class="tags-cell">
               <div class="txn-tag-list">
@@ -414,6 +414,40 @@
     </aside>
     </div>
   </main>
+
+  <div class="split-overlay" id="split-overlay" hidden>
+    <div class="split-panel" id="split-panel" role="dialog" aria-modal="true" aria-labelledby="split-title">
+      <header class="split-panel-header">
+        <h2 id="split-title">Split transaction</h2>
+        <button type="button" class="btn-link" id="split-close" aria-label="Close">Close</button>
+      </header>
+      <p class="split-meta muted" id="split-meta"></p>
+      <div class="split-totals" id="split-totals">
+        <span>Total <strong id="split-total">$0.00</strong></span>
+        <span>Assigned <strong id="split-assigned">$0.00</strong></span>
+        <span>Remaining <strong id="split-remaining">$0.00</strong></span>
+      </div>
+      <table class="split-table" id="split-table">
+        <thead>
+          <tr>
+            <th>Category</th>
+            <th class="amount">Amount</th>
+            <th></th>
+          </tr>
+        </thead>
+        <tbody id="split-tbody"></tbody>
+      </table>
+      <div class="split-actions">
+        <button type="button" class="btn-secondary" id="split-add-line">Add line</button>
+        <span class="split-actions-spacer"></span>
+        <button type="button" class="btn-link" id="split-clear" hidden>Clear split</button>
+        <button type="button" class="btn-secondary" id="split-cancel">Cancel</button>
+        <button type="button" class="btn-primary" id="split-save" disabled>Save</button>
+      </div>
+    </div>
+  </div>
+
+  <script type="application/json" id="split-categories-json">{{ split_categories | tojson }}</script>
 
   <script>
     function formatLocalDate(d) {
@@ -799,7 +833,7 @@
     });
 
     tbody?.addEventListener("click", (ev) => {
-      if (ev.target.closest(".payee-edit, .payee-inline, .tag-add, .tag-edit-wrap, .tag-ac-menu, input, a")) return;
+      if (ev.target.closest(".payee-edit, .payee-inline, .tag-add, .tag-edit-wrap, .tag-ac-menu, .split-btn, input, a")) return;
       const row = ev.target.closest("tr.txn-row");
       if (!row || ev.target.closest("button")) return;
       const index = Number(row.dataset.index);
@@ -1694,6 +1728,233 @@
     });
 
     updateSelectionUi();
+
+    // --- Split editor ---
+    const splitOverlay = document.getElementById("split-overlay");
+    const splitTbody = document.getElementById("split-tbody");
+    const splitCategories = (() => {
+      try {
+        return JSON.parse(document.getElementById("split-categories-json")?.textContent || "[]");
+      } catch (_) {
+        return [];
+      }
+    })();
+    let splitState = { transactionId: null, amount: 0, lines: [], hadSplits: false };
+
+    function money(n) {
+      const v = Number(n) || 0;
+      const abs = Math.abs(v).toFixed(2);
+      return v < 0 ? `($${Number(abs).toLocaleString("en-US", { minimumFractionDigits: 2 })})` : `$${Number(abs).toLocaleString("en-US", { minimumFractionDigits: 2 })}`;
+    }
+
+    function formatAmountInput(n) {
+      const v = Number(n);
+      if (!Number.isFinite(v)) return "0.00";
+      return v.toFixed(2);
+    }
+
+    function categoryOptionsHtml(selectedId) {
+      const opts = [`<option value="">Category…</option>`];
+      splitCategories.forEach((cat) => {
+        const sel = String(cat.category_id) === String(selectedId) ? " selected" : "";
+        opts.push(`<option value="${cat.category_id}"${sel}>${escapeHtml(cat.category_name)}</option>`);
+      });
+      return opts.join("");
+    }
+
+    function splitLineRow(line, index) {
+      const tr = document.createElement("tr");
+      tr.dataset.index = String(index);
+      if (line.id) tr.dataset.id = String(line.id);
+      tr.innerHTML =
+        `<td><select class="split-cat" aria-label="Split category">${categoryOptionsHtml(line.category_id || "")}</select></td>` +
+        `<td class="amount"><input type="text" class="split-amt" inputmode="decimal" value="${escapeHtml(formatAmountInput(line.split_amount))}" aria-label="Split amount"></td>` +
+        `<td><button type="button" class="btn-link split-remove" title="Remove line">Remove</button></td>`;
+      return tr;
+    }
+
+    function readSplitLines() {
+      return Array.from(splitTbody?.querySelectorAll("tr") || []).map((tr) => {
+        const cat = tr.querySelector(".split-cat");
+        const amt = tr.querySelector(".split-amt");
+        return {
+          id: tr.dataset.id ? Number(tr.dataset.id) : null,
+          category_id: Number(cat?.value || 0),
+          split_amount: Number(amt?.value || 0),
+        };
+      });
+    }
+
+    function updateSplitTotals() {
+      const lines = readSplitLines().filter((l) => l.category_id && l.split_amount);
+      const assigned = lines.reduce((s, l) => s + l.split_amount, 0);
+      const total = Number(splitState.amount) || 0;
+      const remaining = total - assigned;
+      const totalEl = document.getElementById("split-total");
+      const assignedEl = document.getElementById("split-assigned");
+      const remainingEl = document.getElementById("split-remaining");
+      const saveBtn = document.getElementById("split-save");
+      const totals = document.getElementById("split-totals");
+      if (totalEl) totalEl.textContent = money(total);
+      if (assignedEl) assignedEl.textContent = money(assigned);
+      if (remainingEl) remainingEl.textContent = money(remaining);
+      const balanced = Math.abs(remaining) < 0.005 && lines.length >= 2;
+      totals?.classList.toggle("is-unbalanced", !balanced);
+      if (saveBtn) saveBtn.disabled = !balanced;
+    }
+
+    function renderSplitEditor(bundle) {
+      splitState = {
+        transactionId: bundle.transaction_id,
+        amount: Number(bundle.amount),
+        lines: bundle.lines || [],
+        hadSplits: (bundle.lines || []).length > 0,
+      };
+      const meta = document.getElementById("split-meta");
+      if (meta) meta.textContent = `Transaction #${bundle.transaction_id}`;
+      const clearBtn = document.getElementById("split-clear");
+      if (clearBtn) clearBtn.hidden = !splitState.hadSplits;
+      if (splitTbody) {
+        splitTbody.innerHTML = "";
+        const seed = (bundle.lines && bundle.lines.length)
+          ? bundle.lines
+          : [
+              { category_id: "", split_amount: 0 },
+              { category_id: "", split_amount: 0 },
+            ];
+        seed.forEach((line, i) => splitTbody.appendChild(splitLineRow(line, i)));
+      }
+      updateSplitTotals();
+    }
+
+    function openSplitOverlay() {
+      if (splitOverlay) splitOverlay.hidden = false;
+    }
+
+    function closeSplitOverlay() {
+      if (splitOverlay) splitOverlay.hidden = true;
+      splitState = { transactionId: null, amount: 0, lines: [], hadSplits: false };
+    }
+
+    async function openSplitEditor(row) {
+      const id = Number(row.dataset.id);
+      if (!id) return;
+      try {
+        const res = await fetch(`/api/transactions/${id}/splits`);
+        if (!res.ok) throw new Error(await res.text());
+        const bundle = await res.json();
+        if (!bundle.lines?.length && row.dataset.amount) {
+          bundle.amount = row.dataset.amount;
+        }
+        renderSplitEditor(bundle);
+        openSplitOverlay();
+      } catch (err) {
+        console.error(err);
+        alert("Could not load split");
+      }
+    }
+
+    function applySplitToRow(row, isSplit) {
+      row.dataset.split = isSplit ? "1" : "";
+      if (!isSplit) row.removeAttribute("data-split");
+      const text = row.querySelector(".category-text");
+      if (text) {
+        text.textContent = isSplit ? "Split" : (text.textContent === "Split" ? "Uncategorized" : text.textContent);
+        text.classList.toggle("split-label", isSplit);
+      }
+      if (isSplit) {
+        row.dataset.category = "Split";
+        row.dataset.categoryId = "";
+      }
+    }
+
+    tbody?.addEventListener("click", (ev) => {
+      const btn = ev.target.closest(".split-btn");
+      if (!btn) return;
+      ev.preventDefault();
+      ev.stopPropagation();
+      const row = btn.closest("tr.txn-row");
+      if (row) openSplitEditor(row);
+    });
+
+    splitTbody?.addEventListener("input", (ev) => {
+      if (ev.target.matches(".split-amt, .split-cat")) updateSplitTotals();
+    });
+    splitTbody?.addEventListener("change", (ev) => {
+      if (ev.target.matches(".split-amt, .split-cat")) updateSplitTotals();
+    });
+    splitTbody?.addEventListener("click", (ev) => {
+      const btn = ev.target.closest(".split-remove");
+      if (!btn) return;
+      const tr = btn.closest("tr");
+      tr?.remove();
+      if (splitTbody && splitTbody.querySelectorAll("tr").length < 2) {
+        splitTbody.appendChild(splitLineRow({ category_id: "", split_amount: 0 }, splitTbody.children.length));
+      }
+      updateSplitTotals();
+    });
+
+    document.getElementById("split-add-line")?.addEventListener("click", () => {
+      splitTbody?.appendChild(splitLineRow({ category_id: "", split_amount: 0 }, splitTbody.children.length));
+      updateSplitTotals();
+    });
+
+    document.getElementById("split-close")?.addEventListener("click", closeSplitOverlay);
+    document.getElementById("split-cancel")?.addEventListener("click", closeSplitOverlay);
+    splitOverlay?.addEventListener("click", (ev) => {
+      if (ev.target === splitOverlay) closeSplitOverlay();
+    });
+
+    document.getElementById("split-save")?.addEventListener("click", async () => {
+      const id = splitState.transactionId;
+      if (!id) return;
+      const lines = readSplitLines()
+        .filter((l) => l.category_id && l.split_amount)
+        .map((l) => ({
+          id: l.id || undefined,
+          category_id: l.category_id,
+          split_amount: formatAmountInput(l.split_amount),
+        }));
+      try {
+        const res = await fetch(`/api/transactions/${id}/splits`, {
+          method: "PUT",
+          headers: { "Content-Type": "application/json", Accept: "application/json" },
+          body: JSON.stringify({ lines }),
+        });
+        if (!res.ok) {
+          const detail = await res.json().catch(() => ({}));
+          throw new Error(detail.detail || res.statusText);
+        }
+        const row = tbody?.querySelector(`tr.txn-row[data-id="${id}"]`);
+        if (row) applySplitToRow(row, true);
+        closeSplitOverlay();
+      } catch (err) {
+        console.error(err);
+        alert(err.message || "Save split failed");
+      }
+    });
+
+    document.getElementById("split-clear")?.addEventListener("click", async () => {
+      const id = splitState.transactionId;
+      if (!id) return;
+      if (!confirm("Remove all split lines from this transaction?")) return;
+      try {
+        const res = await fetch(`/api/transactions/${id}/splits`, { method: "DELETE" });
+        if (!res.ok) throw new Error(await res.text());
+        const row = tbody?.querySelector(`tr.txn-row[data-id="${id}"]`);
+        if (row) {
+          applySplitToRow(row, false);
+          const text = row.querySelector(".category-text");
+          if (text) text.textContent = "Uncategorized";
+          row.dataset.category = "";
+          row.dataset.categoryId = "";
+        }
+        closeSplitOverlay();
+      } catch (err) {
+        console.error(err);
+        alert("Clear split failed");
+      }
+    });
   </script>
 </body>
 </html>

@@ -17,13 +17,18 @@ from app.schemas.transaction import (
     AssignCategoryRequest,
     AssignCategoryResult,
     CategoryOut,
+    SplitBundleOut,
+    SplitLineOut,
+    SplitReplaceRequest,
     TagAttachRequest,
     TagAttachResult,
     TagOut,
     TransactionOut,
 )
 from app.services import payees as payee_service
+from app.services import splits as split_service
 from app.services import transactions as txn_service
+from app.services.splits import SplitBalanceError
 
 router = APIRouter(prefix="/api", tags=["api"])
 
@@ -164,3 +169,63 @@ def approve_category(
     if updated == 0:
         raise HTTPException(status_code=404, detail="No matching transactions")
     return ApproveCategoryResult(updated=updated)
+
+
+def _split_bundle_out(bundle: split_service.SplitBundle) -> SplitBundleOut:
+    return SplitBundleOut(
+        transaction_id=bundle.transaction_id,
+        amount=bundle.amount,
+        lines=[
+            SplitLineOut(
+                id=line.id or 0,
+                external_id=line.external_id or 0,
+                category_id=line.category_id,
+                category_name=line.category_name,
+                split_amount=line.split_amount,
+            )
+            for line in bundle.lines
+        ],
+    )
+
+
+@router.get("/transactions/{transaction_id}/splits", response_model=SplitBundleOut)
+def get_splits(
+    transaction_id: int,
+    db: Session = Depends(get_db),
+) -> SplitBundleOut:
+    bundle = split_service.get_splits(db, transaction_id)
+    if bundle is None:
+        raise HTTPException(status_code=404, detail="Transaction not found")
+    return _split_bundle_out(bundle)
+
+
+@router.put("/transactions/{transaction_id}/splits", response_model=SplitBundleOut)
+def put_splits(
+    transaction_id: int,
+    body: SplitReplaceRequest,
+    db: Session = Depends(get_db),
+) -> SplitBundleOut:
+    try:
+        bundle = split_service.replace_splits(
+            db,
+            external_id=transaction_id,
+            lines=[line.model_dump() for line in body.lines],
+        )
+    except LookupError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+    except SplitBalanceError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+    return _split_bundle_out(bundle)
+
+
+@router.delete("/transactions/{transaction_id}/splits")
+def delete_splits(
+    transaction_id: int,
+    db: Session = Depends(get_db),
+) -> dict[str, int]:
+    ok = split_service.clear_splits(db, external_id=transaction_id)
+    if not ok:
+        raise HTTPException(status_code=404, detail="Transaction not found")
+    return {"cleared": 1}

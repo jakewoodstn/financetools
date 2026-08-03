@@ -50,6 +50,30 @@ class TagAttachResult(BaseModel):
     tag: str
 
 
+class SplitLineIn(BaseModel):
+    id: int | None = None
+    category_id: int
+    split_amount: Decimal
+
+
+class SplitLineOut(BaseModel):
+    id: int
+    external_id: int
+    category_id: int
+    category_name: str | None = None
+    split_amount: Decimal
+
+
+class SplitBundleOut(BaseModel):
+    transaction_id: int
+    amount: Decimal
+    lines: list[SplitLineOut]
+
+
+class SplitReplaceRequest(BaseModel):
+    lines: list[SplitLineIn] = Field(min_length=2)
+
+
 class AssignCategoryRequest(BaseModel):
     transaction_ids: list[int] = Field(min_length=1)
     category_id: int

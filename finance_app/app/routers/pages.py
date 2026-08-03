@@ -64,6 +64,11 @@ def transcat(
     end_date = end if end is not None else today
 
     categories = txn_service.list_categories(db)
+    split_categories = [
+        {"category_id": c.category_id, "category_name": c.category_name}
+        for c in categories
+        if c.category_id > 0
+    ]
     tags = txn_service.list_tags(db)
     frequent_categories = txn_service.list_frequent_categories(db)
     accounts = txn_service.list_accounts(db)
@@ -102,6 +107,7 @@ def transcat(
         name="transcat.html",
         context={
             "categories": categories,
+            "split_categories": split_categories,
             "tags": tags,
             "frequent_categories": frequent_categories,
             "accounts": accounts,
