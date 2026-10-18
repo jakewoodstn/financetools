@@ -107,7 +107,7 @@
       </section>
 
       <section class="panel drift-panel">
-        <h2>Drift periods <span class="legend-hint">contiguous ranges where observed and computed diverge — use start/end dates to hunt missing or duplicate bank transactions</span></h2>
+        <h2>Drift periods <span class="legend-hint">each row runs from one observed balance to the day before the next. Drift is the gap found at that next observation.</span></h2>
         <div id="drift-periods"></div>
         <p id="drift-periods-empty" class="muted card-note hidden">Select one or more accounts to see drift periods for the chart range.</p>
       </section>
@@ -194,7 +194,7 @@
 
       if (!accounts.length && !includeTotal) {
         renderBalanceChart([]);
-        renderDriftPeriods([], start, end);
+        renderDriftPeriods([]);
         return;
       }
 
@@ -213,7 +213,7 @@
       const driftSets = allDatasets.filter((ds) => ds.kind === "drift");
 
       renderBalanceChart(balanceSets);
-      renderDriftPeriods(driftSets, start, end);
+      renderDriftPeriods(driftSets);
     }
 
     function collectLabels(sets) {
@@ -304,57 +304,29 @@
       return Math.abs(amount) > DRIFT_TOLERANCE;
     }
 
-    /** Collapse observation-level drift into contiguous No Drift / Drift periods. */
-    function buildDriftPeriods(points, periodStart, periodEnd) {
-      const start = periodStart || null;
-      const end = periodEnd || null;
+    function dayBefore(iso) {
+      const [y, m, d] = iso.split("-").map(Number);
+      const dt = new Date(y, m - 1, d);
+      dt.setDate(dt.getDate() - 1);
+      return formatLocalDate(dt);
+    }
+
+    /** One row per gap between observations. Drift on an observation belongs to the span that ends the day before it. */
+    function buildDriftPeriods(points) {
       const sorted = (points || []).slice().sort((a, b) => a.date.localeCompare(b.date));
-      if (!start && !end && !sorted.length) return [];
-
-      const rangeStart = start || (sorted[0] && sorted[0].date) || end;
-      const rangeEnd = end || (sorted.length && sorted[sorted.length - 1].date) || start;
-      if (!rangeStart || !rangeEnd) return [];
-
-      let prevStatus = false; // assume no drift at period start
-      let prevBoundary = rangeStart;
-      let firstDriftAmount = null;
       const periods = [];
-
-      function closePeriod(toDate, allowEqual) {
-        if (!toDate) return;
-        if (toDate < prevBoundary) return;
-        if (toDate === prevBoundary && !allowEqual) return;
-        periods.push({
-          start: prevBoundary,
-          end: toDate,
-          drifting: prevStatus,
-          firstDrift: prevStatus ? firstDriftAmount : null,
-        });
-      }
-
       sorted.forEach((p) => {
-        if (p.date < rangeStart || p.date > rangeEnd) return;
+        if (!p.prior_date) return;
+        const end = dayBefore(p.date);
+        if (end < p.prior_date) return;
         const drifting = hasDrift(p.amount);
-        if (drifting !== prevStatus) {
-          closePeriod(p.date, false);
-          prevBoundary = p.date;
-          prevStatus = drifting;
-          firstDriftAmount = drifting ? p.amount : null;
-        } else if (drifting && firstDriftAmount === null) {
-          firstDriftAmount = p.amount;
-        }
-      });
-      closePeriod(rangeEnd, true);
-
-      // If the only period is zero-width (start === end with no observations), still show it.
-      if (!periods.length) {
         periods.push({
-          start: rangeStart,
-          end: rangeEnd,
-          drifting: false,
-          firstDrift: null,
+          start: p.prior_date,
+          end,
+          drifting,
+          drift: drifting ? p.amount : null,
         });
-      }
+      });
       return periods;
     }
 
@@ -362,7 +334,7 @@
       return (ds.label || "").replace(/ — drift$/, "");
     }
 
-    function renderDriftPeriods(sets, periodStart, periodEnd) {
+    function renderDriftPeriods(sets) {
       if (!sets.length) {
         driftPeriodsEl.innerHTML = "";
         driftPeriodsEmpty.classList.remove("hidden");
@@ -372,12 +344,12 @@
 
       driftPeriodsEl.innerHTML = sets.map((ds) => {
         const name = accountLabel(ds);
-        const periods = buildDriftPeriods(ds.points, periodStart, periodEnd);
+        const periods = buildDriftPeriods(ds.points);
         const rows = periods.map((period) => {
           const status = period.drifting
             ? `<span class="drift-status is-drift">Drift</span>`
             : `<span class="drift-status is-ok">No Drift</span>`;
-          const amount = period.drifting ? money(period.firstDrift) : "";
+          const amount = period.drifting ? money(period.drift) : "";
           return `<tr class="${period.drifting ? "is-drift-row" : "is-ok-row"}">
             <td class="mono">${period.start} – ${period.end}</td>
             <td>${status}</td>
@@ -391,7 +363,7 @@
               <tr>
                 <th>Period</th>
                 <th>Status</th>
-                <th>First drift</th>
+                <th>Drift</th>
               </tr>
             </thead>
             <tbody>${rows || `<tr><td colspan="3" class="muted">No observations in range.</td></tr>`}</tbody>

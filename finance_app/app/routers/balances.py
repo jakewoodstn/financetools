@@ -151,11 +151,12 @@ def balances_api(
                     "points": [
                         {
                             "date": as_of.isoformat(),
+                            "prior_date": prior_date.isoformat() if prior_date is not None else None,
                             "amount": float(drift) if drift is not None else None,
                             "observed": float(observed),
                             "computed": float(computed) if computed is not None else None,
                         }
-                        for as_of, observed, computed, drift in drift_points
+                        for as_of, observed, computed, drift, prior_date in drift_points
                     ],
                 }
             )

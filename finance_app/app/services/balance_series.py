@@ -297,7 +297,7 @@ def drift_series(
     start: date | None = None,
     end: date | None = None,
 ) -> dict[int, list[tuple[date, Decimal, Decimal | None, Decimal | None]]]:
-    """Per-account (date, observed, computed_from_prior, drift) via set-based SQL."""
+    """Per-account (date, observed, computed_from_prior, drift, prior_date) via set-based SQL."""
     from sqlalchemy import bindparam
 
     params: dict = {}
@@ -332,6 +332,7 @@ def drift_series(
             SELECT
                 o.account_id,
                 o.as_of_date,
+                o.prior_date,
                 o.amount AS observed,
                 CASE
                     WHEN o.prior_date IS NULL THEN NULL
@@ -352,7 +353,8 @@ def drift_series(
             as_of_date,
             observed,
             computed,
-            CASE WHEN computed IS NULL THEN NULL ELSE observed - computed END AS drift
+            CASE WHEN computed IS NULL THEN NULL ELSE observed - computed END AS drift,
+            prior_date
         FROM compared
         ORDER BY account_id, as_of_date
         """
@@ -362,9 +364,9 @@ def drift_series(
 
     rows = db.execute(stmt, params).all()
 
-    result: dict[int, list[tuple[date, Decimal, Decimal | None, Decimal | None]]] = {}
-    for acct_id, as_of, observed, computed, drift in rows:
-        result.setdefault(acct_id, []).append((as_of, observed, computed, drift))
+    result: dict[int, list[tuple[date, Decimal, Decimal | None, Decimal | None, date | None]]] = {}
+    for acct_id, as_of, observed, computed, drift, prior_date in rows:
+        result.setdefault(acct_id, []).append((as_of, observed, computed, drift, prior_date))
     return result
 
 
@@ -375,7 +377,7 @@ def drift_report(db: Session, account_id: int | None = None) -> list[DriftRow]:
     )
     rows: list[DriftRow] = []
     for acct_id, points in series.items():
-        for as_of, observed, computed, drift in points:
+        for as_of, observed, computed, drift, _prior_date in points:
             rows.append(
                 DriftRow(
                     account_id=acct_id,
