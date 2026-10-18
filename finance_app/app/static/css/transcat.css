@@ -982,11 +982,19 @@ th.sortable .sort-ind {
   background: #eef3f9;
   border: 1px solid #c9d4e4;
   color: #1f2937;
+  font: inherit;
   font-size: 0.72rem;
   line-height: 1.25;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+  cursor: pointer;
+  text-align: left;
+}
+
+.txn-tag:hover {
+  border-color: var(--theme-accent, #1d4ed8);
+  color: var(--theme-accent, #1d4ed8);
 }
 
 .tag-add {

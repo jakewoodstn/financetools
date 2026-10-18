@@ -2,7 +2,7 @@ from datetime import date
 from unittest.mock import MagicMock
 
 from app.services import transactions as txn_service
-from app.services.transactions import autocomplete_tags, get_or_create_tag, list_tags
+from app.services.transactions import autocomplete_tags, detach_tag, get_or_create_tag, list_tags
 
 
 def test_autocomplete_tags_requires_query(monkeypatch):
@@ -38,6 +38,31 @@ def test_get_or_create_tag_reuses_case_insensitive(monkeypatch):
     tag = get_or_create_tag(db, "vacation")
     assert tag is existing
     db.add.assert_not_called()
+
+
+def test_detach_tag_deletes_links_and_keeps_tag(monkeypatch):
+    tag = MagicMock()
+    tag.id = 7
+    tag.tag = "Vacation"
+    txn = MagicMock()
+    txn.id = 42
+    link = MagicMock()
+    db = MagicMock()
+    db.scalar.return_value = tag
+    db.scalars.return_value.all.side_effect = [[txn], [link]]
+
+    removed, found = detach_tag(db, external_ids=[1001], tag_name="vacation", commit=True)
+
+    assert removed == 1
+    assert found is tag
+    db.delete.assert_called_once_with(link)
+    db.commit.assert_called_once()
+
+
+def test_detach_tag_missing_name_is_noop():
+    db = MagicMock()
+    assert detach_tag(db, external_ids=[1], tag_name="  ") == (0, None)
+    db.scalar.assert_not_called()
 
 
 def test_list_tags_still_loads(monkeypatch):

@@ -311,6 +311,50 @@ def attach_tag(
     return len(txns), tag
 
 
+def detach_tag(
+    db: Session,
+    *,
+    external_ids: list[int],
+    tag_name: str,
+    commit: bool = True,
+) -> tuple[int, TaggedEvent | None]:
+    """Remove a tag from transactions by external_id. The tag itself stays."""
+    name = (tag_name or "").strip()
+    if not name or not external_ids:
+        return 0, None
+
+    tag = db.scalar(
+        select(TaggedEvent).where(func.lower(TaggedEvent.tag) == name.lower())
+    )
+    if tag is None:
+        return 0, None
+
+    txns = list(
+        db.scalars(
+            select(BankTransaction).where(BankTransaction.external_id.in_(external_ids))
+        ).all()
+    )
+    if not txns:
+        return 0, tag
+
+    links = list(
+        db.scalars(
+            select(TransactionTaggedEvent).where(
+                TransactionTaggedEvent.bank_transaction_id.in_([txn.id for txn in txns]),
+                TransactionTaggedEvent.tagged_event_id == tag.id,
+            )
+        ).all()
+    )
+    for link in links:
+        db.delete(link)
+
+    if commit:
+        db.commit()
+    else:
+        db.flush()
+    return len(links), tag
+
+
 def list_frequent_categories(
     db: Session,
     *,

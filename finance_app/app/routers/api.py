@@ -92,6 +92,24 @@ def attach_tag(
     return TagAttachResult(updated=updated, tag_id=tag.id, tag=tag.tag)
 
 
+@router.post("/transactions/tags/detach", response_model=TagAttachResult)
+def detach_tag(
+    body: TagAttachRequest,
+    db: Session = Depends(get_db),
+) -> TagAttachResult:
+    name = body.tag.strip()
+    if not name:
+        raise HTTPException(status_code=400, detail="tag required")
+    removed, tag = txn_service.detach_tag(
+        db,
+        external_ids=body.transaction_ids,
+        tag_name=name,
+    )
+    if tag is None or removed == 0:
+        raise HTTPException(status_code=404, detail="Tag is not on those transactions")
+    return TagAttachResult(updated=removed, tag_id=tag.id, tag=tag.tag)
+
+
 @router.get("/payees", response_model=list[PayeeAutocompleteItem])
 def search_payees(
     q: str = Query(default="", min_length=1),

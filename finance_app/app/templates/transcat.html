@@ -338,7 +338,7 @@
                   {% for name in txn.tags.split(";") %}
                     {% set label = name.strip() %}
                     {% if label %}
-                    <span class="txn-tag">{{ label }}</span>
+                    <button type="button" class="txn-tag" data-tag="{{ label }}" title="Remove {{ label }}">{{ label }}</button>
                     {% endif %}
                   {% endfor %}
                 {% endif %}
@@ -833,7 +833,7 @@
     });
 
     tbody?.addEventListener("click", (ev) => {
-      if (ev.target.closest(".payee-edit, .payee-inline, .tag-add, .tag-edit-wrap, .tag-ac-menu, .split-btn, input, a")) return;
+      if (ev.target.closest(".payee-edit, .payee-inline, .txn-tag, .tag-add, .tag-edit-wrap, .tag-ac-menu, .split-btn, input, a")) return;
       const row = ev.target.closest("tr.txn-row");
       if (!row || ev.target.closest("button")) return;
       const index = Number(row.dataset.index);
@@ -1252,7 +1252,10 @@
       if (!list) return;
       const tags = parseRowTags(row);
       list.innerHTML = tags
-        .map((name) => `<span class="txn-tag">${escapeHtml(name)}</span>`)
+        .map((name) => {
+          const safe = escapeHtml(name);
+          return `<button type="button" class="txn-tag" data-tag="${safe}" title="Remove ${safe}">${safe}</button>`;
+        })
         .join("");
     }
 
@@ -1278,6 +1281,28 @@
       return postJson("/api/transactions/tags/attach", {
         transaction_ids: ids,
         tag: name,
+      });
+    }
+
+    async function detachTagFromRows(ids, tagName) {
+      const name = (tagName || "").trim();
+      if (!ids.length || !name) return null;
+      return postJson("/api/transactions/tags/detach", {
+        transaction_ids: ids,
+        tag: name,
+      });
+    }
+
+    function dropTagFromRows(ids, tagName) {
+      const name = (tagName || "").trim().toLowerCase();
+      if (!name) return;
+      const idSet = new Set(ids.map(Number));
+      tbody?.querySelectorAll("tr.txn-row").forEach((row) => {
+        const id = Number(row.dataset.id);
+        if (!idSet.has(id)) return;
+        const tags = parseRowTags(row).filter((t) => t.toLowerCase() !== name);
+        row.dataset.tags = tags.join(";");
+        renderRowTags(row);
       });
     }
 
@@ -1446,6 +1471,32 @@
     }
 
     tbody?.addEventListener("click", (ev) => {
+      const chip = ev.target.closest(".txn-tag");
+      if (chip) {
+        ev.preventDefault();
+        ev.stopPropagation();
+        const row = chip.closest("tr.txn-row");
+        const name = chip.dataset.tag || chip.textContent || "";
+        if (!row || tagSaving || !name.trim()) return;
+        const ids = tagTargetsForRow(row);
+        tagSaving = true;
+        detachTagFromRows(ids, name)
+          .then((result) => {
+            if (!result || !result.updated) {
+              alert("Remove tag failed");
+              return;
+            }
+            dropTagFromRows(ids, result.tag || name);
+          })
+          .catch((err) => {
+            console.error(err);
+            alert("Remove tag failed");
+          })
+          .finally(() => {
+            tagSaving = false;
+          });
+        return;
+      }
       const btn = ev.target.closest(".tag-add");
       if (!btn) return;
       ev.preventDefault();
